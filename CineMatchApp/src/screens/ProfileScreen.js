@@ -1,142 +1,150 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  Image,
   ScrollView,
+  Image,
+  TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { authService } from '../services/authService';
-import { preferenceService } from '../services/preferenceService';
+import * as ImagePicker from 'expo-image-picker';
+import { useAuth } from '../context/AuthContext';
+import colors from '../constants/colors';
 
 const ProfileScreen = ({ navigation }) => {
-  const [user, setUser] = useState(null);
-  const [preferences, setPreferences] = useState(null);
+  const { user, logout, updateUser } = useAuth();
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
+  const pickImage = async () => {
     try {
-      const userData = await authService.getCurrentUser();
-      const prefsData = await preferenceService.getUserPreferences();
-      setUser(userData);
-      setPreferences(prefsData);
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert('Permission Required', 'Please allow access to your photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setUploadingPhoto(true);
+        try {
+          // Aquí se subiría la foto al servidor
+          // Por ahora solo actualizamos localmente
+          const photoUri = result.assets[0].uri;
+          
+          // TODO: Implementar subida al servidor
+          // await updateUser({ profile_photo: photoUri });
+          
+          Alert.alert('Success', 'Profile photo updated!');
+        } catch (error) {
+          console.error('Error uploading photo:', error);
+          Alert.alert('Error', 'Failed to upload photo');
+        } finally {
+          setUploadingPhoto(false);
+        }
+      }
     } catch (error) {
-      console.error('Error al cargar datos del usuario:', error);
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
     }
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro que quieres salir?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Salir',
-          style: 'destructive',
-          onPress: async () => {
-            await authService.logout();
-            navigation.replace('Login');
-          },
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
         },
-      ]
-    );
+      },
+    ]);
   };
 
+  const menuItems = [
+    {
+      title: 'Movie Preferences',
+      icon: '🎬',
+      onPress: () => navigation.navigate('Preferences'),
+    },
+    {
+      title: 'Subscription',
+      icon: '⭐',
+      onPress: () => Alert.alert('Coming Soon', 'Subscription feature coming soon!'),
+    },
+    {
+      title: 'Settings',
+      icon: '⚙️',
+      onPress: () => Alert.alert('Coming Soon', 'Settings feature coming soon!'),
+    },
+    {
+      title: 'Help & Support',
+      icon: '💬',
+      onPress: () => Alert.alert('Coming Soon', 'Help & Support feature coming soon!'),
+    },
+  ];
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Image
-          source={{ uri: user?.profile_photo_url || 'https://via.placeholder.com/150' }}
-          style={styles.avatar}
-        />
-        <Text style={styles.name}>{user?.name || 'Usuario'}</Text>
+        <TouchableOpacity onPress={pickImage} style={styles.avatarContainer}>
+          <Image
+            source={{
+              uri: user?.profile_photo || 'https://via.placeholder.com/120',
+            }}
+            style={styles.avatar}
+          />
+          {uploadingPhoto && (
+            <View style={styles.uploadingOverlay}>
+              <ActivityIndicator color="white" size="large" />
+            </View>
+          )}
+          <View style={styles.editIconContainer}>
+            <Text style={styles.editIcon}>📷</Text>
+          </View>
+        </TouchableOpacity>
+        <Text style={styles.name}>{user?.name}</Text>
         <Text style={styles.email}>{user?.email}</Text>
+        {user?.age && <Text style={styles.age}>{user.age} years old</Text>}
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferencias</Text>
-        
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('Preferences')}
-        >
-          <View style={styles.menuItemLeft}>
-            <Icon name="heart-outline" size={24} color="#E50914" />
-            <Text style={styles.menuItemText}>Mis Gustos</Text>
-          </View>
-          <Icon name="chevron-forward" size={24} color="#666" />
-        </TouchableOpacity>
+      {user?.bio && (
+        <View style={styles.bioContainer}>
+          <Text style={styles.bioLabel}>About me</Text>
+          <Text style={styles.bioText}>{user.bio}</Text>
+        </View>
+      )}
 
-        {preferences?.favorite_genres && preferences.favorite_genres.length > 0 && (
-          <View style={styles.previewContainer}>
-            <Text style={styles.previewLabel}>Géneros Favoritos:</Text>
-            <View style={styles.tagsContainer}>
-              {preferences.favorite_genres.map((genre, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{genre.name}</Text>
-                </View>
-              ))}
+      <View style={styles.menuContainer}>
+        {menuItems.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.menuItem}
+            onPress={item.onPress}
+          >
+            <View style={styles.menuItemLeft}>
+              <Text style={styles.menuIcon}>{item.icon}</Text>
+              <Text style={styles.menuTitle}>{item.title}</Text>
             </View>
-          </View>
-        )}
-
-        {preferences?.favorite_directors && preferences.favorite_directors.length > 0 && (
-          <View style={styles.previewContainer}>
-            <Text style={styles.previewLabel}>Directores Favoritos:</Text>
-            <View style={styles.tagsContainer}>
-              {preferences.favorite_directors.map((director, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{director.name}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Configuración</Text>
-        
-        <TouchableOpacity style={styles.menuItem}>
-          <View style={styles.menuItemLeft}>
-            <Icon name="notifications-outline" size={24} color="#E50914" />
-            <Text style={styles.menuItemText}>Notificaciones</Text>
-          </View>
-          <Icon name="chevron-forward" size={24} color="#666" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <View style={styles.menuItemLeft}>
-            <Icon name="lock-closed-outline" size={24} color="#E50914" />
-            <Text style={styles.menuItemText}>Privacidad</Text>
-          </View>
-          <Icon name="chevron-forward" size={24} color="#666" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <View style={styles.menuItemLeft}>
-            <Icon name="help-circle-outline" size={24} color="#E50914" />
-            <Text style={styles.menuItemText}>Ayuda</Text>
-          </View>
-          <Icon name="chevron-forward" size={24} color="#666" />
-        </TouchableOpacity>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Icon name="log-out-outline" size={24} color="#fff" />
-        <Text style={styles.logoutText}>Cerrar Sesión</Text>
+        <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
 
-      <View style={styles.footer}>
-        <Text style={styles.version}>CineMatch v1.0.0</Text>
-      </View>
+      <Text style={styles.version}>CineMatch v1.0.0</Text>
     </ScrollView>
   );
 };
@@ -144,112 +152,131 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
+  },
+  content: {
+    padding: 20,
+    paddingTop: 60,
   },
   header: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 30,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1a1a1a',
+    marginBottom: 24,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 16,
   },
   avatar: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    marginBottom: 15,
     borderWidth: 3,
-    borderColor: '#E50914',
+    borderColor: colors.primary,
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: colors.background,
+  },
+  editIcon: {
+    fontSize: 20,
   },
   name: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 5,
+    color: colors.text,
+    marginBottom: 4,
   },
   email: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
+    marginBottom: 4,
   },
-  section: {
-    marginTop: 20,
-    paddingHorizontal: 20,
+  age: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 15,
+  bioContainer: {
+    backgroundColor: colors.card,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+  },
+  bioLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  bioText: {
+    fontSize: 16,
+    color: colors.text,
+    lineHeight: 22,
+  },
+  menuContainer: {
+    gap: 12,
+    marginBottom: 32,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1a1a1a',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+    backgroundColor: colors.card,
+    padding: 16,
+    borderRadius: 12,
   },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
-  menuItemText: {
+  menuIcon: {
+    fontSize: 24,
+  },
+  menuTitle: {
     fontSize: 16,
-    color: '#fff',
-    marginLeft: 15,
+    color: colors.text,
+    fontWeight: '500',
   },
-  previewContainer: {
-    backgroundColor: '#1a1a1a',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  previewLabel: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 10,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  tag: {
-    backgroundColor: 'rgba(229, 9, 20, 0.3)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  tagText: {
-    color: '#E50914',
-    fontSize: 12,
-    fontWeight: '600',
+  menuArrow: {
+    fontSize: 28,
+    color: colors.textSecondary,
   },
   logoutButton: {
-    flexDirection: 'row',
+    backgroundColor: colors.error,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#E50914',
-    marginHorizontal: 20,
-    marginTop: 30,
-    padding: 15,
-    borderRadius: 10,
+    marginBottom: 20,
   },
-  logoutText: {
-    color: '#fff',
+  logoutButtonText: {
+    color: colors.text,
     fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  footer: {
-    alignItems: 'center',
-    padding: 30,
   },
   version: {
-    color: '#666',
+    textAlign: 'center',
     fontSize: 12,
+    color: colors.textSecondary,
   },
 });
 

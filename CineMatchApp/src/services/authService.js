@@ -1,50 +1,65 @@
 import api from '../config/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage } from '../utils/storage';
 
 export const authService = {
-  async login(email, password) {
-    try {
-      const response = await api.post('/login', { email, password });
-      if (response.data.token) {
-        await AsyncStorage.setItem('authToken', response.data.token);
-        await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
-      }
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
+  // Registro de usuario
   async register(userData) {
     try {
       const response = await api.post('/register', userData);
       if (response.data.token) {
-        await AsyncStorage.setItem('authToken', response.data.token);
-        await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+        await storage.saveToken(response.data.token);
+        await storage.saveUser(response.data.user);
       }
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error.response?.data || error;
     }
   },
 
+  // Login
+  async login(email, password) {
+    try {
+      const response = await api.post('/login', { email, password });
+      if (response.data.token) {
+        await storage.saveToken(response.data.token);
+        await storage.saveUser(response.data.user);
+      }
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Logout
   async logout() {
     try {
       await api.post('/logout');
     } catch (error) {
-      console.log('Error al cerrar sesión:', error);
+      console.error('Logout error:', error);
     } finally {
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('user');
+      await storage.clear();
     }
   },
 
+  // Obtener usuario actual
   async getCurrentUser() {
     try {
-      const userString = await AsyncStorage.getItem('user');
-      return userString ? JSON.parse(userString) : null;
+      const response = await api.get('/me');
+      await storage.saveUser(response.data);
+      return response.data;
     } catch (error) {
-      return null;
+      throw error.response?.data || error;
     }
-  }
+  },
+
+  // Actualizar perfil
+  async updateProfile(userData) {
+    try {
+      const response = await api.put('/profile', userData);
+      await storage.saveUser(response.data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
 };

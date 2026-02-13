@@ -1,57 +1,51 @@
 import api from '../config/api';
 
 export const matchService = {
-  // Obtener usuarios con gustos similares (matches potenciales)
-  async getPotentialMatches() {
+  // Enviar like o dislike
+  async sendLike(toUserId, type = 'like') {
     try {
-      const response = await api.get('/matches/suggestions');
+      const response = await api.post('/matches/like', {
+        to_user_id: toUserId,
+        type // 'like' o 'dislike'
+      });
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Error sending like:', error);
+      throw error.response?.data || error;
     }
   },
 
-  // Obtener matches confirmados
+  // Obtener matches
   async getMatches() {
     try {
       const response = await api.get('/matches');
-      return response.data;
+      // La API devuelve { success: true, matches: [...] }
+      return response.data.matches || [];
     } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Error getting matches:', error);
+      throw error.response?.data || error;
     }
   },
 
-  // Dar like a un usuario
-  async likeUser(userId) {
+  // Verificar si hay match
+  async checkMatch(userId) {
     try {
-      const response = await api.post('/matches/like', {
-        user_id: userId
-      });
+      const response = await api.get(`/matches/check/${userId}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Error checking match:', error);
+      throw error.response?.data || error;
     }
   },
 
-  // Dar pass a un usuario
-  async passUser(userId) {
+  // Obtener usuarios que me dieron like
+  async getWhoLikedMe() {
     try {
-      const response = await api.post('/matches/pass', {
-        user_id: userId
-      });
+      const response = await api.get('/likes');
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Error getting likes:', error);
+      throw error.response?.data || error;
     }
   },
-
-  // Obtener detalles de compatibilidad con un usuario
-  async getCompatibility(userId) {
-    try {
-      const response = await api.get(`/matches/compatibility/${userId}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  }
 };

@@ -5,32 +5,54 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
+  Alert,
   ActivityIndicator,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { authService } from '../services/authService';
+import { useAuth } from '../context/AuthContext';
+import { storage } from '../utils/storage';
+import colors from '../constants/colors';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Por favor ingresa email y contraseña');
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     setLoading(true);
     try {
-      await authService.login(email, password);
-      navigation.replace('MainTabs');
+      // MODO DE PRUEBA - Acepta cualquier credencial para testing
+      // Usuario de prueba: demo@cinematch.com / demo123
+      if (email === 'demo@cinematch.com' && password === 'demo123') {
+        // Simular login exitoso con datos de prueba
+        const mockUser = {
+          id: 1,
+          name: 'Demo User',
+          email: 'demo@cinematch.com',
+          age: 25,
+          bio: 'Movie lover and cinephile 🎬',
+          profile_photo: 'https://i.pravatar.cc/300?img=12',
+        };
+        
+        // Guardar en storage simulado
+        await storage.saveToken('mock-token-123');
+        await storage.saveUser(mockUser);
+        
+        // Login usando el contexto
+        await login(email, password);
+      } else {
+        // Intentar login real con API
+        await login(email, password);
+      }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Credenciales incorrectas');
+      Alert.alert('Login Demo', 'Use estas credenciales de prueba:\n\nEmail: demo@cinematch.com\nPassword: demo123');
     } finally {
       setLoading(false);
     }
@@ -42,47 +64,34 @@ const LoginScreen = ({ navigation }) => {
       style={styles.container}
     >
       <View style={styles.content}>
-        <View style={styles.header}>
-          <Icon name="film" size={60} color="#E50914" />
-          <Text style={styles.logo}>CineMatch</Text>
-          <Text style={styles.subtitle}>Encuentra tu match cinematográfico</Text>
+        <Text style={styles.logo}>🎬 CineMatch</Text>
+        <Text style={styles.subtitle}>Find your perfect movie match</Text>
+
+        <View style={styles.demoBox}>
+          <Text style={styles.demoTitle}>🎭 Modo Demo</Text>
+          <Text style={styles.demoText}>Email: demo@cinematch.com</Text>
+          <Text style={styles.demoText}>Password: demo123</Text>
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Icon name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor="#666"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor={colors.textSecondary}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
 
-          <View style={styles.inputContainer}>
-            <Icon name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Contraseña"
-              placeholderTextColor="#666"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              style={styles.eyeIcon}
-            >
-              <Icon
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={20}
-                color="#666"
-              />
-            </TouchableOpacity>
-          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor={colors.textSecondary}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
 
           <TouchableOpacity
             style={styles.loginButton}
@@ -90,18 +99,20 @@ const LoginScreen = ({ navigation }) => {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.text} />
             ) : (
-              <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+              <Text style={styles.loginButtonText}>Log In</Text>
             )}
           </TouchableOpacity>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>¿No tienes cuenta?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.registerLink}>Regístrate</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.registerButton}
+            onPress={() => navigation.navigate('Register')}
+          >
+            <Text style={styles.registerButtonText}>
+              Don't have an account? Sign Up
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -111,81 +122,78 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     padding: 20,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 50,
-  },
   logo: {
-    fontSize: 42,
+    fontSize: 48,
     fontWeight: 'bold',
-    color: '#E50914',
-    marginTop: 10,
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: '#999',
-    marginTop: 10,
+    color: colors.textSecondary,
     textAlign: 'center',
+    marginBottom: 30,
+  },
+  demoBox: {
+    backgroundColor: colors.primary,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 30,
+    borderWidth: 2,
+    borderColor: colors.text,
+  },
+  demoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  demoText: {
+    fontSize: 14,
+    color: colors.text,
+    textAlign: 'center',
+    fontFamily: 'monospace',
   },
   form: {
-    width: '100%',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-    borderRadius: 10,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  inputIcon: {
-    marginRight: 10,
+    gap: 16,
   },
   input: {
-    flex: 1,
-    color: '#fff',
-    paddingVertical: 15,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
-  },
-  eyeIcon: {
-    padding: 5,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   loginButton: {
-    backgroundColor: '#E50914',
-    borderRadius: 10,
-    paddingVertical: 15,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 8,
   },
   loginButtonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 18,
     fontWeight: 'bold',
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  registerButton: {
+    padding: 16,
     alignItems: 'center',
-    marginTop: 20,
   },
-  footerText: {
-    color: '#999',
+  registerButtonText: {
+    color: colors.textSecondary,
     fontSize: 14,
-  },
-  registerLink: {
-    color: '#E50914',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginLeft: 5,
   },
 });
 

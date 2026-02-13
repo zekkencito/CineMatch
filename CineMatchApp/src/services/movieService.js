@@ -1,58 +1,55 @@
 import api from '../config/api';
 
 export const movieService = {
-  // Obtener películas recomendadas para swipe
-  async getRecommendedMovies() {
+  // Obtener todas las películas
+  async getMovies(params = {}) {
     try {
-      const response = await api.get('/movies/recommendations');
+      const response = await api.get('/movies', { params });
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error.response?.data || error;
     }
   },
 
-  // Calificar una película (like/dislike)
-  async rateMovie(movieId, rating) {
-    try {
-      const response = await api.post('/movies/rate', {
-        movie_id: movieId,
-        rating: rating // 1-5 o like/dislike según tu implementación
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  // Marcar película como vista
-  async markAsWatched(movieId) {
-    try {
-      const response = await api.post('/movies/watched', {
-        movie_id: movieId
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  // Obtener detalles de una película
-  async getMovieDetails(movieId) {
+  // Obtener película por ID
+  async getMovie(movieId) {
     try {
       const response = await api.get(`/movies/${movieId}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error.response?.data || error;
     }
   },
 
-  // Obtener películas vistas por el usuario
-  async getWatchedMovies() {
+  // Obtener géneros
+  async getGenres() {
     try {
-      const response = await api.get('/movies/watched');
+      const response = await api.get('/genres');
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error.response?.data || error;
     }
-  }
+  },
+
+  // Obtener directores
+  async getDirectors() {
+    try {
+      const response = await api.get('/directors');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Buscar películas
+  async searchMovies(query) {
+    try {
+      const response = await api.get('/movies/search', { 
+        params: { q: query } 
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
 };

@@ -1,173 +1,168 @@
-# CineMatch - App Móvil
+# CineMatch - React Native App
 
-Aplicación móvil tipo Tinder para encontrar personas con gustos cinematográficos similares.
+Aplicación móvil de matching basada en preferencias de películas, similar a Tinder pero para cinéfilos.
 
-## 🎬 Características
+## 🚀 Tecnologías
 
-- **Swipe de Películas**: Descubre nuevas películas con un sistema de swipe (like/dislike)
-- **Match con Personas**: Encuentra usuarios con gustos similares en cine
-- **Sistema de Compatibilidad**: Algoritmo basado en géneros, directores y películas favoritas
-- **Chat en Tiempo Real**: Comunícate con tus matches
-- **Preferencias Personalizadas**: Configura tus géneros y directores favoritos
+- **React Native** con Expo SDK 54
+- **React Navigation** (Stack & Bottom Tabs)
+- **React Native Gesture Handler** & **Reanimated** (para swipe)
+- **Axios** (llamadas API)
+- **AsyncStorage** (almacenamiento local)
 
-## 📋 Requisitos Previos
-
-- Node.js (v16 o superior)
-- npm o yarn
-- Expo CLI: `npm install -g expo-cli`
-- Para iOS: Xcode y CocoaPods
-- Para Android: Android Studio
-
-## 🚀 Instalación
-
-1. **Clonar el repositorio** (si aplica)
-```bash
-cd CineMatchApp
-```
-
-2. **Instalar dependencias**
-```bash
-npm install
-```
-
-3. **Configurar la API**
-
-Edita el archivo `src/config/api.js` y configura la URL de tu backend Laravel:
-
-```javascript
-// Para emulador Android
-const API_BASE_URL = 'http://10.0.2.2:8000/api';
-
-// Para simulador iOS
-const API_BASE_URL = 'http://localhost:8000/api';
-
-// Para dispositivo físico (usa tu IP local)
-const API_BASE_URL = 'http://192.168.1.X:8000/api';
-
-// Para producción
-const API_BASE_URL = 'https://tu-servidor.com/api';
-```
-
-4. **Iniciar la aplicación**
-```bash
-npm start
-```
-
-O para plataformas específicas:
-```bash
-npm run android  # Para Android
-npm run ios      # Para iOS
-npm run web      # Para web
-```
-
-## 📱 Ejecutar en Dispositivo
-
-### Android
-1. Instala la app Expo Go desde Play Store
-2. Escanea el código QR que aparece en la terminal
-
-### iOS
-1. Instala la app Expo Go desde App Store
-2. Escanea el código QR que aparece en la terminal
-
-## 🔧 Configuración del Backend Laravel
-
-Asegúrate de que tu backend Laravel tenga las siguientes rutas API configuradas:
-
-### Autenticación
-- `POST /api/login`
-- `POST /api/register`
-- `POST /api/logout`
-
-### Películas
-- `GET /api/movies/recommendations` - Obtener películas recomendadas
-- `POST /api/movies/rate` - Calificar película
-- `POST /api/movies/watched` - Marcar como vista
-- `GET /api/movies/{id}` - Detalles de película
-- `GET /api/movies/watched` - Películas vistas
-
-### Matches
-- `GET /api/matches/suggestions` - Usuarios sugeridos
-- `GET /api/matches` - Matches confirmados
-- `POST /api/matches/like` - Dar like a usuario
-- `POST /api/matches/pass` - Pasar usuario
-- `GET /api/matches/compatibility/{userId}` - Ver compatibilidad
-
-### Preferencias
-- `GET /api/genres` - Listar géneros
-- `GET /api/directors` - Listar directores
-- `POST /api/user/favorite-genres` - Guardar géneros favoritos
-- `POST /api/user/favorite-directors` - Guardar directores favoritos
-- `GET /api/user/preferences` - Obtener preferencias del usuario
-
-## 🎨 Estructura del Proyecto
+## 📁 Estructura del Proyecto
 
 ```
 CineMatchApp/
 ├── src/
-│   ├── components/        # Componentes reutilizables
-│   │   ├── MovieCard.js   # Card de película
-│   │   └── UserCard.js    # Card de usuario
-│   ├── config/
-│   │   └── api.js         # Configuración de Axios
-│   ├── screens/           # Pantallas de la app
-│   │   ├── HomeScreen.js
+│   ├── components/          # Componentes reutilizables
+│   │   ├── UserCard.js      # Tarjeta de usuario para swipe
+│   │   ├── MovieCard.js     # Tarjeta de película
+│   │   ├── MatchItem.js     # Item de match en lista
+│   │   └── GenreSelector.js # Selector de géneros
+│   │
+│   ├── screens/            # Pantallas de la app
 │   │   ├── LoginScreen.js
 │   │   ├── RegisterScreen.js
-│   │   ├── MatchesScreen.js
-│   │   ├── ProfileScreen.js
-│   │   ├── PreferencesScreen.js
-│   │   └── ChatScreen.js
-│   └── services/          # Servicios de API
-│       ├── authService.js
-│       ├── movieService.js
-│       ├── matchService.js
-│       └── preferenceService.js
-├── App.js                 # Componente principal
-└── package.json
+│   │   ├── HomeScreen.js         # Swipe de usuarios
+│   │   ├── MatchesScreen.js      # Lista de matches
+│   │   ├── ChatScreen.js         # Chat con matches
+│   │   ├── ProfileScreen.js      # Perfil de usuario
+│   │   └── PreferencesScreen.js  # Preferencias de géneros
+│   │
+│   ├── navigation/         # Navegación
+│   │   ├── AppNavigator.js       # Navegador principal
+│   │   ├── AuthNavigator.js      # Stack de autenticación
+│   │   └── MainNavigator.js      # Tabs principales
+│   │
+│   ├── services/          # Servicios API
+│   │   ├── authService.js        # Login, registro, perfil
+│   │   ├── userService.js        # Usuarios y preferencias
+│   │   ├── matchService.js       # Likes y matches
+│   │   ├── movieService.js       # Películas y géneros
+│   │   └── subscriptionService.js # Planes de suscripción
+│   │
+│   ├── context/           # Context API
+│   │   └── AuthContext.js        # Contexto de autenticación
+│   │
+│   ├── config/            # Configuración
+│   │   └── api.js                # Configuración de Axios
+│   │
+│   ├── utils/             # Utilidades
+│   │   └── storage.js            # Helpers para AsyncStorage
+│   │
+│   └── constants/         # Constantes
+│       └── colors.js             # Paleta de colores
+│
+├── App.js                 # Punto de entrada
+├── package.json
+└── babel.config.js
+
 ```
 
-## 🔐 Autenticación
+## 🎨 Características
 
-La app usa tokens Bearer para autenticación. El token se almacena en AsyncStorage y se incluye automáticamente en cada petición HTTP.
+### Autenticación
+- ✅ Login con email y contraseña
+- ✅ Registro de nuevos usuarios
+- ✅ Almacenamiento seguro de tokens
+- ✅ Persistencia de sesión
 
-## 🎯 Próximas Características
+### Funcionalidades Principales
+- ✅ **Swipe de usuarios** - Desplazamiento tipo Tinder con gestos
+- ✅ **Sistema de Likes** - Like/Dislike a otros usuarios
+- ✅ **Matches** - Notificación cuando hay match mutuo
+- ✅ **Chat** - Mensajería con matches
+- ✅ **Preferencias** - Selección de géneros favoritos
+- ✅ **Perfil** - Visualización y edición de perfil
 
-- [ ] Chat en tiempo real con WebSockets
-- [ ] Filtros avanzados de búsqueda
-- [ ] Recomendaciones con ML
-- [ ] Sistema de notificaciones push
-- [ ] Perfiles más detallados
-- [ ] Lista de películas para ver juntos
-- [ ] Integración con servicios de streaming
+### Basado en Laravel API
+La app consume endpoints REST de Laravel:
+- `/api/auth/*` - Autenticación
+- `/api/users` - Gestión de usuarios
+- `/api/likes` - Sistema de likes
+- `/api/matches` - Matches
+- `/api/movies` - Películas
+- `/api/genres` - Géneros
+- `/api/subscription-plans` - Planes de suscripción
 
-## 🐛 Solución de Problemas
+## 🔧 Configuración
 
-### Error de conexión con la API
-- Verifica que el servidor Laravel esté corriendo
-- Asegúrate de usar la IP correcta según tu entorno
-- Verifica que CORS esté configurado correctamente en Laravel
-
-### Problemas con dependencias
+### 1. Instalar dependencias
 ```bash
-rm -rf node_modules
-rm package-lock.json
 npm install
 ```
 
-### Limpiar caché de Expo
-```bash
-expo start -c
+### 2. Configurar URL del API
+Editar `src/config/api.js` y cambiar la URL del API:
+```javascript
+const API_URL = 'http://tu-servidor-laravel.com/api';
 ```
+
+### 3. Ejecutar la aplicación
+```bash
+# Iniciar Expo
+npm start
+
+# Android
+npm run android
+
+# iOS
+npm run ios
+
+# Web
+npm run web
+```
+
+## 📱 Pantallas
+
+### Auth Stack
+- **Login** - Inicio de sesión
+- **Register** - Registro de usuario
+
+### Main Tabs
+- **Home** - Descubrir usuarios (swipe)
+- **Matches** - Ver matches y chats
+- **Profile** - Perfil y configuración
+
+### Modales/Stack
+- **Chat** - Chat individual con match
+- **Preferences** - Configurar géneros favoritos
+
+## 🎨 Diseño
+
+- **Tema oscuro** estilo Netflix
+- **Colores principales:**
+  - Primary: `#E50914` (Rojo CineMatch)
+  - Background: `#141414` (Negro oscuro)
+  - Card: `#1F1F1F` (Gris oscuro)
+  - Text: `#FFFFFF` (Blanco)
+
+## 🔐 Autenticación
+
+La app usa tokens Bearer para autenticación:
+1. Usuario hace login/registro
+2. Laravel devuelve token JWT
+3. Token se guarda en AsyncStorage
+4. Se incluye en todas las peticiones API
+
+## 📝 Notas
+
+- **Swipe**: Usa `react-native-gesture-handler` y `reanimated`
+- **Navegación**: React Navigation v6
+- **Estado global**: Context API para autenticación
+- **Almacenamiento**: AsyncStorage para tokens y datos de usuario
+- **API**: Axios con interceptores para tokens
+
+## 🚧 Próximas Funcionalidades
+
+- [ ] Sistema de suscripciones (Premium)
+- [ ] Chat en tiempo real (WebSockets)
+- [ ] Notificaciones push
+- [ ] Galería de fotos de usuario
+- [ ] Filtros avanzados
+- [ ] Películas vistas y ratings
 
 ## 📄 Licencia
 
-MIT
-
-## 👥 Contribución
-
-Las contribuciones son bienvenidas. Por favor abre un issue primero para discutir los cambios propuestos.
-
-## 📞 Soporte
-
-Para problemas o preguntas, abre un issue en el repositorio.
+Este proyecto es parte de CineMatch - Sistema de matching de cinéfilos.

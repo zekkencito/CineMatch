@@ -3,242 +3,224 @@ import {
   View,
   Text,
   StyleSheet,
+  Alert,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
+  Dimensions,
+  Platform,
 } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
-import Icon from 'react-native-vector-icons/Ionicons';
-import MovieCard from '../components/MovieCard';
-import UserCard from '../components/UserCard';
-import { movieService } from '../services/movieService';
+import { userService } from '../services/userService';
 import { matchService } from '../services/matchService';
+import { mockUsers } from '../utils/mockData';
+import UserCard from '../components/UserCard';
+import colors from '../constants/colors';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
-  const [mode, setMode] = useState('movies'); // 'movies' o 'users'
-  const [cards, setCards] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [cardIndex, setCardIndex] = useState(0);
   const swiperRef = useRef(null);
 
   useEffect(() => {
-    loadCards();
-  }, [mode]);
+    loadUsers();
+  }, []);
 
-  const loadCards = async () => {
-    setLoading(true);
+  const loadUsers = async () => {
     try {
-      let data;
-      if (mode === 'movies') {
-        data = await movieService.getRecommendedMovies();
-      } else {
-        data = await matchService.getPotentialMatches();
+      setLoading(true);
+      // Intentar cargar desde API
+      try {
+        const data = await userService.getUsers();
+        // Filtrar cualquier usuario invalido o undefined
+        const validUsers = (data || []).filter(user => user && user.id && user.name);
+        console.log(`Loaded ${validUsers.length} valid users`);
+        setUsers(validUsers);
+      } catch (apiError) {
+        // Si falla la API, usar datos mock
+        console.log('Using mock data for users');
+        setUsers(mockUsers);
       }
-      setCards(data);
-      setCardIndex(0);
     } catch (error) {
-      Alert.alert('Error', 'No se pudieron cargar las recomendaciones');
-      console.error(error);
+      Alert.alert('Error', 'Failed to load users');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSwipeRight = async (index) => {
+  const handleSwiped = async (cardIndex, direction) => {
+    const swipedUser = users[cardIndex];
+    
+    // Validar que el usuario exista
+    if (!swipedUser || !swipedUser.id) {
+      console.warn('Invalid user at index:', cardIndex);
+      return;
+    }
+    
+    const type = direction === 'right' ? 'like' : 'dislike';
+    
     try {
-      const card = cards[index];
-      if (mode === 'movies') {
-        await movieService.rateMovie(card.id, 5); // Rating alto = like
-      } else {
-        const result = await matchService.likeUser(card.id);
+      // Intentar enviar like a la API
+      try {
+        const result = await matchService.sendLike(swipedUser.id, type);
         if (result.matched) {
           Alert.alert(
-            '¡Match! 🎬',
-            `¡Tienes un nuevo match con ${card.name}!`,
-            [{ text: 'Genial!', onPress: () => {} }]
+            "🎬 Movie Buddy Found!",
+            `You and ${swipedUser.name} share similar movie tastes! Start chatting about films.`,
+            [
+              { text: 'Keep Looking', style: 'cancel' },
+              { text: 'Chat Now', onPress: () => navigation.navigate('Matches') },
+            ]
+          );
+        }
+      } catch (apiError) {
+        console.log('API error during swipe:', apiError);
+        // Modo demo: simular match aleatorio
+        if (direction === 'right' && Math.random() > 0.7) {
+          Alert.alert(
+            "🎬 Movie Buddy Found!",
+            `You and ${swipedUser.name} share similar movie tastes! Start chatting about films.`,
+            [
+              { text: 'Keep Looking', style: 'cancel' },
+              { text: 'Chat Now', onPress: () => navigation.navigate('Matches') },
+            ]
           );
         }
       }
     } catch (error) {
-      console.error('Error al dar like:', error);
+      console.error('Swipe error:', error);
     }
   };
 
-  const handleSwipeLeft = async (index) => {
-    try {
-      const card = cards[index];
-      if (mode === 'movies') {
-        await movieService.rateMovie(card.id, 1); // Rating bajo = dislike
-      } else {
-        await matchService.passUser(card.id);
-      }
-    } catch (error) {
-      console.error('Error al dar pass:', error);
-    }
-  };
-
-  const handleSwipeAll = () => {
+  const handleSwipedAll = () => {
+    console.log('All cards swiped');
     Alert.alert(
-      'Sin más recomendaciones',
-      '¿Quieres recargar?',
+      "🎬 You've seen everyone!",
+      "You've checked out all available film fans nearby. We'll refresh the list for you.",
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Recargar', onPress: loadCards },
+        { 
+          text: 'OK', 
+          onPress: () => {
+            // Recargar usuarios
+            loadUsers();
+          }
+        }
       ]
     );
   };
 
-  const renderCard = (card) => {
-    if (!card) return null;
-    
-    if (mode === 'movies') {
-      return (
-        <MovieCard 
-          movie={card}
-          onPressInfo={() => {
-            // Navegar a detalles de la película
-          }}
-        />
-      );
-    } else {
-      return <UserCard user={card} />;
+  const handleLike = () => {
+    if (swiperRef.current) {
+      swiperRef.current.swipeRight();
+    }
+  };
+
+  const handleDislike = () => {
+    if (swiperRef.current) {
+      swiperRef.current.swipeLeft();
     }
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#E50914" />
-        <Text style={styles.loadingText}>Cargando...</Text>
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (users.length === 0) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.emptyText}>🎬 No more film fans nearby</Text>
+        <Text style={styles.emptySubtext}>Check back later for more people!</Text>
+        <TouchableOpacity style={styles.reloadButton} onPress={loadUsers}>
+          <Text style={styles.reloadButtonText}>Reload</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.logo}>CineMatch</Text>
-        <View style={styles.modeSwitch}>
-          <TouchableOpacity
-            style={[styles.modeButton, mode === 'movies' && styles.modeButtonActive]}
-            onPress={() => setMode('movies')}
-          >
-            <Icon name="film" size={20} color={mode === 'movies' ? '#fff' : '#666'} />
-            <Text style={[styles.modeText, mode === 'movies' && styles.modeTextActive]}>
-              Películas
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modeButton, mode === 'users' && styles.modeButtonActive]}
-            onPress={() => setMode('users')}
-          >
-            <Icon name="people" size={20} color={mode === 'users' ? '#fff' : '#666'} />
-            <Text style={[styles.modeText, mode === 'users' && styles.modeTextActive]}>
-              Personas
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.logo}>🎬 CineMatch</Text>
+        <Text style={styles.subtitle}>Find people who share your film taste</Text>
       </View>
 
-      {/* Swiper */}
       <View style={styles.swiperContainer}>
-        {cards.length > 0 ? (
-          <Swiper
-            ref={swiperRef}
-            cards={cards}
-            renderCard={renderCard}
-            onSwipedRight={handleSwipeRight}
-            onSwipedLeft={handleSwipeLeft}
-            onSwipedAll={handleSwipeAll}
-            cardIndex={cardIndex}
-            backgroundColor="transparent"
-            stackSize={3}
-            stackSeparation={15}
-            overlayLabels={{
-              left: {
-                title: 'NOPE',
-                style: {
-                  label: {
-                    backgroundColor: '#000',
-                    borderColor: '#E50914',
-                    color: '#E50914',
-                    borderWidth: 3,
-                    fontSize: 24,
-                    fontWeight: 'bold',
-                    padding: 10,
-                    borderRadius: 10,
-                  },
-                  wrapper: {
-                    flexDirection: 'column',
-                    alignItems: 'flex-end',
-                    justifyContent: 'flex-start',
-                    marginTop: 30,
-                    marginLeft: -30,
-                  },
+        <Swiper
+          ref={swiperRef}
+          cards={users}
+          renderCard={(user) => {
+            if (!user || !user.id) {
+              return null;
+            }
+            return <UserCard user={user} />;
+          }}
+          onSwiped={(cardIndex) => {}}
+          onSwipedLeft={(cardIndex) => handleSwiped(cardIndex, 'left')}
+          onSwipedRight={(cardIndex) => handleSwiped(cardIndex, 'right')}
+          onSwipedAll={handleSwipedAll}
+          cardIndex={0}
+          backgroundColor={colors.background}
+          stackSize={2}
+          stackScale={10}
+          stackSeparation={15}
+          animateCardOpacity
+          verticalSwipe={false}
+          infinite={false}
+          overlayLabels={{
+            left: {
+              title: 'NO',
+              style: {
+                label: {
+                  backgroundColor: colors.error,
+                  borderColor: colors.error,
+                  color: colors.text,
+                  borderWidth: 1,
+                  fontSize: 24,
+                },
+                wrapper: {
+                  flexDirection: 'column',
+                  alignItems: 'flex-end',
+                  justifyContent: 'flex-start',
+                  marginTop: 30,
+                  marginLeft: -30,
                 },
               },
-              right: {
-                title: 'LIKE',
-                style: {
-                  label: {
-                    backgroundColor: '#000',
-                    borderColor: '#4DED30',
-                    color: '#4DED30',
-                    borderWidth: 3,
-                    fontSize: 24,
-                    fontWeight: 'bold',
-                    padding: 10,
-                    borderRadius: 10,
-                  },
-                  wrapper: {
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    justifyContent: 'flex-start',
-                    marginTop: 30,
-                    marginLeft: 30,
-                  },
+            },
+            right: {
+              title: 'Sí',
+              style: {
+                label: {
+                  backgroundColor: colors.success,
+                  borderColor: colors.success,
+                  color: colors.text,
+                  borderWidth: 1,
+                  fontSize: 24,
+                },
+                wrapper: {
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  justifyContent: 'flex-start',
+                  marginTop: 30,
+                  marginLeft: 30,
                 },
               },
-            }}
-            animateOverlayLabelsOpacity
-            animateCardOpacity
-            swipeBackCard
-          />
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Icon name="film-outline" size={80} color="#ccc" />
-            <Text style={styles.emptyText}>No hay más recomendaciones</Text>
-            <TouchableOpacity style={styles.reloadButton} onPress={loadCards}>
-              <Text style={styles.reloadButtonText}>Recargar</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+            },
+          }}
+        />
       </View>
 
-      {/* Action Buttons */}
       <View style={styles.buttonsContainer}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.passButton]}
-          onPress={() => swiperRef.current?.swipeLeft()}
-        >
-          <Icon name="close" size={30} color="#E50914" />
+        <TouchableOpacity style={styles.dislikeButton} onPress={handleDislike}>
+          <Text style={styles.buttonIcon}>✕</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.infoButton]}
-          onPress={() => {
-            // Mostrar info detallada
-          }}
-        >
-          <Icon name="information-circle" size={25} color="#2196F3" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, styles.likeButton]}
-          onPress={() => swiperRef.current?.swipeRight()}
-        >
-          <Icon name="heart" size={30} color="#4DED30" />
+        <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
+          <Text style={styles.buttonIcon}>♥</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -248,117 +230,91 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
   },
-  loadingContainer: {
+  centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
-  },
-  loadingText: {
-    color: '#fff',
-    marginTop: 10,
-    fontSize: 16,
+    backgroundColor: colors.background,
   },
   header: {
+    padding: 20,
     paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    alignItems: 'center',
   },
   logo: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#E50914',
-    marginBottom: 15,
+    color: colors.text,
   },
-  modeSwitch: {
-    flexDirection: 'row',
-    backgroundColor: '#1a1a1a',
-    borderRadius: 25,
-    padding: 4,
-  },
-  modeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  modeButtonActive: {
-    backgroundColor: '#E50914',
-  },
-  modeText: {
-    color: '#666',
-    marginLeft: 8,
+  subtitle: {
     fontSize: 14,
-    fontWeight: '600',
-  },
-  modeTextActive: {
-    color: '#fff',
+    color: colors.textSecondary,
+    marginTop: 4,
   },
   swiperContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: -50,
   },
   buttonsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
+    gap: 40,
     paddingBottom: 40,
-    gap: 20,
+    paddingTop: 20,
   },
-  actionButton: {
+  dislikeButton: {
     width: 60,
     height: 60,
     borderRadius: 30,
+    backgroundColor: colors.error,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
     elevation: 5,
   },
-  passButton: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#E50914',
-  },
-  infoButton: {
-    backgroundColor: '#fff',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
   likeButton: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#4DED30',
-  },
-  emptyContainer: {
-    alignItems: 'center',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.success,
     justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  buttonIcon: {
+    fontSize: 30,
+    color: colors.text,
+    fontWeight: 'bold',
   },
   emptyText: {
-    color: '#fff',
     fontSize: 18,
-    marginTop: 20,
-    marginBottom: 30,
+    color: colors.textSecondary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 20,
+    textAlign: 'center',
   },
   reloadButton: {
-    backgroundColor: '#E50914',
+    backgroundColor: colors.primary,
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 25,
   },
   reloadButtonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: 'bold',
   },
