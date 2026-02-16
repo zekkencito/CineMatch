@@ -2,29 +2,6 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-/**
- * CONFIGURACIÓN DE LA URL DE LA API
- * 
- * Para conectar con tu servidor Laravel, usa la URL correcta según tu entorno:
- * 
- * 🌐 WEB (navegador):
- *    const API_URL = 'http://localhost:8000/api';
- * 
- * 📱 ANDROID:
- *    - Emulador: const API_URL = 'http://10.0.2.2:8000/api';
- *    - Dispositivo físico: const API_URL = 'http://TU_IP_LOCAL:8000/api';
- *      (Ejemplo: 'http://192.168.1.100:8000/api')
- * 
- * 🍎 iOS:
- *    - Simulador: const API_URL = 'http://localhost:8000/api';
- *    - Dispositivo físico: const API_URL = 'http://TU_IP_LOCAL:8000/api';
- * 
- * 💡 Para encontrar tu IP local:
- *    - Windows: ipconfig (busca "Dirección IPv4")
- *    - Mac/Linux: ifconfig o ip addr
- * 
- * ⚠️ IMPORTANTE: Tu dispositivo y el servidor deben estar en la misma red WiFi
- */
 
 // Configuración automática según la plataforma
 const getApiUrl = () => {

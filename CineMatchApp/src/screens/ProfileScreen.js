@@ -27,7 +27,7 @@ const ProfileScreen = ({ navigation }) => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.7,
@@ -36,12 +36,10 @@ const ProfileScreen = ({ navigation }) => {
       if (!result.canceled && result.assets[0]) {
         setUploadingPhoto(true);
         try {
-          // Aquí se subiría la foto al servidor
-          // Por ahora solo actualizamos localmente
           const photoUri = result.assets[0].uri;
           
-          // TODO: Implementar subida al servidor
-          // await updateUser({ profile_photo: photoUri });
+          // Actualizar el perfil con la nueva foto
+          await updateUser({ profile_photo: photoUri });
           
           Alert.alert('Success', 'Profile photo updated!');
         } catch (error) {

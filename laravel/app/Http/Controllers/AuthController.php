@@ -131,6 +131,7 @@ class AuthController extends Controller
             'name' => 'sometimes|string|max:255',
             'age' => 'sometimes|integer|min:18',
             'bio' => 'sometimes|string|max:500',
+            'profile_photo' => 'sometimes|string|max:500',
             'latitude' => 'sometimes|numeric',
             'longitude' => 'sometimes|numeric',
             'search_radius' => 'sometimes|integer|min:1|max:500',
@@ -144,7 +145,7 @@ class AuthController extends Controller
         }
 
         // Actualizar datos básicos del usuario
-        $user->update($request->only(['name', 'age', 'bio']));
+        $user->update($request->only(['name', 'age', 'bio', 'profile_photo']));
 
         // Actualizar o crear ubicación si se proporcionan datos de ubicación
         if ($request->hasAny(['latitude', 'longitude', 'search_radius'])) {
