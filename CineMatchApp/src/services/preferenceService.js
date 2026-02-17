@@ -258,16 +258,24 @@ export const preferenceService = {
    */
   async syncWatchedMovies(movies) {
     try {
+      console.log('📤 Enviando películas al backend:', movies);
       const response = await api.post('/preferences/movies/sync', {
         movies: movies,
       });
       await saveToLocal(STORAGE_KEYS.movies, movies);
       return response.data;
     } catch (error) {
-      // Fallback a local storage
-      console.log('⚠️ Backend unavailable, syncing movies locally');
-      await saveToLocal(STORAGE_KEYS.movies, movies);
-      return { success: true, saved_locally: true };
+      console.error('❌ Error sincronizando películas:', error.response?.data || error.message);
+      
+      // Si es error de red (no hay backend), guardar localmente
+      if (!error.response || error.response.status >= 500) {
+        console.log('⚠️ Backend unavailable, syncing movies locally');
+        await saveToLocal(STORAGE_KEYS.movies, movies);
+        return { success: true, saved_locally: true };
+      }
+      
+      // Para otros errores (como 422), lanzar el error
+      throw error;
     }
   },
 

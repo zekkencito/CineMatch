@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import locationService from '../services/locationService';
 
-const LocationPicker = ({ onLocationSelected }) => {
+const LocationPicker = ({ onLocationSelected, onLocationChange }) => {
   const [loading, setLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
 
@@ -27,7 +27,8 @@ const LocationPicker = ({ onLocationSelected }) => {
       const location = await locationService.getCurrentLocation();
       
       setSelectedLocation(location);
-      onLocationSelected(location);
+      if (onLocationSelected) onLocationSelected(location);
+      if (onLocationChange) onLocationChange(location);
       
       Alert.alert(
         '✅ Ubicación obtenida',

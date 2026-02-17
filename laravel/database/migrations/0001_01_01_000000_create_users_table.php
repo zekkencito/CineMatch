@@ -18,7 +18,7 @@ return new class extends Migration
         $table->string('password');
         $table->integer('age')->nullable();
         $table->text('bio')->nullable();
-        $table->string('profile_photo')->nullable();
+        $table->mediumText('profile_photo')->nullable();
         $table->timestamps();
     });
 

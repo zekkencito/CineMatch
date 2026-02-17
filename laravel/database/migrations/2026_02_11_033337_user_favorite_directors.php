@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('user_favorite_directors', function (Blueprint $table) {
         $table->foreignId('user_id')->constrained()->onDelete('cascade');
-        $table->foreignId('director_id')->constrained()->onDelete('cascade');
+        $table->integer('director_id'); // TMDB director ID
         $table->primary(['user_id', 'director_id']);
     });
 

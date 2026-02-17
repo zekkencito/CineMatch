@@ -1,27 +1,31 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-
+import Constants from 'expo-constants';
 
 // Configuración automática según la plataforma
 const getApiUrl = () => {
-  // IP local detectada automáticamente
-  const YOUR_LOCAL_IP = '175.17.2.19'; // Tu IP de Wi-Fi
-  
-  if (Platform.OS === 'android') {
-    // Android emulador - usando IP local porque 10.0.2.2 está bloqueado por firewall
-    return __DEV__ 
-      ? `http://${YOUR_LOCAL_IP}:8000/api`  // Emulador con IP local
-      : `http://${YOUR_LOCAL_IP}:8000/api`; // Dispositivo físico
-  } else if (Platform.OS === 'ios') {
-    // iOS simulador puede usar localhost directamente
-    return __DEV__
-      ? 'http://localhost:8000/api'  // Simulador
-      : `http://${YOUR_LOCAL_IP}:8000/api`; // Dispositivo físico
-  } else {
-    // Web
-    return 'http://localhost:8000/api';
+  // 1. Si hay EXPO_PUBLIC_API_URL en .env, úsala (prioridad máxima)
+  const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envApiUrl) {
+    console.log('📌 Usando API_URL desde .env:', envApiUrl);
+    return envApiUrl;
   }
+
+  // 2. Auto-detectar IP del Metro bundler (Expo)
+  const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
+  if (debuggerHost) {
+    const ip = debuggerHost.split(':')[0]; // Extraer solo la IP
+    const autoUrl = `http://${ip}:8000/api`;
+    console.log('🔍 Auto-detectada API_URL:', autoUrl);
+    return autoUrl;
+  }
+
+  // 3. Fallback a configuración manual (cambiar solo si falla auto-detección)
+  const FALLBACK_IP = '192.168.100.12'; // Tu última IP conocida
+  const fallbackUrl = `http://${FALLBACK_IP}:8000/api`;
+  console.log('⚠️ Usando IP fallback:', fallbackUrl);
+  return fallbackUrl;
 };
 
 const API_URL = getApiUrl();

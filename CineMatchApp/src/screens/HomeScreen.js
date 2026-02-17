@@ -8,11 +8,12 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  Animated,
 } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
+import { LinearGradient } from 'expo-linear-gradient';
 import { userService } from '../services/userService';
 import { matchService } from '../services/matchService';
-import { mockUsers } from '../utils/mockData';
 import UserCard from '../components/UserCard';
 import colors from '../constants/colors';
 
@@ -22,28 +23,33 @@ const HomeScreen = ({ navigation }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const swiperRef = useRef(null);
+  
+  // Animaciones para los botones
+  const likeScale = useRef(new Animated.Value(1)).current;
+  const dislikeScale = useRef(new Animated.Value(1)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadUsers();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      // Intentar cargar desde API
-      try {
-        const data = await userService.getUsers();
-        // Filtrar cualquier usuario invalido o undefined
-        const validUsers = (data || []).filter(user => user && user.id && user.name);
-        console.log(`Loaded ${validUsers.length} valid users`);
-        setUsers(validUsers);
-      } catch (apiError) {
-        // Si falla la API, usar datos mock
-        console.log('Using mock data for users');
-        setUsers(mockUsers);
-      }
+      const data = await userService.getUsers();
+      // Filtrar cualquier usuario invalido o undefined
+      const validUsers = (data || []).filter(user => user && user.id && user.name);
+      console.log(`Loaded ${validUsers.length} valid users`);
+      setUsers(validUsers);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load users');
+      console.error('Error loading users:', error);
+      Alert.alert('Error', 'Problema al cargar usuarios. Por favor, revisa tu conexión e inténtalo de nuevo.');
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -54,55 +60,38 @@ const HomeScreen = ({ navigation }) => {
     
     // Validar que el usuario exista
     if (!swipedUser || !swipedUser.id) {
-      console.warn('Invalid user at index:', cardIndex);
+      console.warn('Usuario no válido:', cardIndex);
       return;
     }
     
     const type = direction === 'right' ? 'like' : 'dislike';
     
     try {
-      // Intentar enviar like a la API
-      try {
-        const result = await matchService.sendLike(swipedUser.id, type);
-        if (result.matched) {
-          Alert.alert(
-            "🎬 Movie Buddy Found!",
-            `You and ${swipedUser.name} share similar movie tastes! Start chatting about films.`,
-            [
-              { text: 'Keep Looking', style: 'cancel' },
-              { text: 'Chat Now', onPress: () => navigation.navigate('Matches') },
-            ]
-          );
-        }
-      } catch (apiError) {
-        console.log('API error during swipe:', apiError);
-        // Modo demo: simular match aleatorio
-        if (direction === 'right' && Math.random() > 0.7) {
-          Alert.alert(
-            "🎬 Movie Buddy Found!",
-            `You and ${swipedUser.name} share similar movie tastes! Start chatting about films.`,
-            [
-              { text: 'Keep Looking', style: 'cancel' },
-              { text: 'Chat Now', onPress: () => navigation.navigate('Matches') },
-            ]
-          );
-        }
+      const result = await matchService.sendLike(swipedUser.id, type);
+      if (result.matched) {
+        Alert.alert(
+          "🎬 Encontramos un compañero de películas!",
+          `¡${swipedUser.name} y tú tienen gustos similares! Pueden comenzar a chatear.`,
+          [
+            { text: 'Seguir buscando', style: 'cancel' },
+            { text: 'Chatear ahora', onPress: () => navigation.navigate('Matches') },
+          ]
+        );
       }
     } catch (error) {
-      console.error('Swipe error:', error);
+      console.error('Error sending like:', error);
     }
   };
 
   const handleSwipedAll = () => {
-    console.log('All cards swiped');
+    console.log('Todos los usuarios han sido vistos');
     Alert.alert(
-      "🎬 You've seen everyone!",
-      "You've checked out all available film fans nearby. We'll refresh the list for you.",
+      "🎬 Viste a todos",
+      "Ya viste a todos los usuarios disponibles. Actualizaremos la lista por ti.",
       [
         { 
           text: 'OK', 
           onPress: () => {
-            // Recargar usuarios
             loadUsers();
           }
         }
@@ -110,13 +99,31 @@ const HomeScreen = ({ navigation }) => {
     );
   };
 
+  const animateButton = (buttonAnim) => {
+    Animated.sequence([
+      Animated.timing(buttonAnim, {
+        toValue: 0.85,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.spring(buttonAnim, {
+        toValue: 1,
+        friction: 3,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const handleLike = () => {
+    animateButton(likeScale);
     if (swiperRef.current) {
       swiperRef.current.swipeRight();
     }
   };
 
   const handleDislike = () => {
+    animateButton(dislikeScale);
     if (swiperRef.current) {
       swiperRef.current.swipeLeft();
     }
@@ -124,30 +131,53 @@ const HomeScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <LinearGradient
+        colors={[colors.secondary, colors.secondaryLight]}
+        style={styles.centerContainer}
+      >
+        <View style={styles.loadingBox}>
+          <Text style={styles.loadingEmoji}>🎬</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Finding your matches...</Text>
+        </View>
+      </LinearGradient>
     );
   }
 
   if (users.length === 0) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>🎬 No more film fans nearby</Text>
-        <Text style={styles.emptySubtext}>Check back later for more people!</Text>
-        <TouchableOpacity style={styles.reloadButton} onPress={loadUsers}>
-          <Text style={styles.reloadButtonText}>Reload</Text>
-        </TouchableOpacity>
-      </View>
+      <LinearGradient
+        colors={[colors.secondary, colors.secondaryLight]}
+        style={styles.centerContainer}
+      >
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyEmoji}>🎭</Text>
+          <Text style={styles.emptyText}>No hay más amigos palomeros cerca</Text>
+          <Text style={styles.emptySubtext}>Vuelve a revisar más tarde para encontrar más amantes del cine!</Text>
+          <TouchableOpacity 
+            style={styles.reloadButton} 
+            onPress={loadUsers}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.reloadButtonText}>Recargar ↻</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.logo}>🎬 CineMatch</Text>
-        <Text style={styles.subtitle}>Find people who share your film taste</Text>
-      </View>
+    <LinearGradient
+      colors={[colors.secondary, colors.secondaryLight]}
+      style={styles.container}
+    >
+      <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
+        <View style={styles.logoBox}>
+          <Text style={styles.logoEmoji}>🎬</Text>
+        </View>
+        <Text style={styles.logo}>CineMatch</Text>
+        <Text style={styles.subtitle}>Swipe to find your movie soulmate</Text>
+      </Animated.View>
 
       <View style={styles.swiperContainer}>
         <Swiper
@@ -164,48 +194,54 @@ const HomeScreen = ({ navigation }) => {
           onSwipedRight={(cardIndex) => handleSwiped(cardIndex, 'right')}
           onSwipedAll={handleSwipedAll}
           cardIndex={0}
-          backgroundColor={colors.background}
-          stackSize={2}
-          stackScale={10}
-          stackSeparation={15}
+          backgroundColor="transparent"
+          stackSize={3}
+          stackScale={5}
+          stackSeparation={14}
           animateCardOpacity
           verticalSwipe={false}
           infinite={false}
           overlayLabels={{
             left: {
-              title: 'NO',
+              title: 'PASS',
               style: {
                 label: {
-                  backgroundColor: colors.error,
-                  borderColor: colors.error,
-                  color: colors.text,
-                  borderWidth: 1,
-                  fontSize: 24,
+                  backgroundColor: colors.textDark,
+                  borderColor: colors.textDark,
+                  color: colors.accent,
+                  borderWidth: 2,
+                  fontSize: 28,
+                  fontWeight: 'bold',
+                  borderRadius: 12,
+                  padding: 12,
                 },
                 wrapper: {
                   flexDirection: 'column',
                   alignItems: 'flex-end',
                   justifyContent: 'flex-start',
-                  marginTop: 30,
+                  marginTop: 50,
                   marginLeft: -30,
                 },
               },
             },
             right: {
-              title: 'Sí',
+              title: 'MATCH',
               style: {
                 label: {
-                  backgroundColor: colors.success,
-                  borderColor: colors.success,
-                  color: colors.text,
-                  borderWidth: 1,
-                  fontSize: 24,
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primary,
+                  color: colors.textDark,
+                  borderWidth: 2,
+                  fontSize: 28,
+                  fontWeight: 'bold',
+                  borderRadius: 12,
+                  padding: 12,
                 },
                 wrapper: {
                   flexDirection: 'column',
                   alignItems: 'flex-start',
                   justifyContent: 'flex-start',
-                  marginTop: 30,
+                  marginTop: 50,
                   marginLeft: 30,
                 },
               },
@@ -215,107 +251,164 @@ const HomeScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.buttonsContainer}>
-        <TouchableOpacity style={styles.dislikeButton} onPress={handleDislike}>
-          <Text style={styles.buttonIcon}>✕</Text>
-        </TouchableOpacity>
+        <Animated.View style={{ transform: [{ scale: dislikeScale }] }}>
+          <TouchableOpacity 
+            style={styles.dislikeButton} 
+            onPress={handleDislike}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.buttonIcon}>✕</Text>
+          </TouchableOpacity>
+        </Animated.View>
 
-        <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
-          <Text style={styles.buttonIcon}>♥</Text>
-        </TouchableOpacity>
+        <Animated.View style={{ transform: [{ scale: likeScale }] }}>
+          <TouchableOpacity 
+            style={styles.likeButton} 
+            onPress={handleLike}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.buttonIcon}>★</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
   },
-  header: {
-    padding: 20,
-    paddingTop: 50,
+  loadingBox: {
     alignItems: 'center',
+    gap: 16,
   },
-  logo: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text,
+  loadingEmoji: {
+    fontSize: 64,
   },
-  subtitle: {
-    fontSize: 14,
+  loadingText: {
+    fontSize: 16,
     color: colors.textSecondary,
-    marginTop: 4,
+    marginTop: 8,
   },
-  swiperContainer: {
-    flex: 1,
-    marginTop: -50,
-  },
-  buttonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 40,
-    paddingBottom: 40,
-    paddingTop: 20,
-  },
-  dislikeButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.error,
-    justifyContent: 'center',
+  emptyContainer: {
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    paddingHorizontal: 40,
   },
-  likeButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.success,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  buttonIcon: {
-    fontSize: 30,
-    color: colors.text,
-    fontWeight: 'bold',
+  emptyEmoji: {
+    fontSize: 80,
+    marginBottom: 24,
   },
   emptyText: {
-    fontSize: 18,
-    color: colors.textSecondary,
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.primary,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textSecondary,
-    marginBottom: 20,
+    marginBottom: 32,
     textAlign: 'center',
   },
   reloadButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 24,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   reloadButtonText: {
-    color: colors.text,
-    fontSize: 16,
+    color: colors.textDark,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 20,
+    alignItems: 'center',
+    gap: 8,
+  },
+  logoBox: {
+    width: 56,
+    height: 56,
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  logoEmoji: {
+    fontSize: 32,
+  },
+  logo: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: colors.primary,
+    letterSpacing: 1,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+  },
+  swiperContainer: {
+    flex: 1,
+  },
+  buttonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 50,
+    paddingBottom: 40,
+    paddingTop: 20,
+  },
+  dislikeButton: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 3,
+    borderColor: colors.textDark,
+  },
+  likeButton: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 3,
+    borderColor: colors.textDark,
+  },
+  buttonIcon: {
+    fontSize: 34,
+    color: colors.textDark,
     fontWeight: 'bold',
   },
 });

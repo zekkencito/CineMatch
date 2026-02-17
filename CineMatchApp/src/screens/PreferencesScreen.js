@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,14 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Animated,
+  Platform,
+  Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Slider from '@react-native-community/slider';
+import MapView, { Circle, Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
 import colors from '../constants/colors';
 import tmdbMovieService from '../services/tmdbMovieService';
 import preferenceService from '../services/preferenceService';
@@ -38,12 +44,54 @@ const PreferencesScreen = ({ navigation, route }) => {
   const [watchedMovies, setWatchedMovies] = useState([]);
   const [searchingMovies, setSearchingMovies] = useState(false);
   
-  // Radio de búsqueda
+  // Radio de búsqueda y ubicación
   const [searchRadius, setSearchRadius] = useState(50);
+  const [userLocation, setUserLocation] = useState(null);
+  const [updatingLocation, setUpdatingLocation] = useState(false);
+  const mapRef = useRef(null);
+  
+  // Animaciones
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     loadPreferences();
+    
+    // Animar entrada
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
+
+  // Actualizar región del mapa cuando cambie el radio o la ubicación
+  useEffect(() => {
+    if (mapRef.current && userLocation && searchRadius > 0) {
+      try {
+        // Calcular delta con límites seguros (mínimo 0.01, máximo 10)
+        const delta = Math.max(0.01, Math.min(10, searchRadius / 111));
+        
+        const region = {
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          latitudeDelta: delta,
+          longitudeDelta: delta,
+        };
+        
+        mapRef.current.animateToRegion(region, 500);
+      } catch (error) {
+        console.error('Error animando el mapa de la región:', error);
+      }
+    }
+  }, [searchRadius, userLocation]);
 
   const loadPreferences = async () => {
     try {
@@ -51,6 +99,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       
       // Cargar géneros de TMDB
       const genres = await tmdbMovieService.getGenres();
+      console.log(`📚 Géneros cargados: ${genres.length}`, genres.map(g => g.name).join(', '));
       setAllGenres(genres);
       
       // Si no es setup inicial, cargar preferencias guardadas
@@ -65,13 +114,94 @@ const PreferencesScreen = ({ navigation, route }) => {
         setSelectedGenres(favGenres.map(g => g.id));
         setSelectedDirectors(favDirectors);
         setWatchedMovies(watched);
-        setSearchRadius(location?.radius || 50);
+        // Soportar tanto 'radius' como 'search_radius' del backend
+        setSearchRadius(location?.radius || location?.search_radius || 50);
+        
+        // Guardar ubicación para el mapa
+        if (location?.latitude && location?.longitude) {
+          const lat = parseFloat(location.latitude);
+          const lng = parseFloat(location.longitude);
+          
+          // Validar que sean coordenadas válidas
+          if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            setUserLocation({
+              latitude: lat,
+              longitude: lng,
+              city: location.city || '',
+              country: location.country || '',
+            });
+          } else {
+            console.warn('Coordenadas inválidas:', location.latitude, location.longitude);
+          }
+        }
       }
     } catch (error) {
-      console.error('Error loading preferences:', error);
+      console.error('Error cargando preferencias:', error);
       Alert.alert('Error', 'No se pudieron cargar las preferencias');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Actualizar ubicación desde GPS
+  const updateLocationFromGPS = async () => {
+    try {
+      setUpdatingLocation(true);
+      
+      // Solicitar permisos de ubicación
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permisos denegados',
+          'Se necesitan permisos de ubicación para actualizar tu posición'
+        );
+        return;
+      }
+
+      // Obtener ubicación actual
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const { latitude, longitude } = location.coords;
+
+      // Obtener ciudad y país usando geocoding inverso
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+
+      const city = geocode[0]?.city || geocode[0]?.subregion || '';
+      const country = geocode[0]?.country || '';
+
+      // Actualizar estado local
+      setUserLocation({
+        latitude,
+        longitude,
+        city,
+        country,
+      });
+
+      // Guardar al backend
+      try {
+        await preferenceService.updateLocation({
+          latitude,
+          longitude,
+          city,
+          country,
+        });
+        
+        Alert.alert('✓ Ubicación actualizada', `${city}, ${country}`);
+      } catch (error) {
+        console.error('Error guardando ubicación:', error);
+        Alert.alert('Advertencia', 'Ubicación actualizada localmente pero no se pudo guardar en el servidor');
+      }
+    } catch (error) {
+      console.error('Error obteniendo ubicación:', error);
+      Alert.alert('Error', 'No se pudo obtener tu ubicación. Verifica que el GPS esté activado.');
+    } finally {
+      setUpdatingLocation(false);
     }
   };
 
@@ -87,7 +217,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       const results = await tmdbMovieService.searchDirectors(query);
       setDirectorResults(results);
     } catch (error) {
-      console.error('Error searching directors:', error);
+      console.error('Error encontrando directores:', error);
     } finally {
       setSearchingDirectors(false);
     }
@@ -106,7 +236,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       // searchMovies retorna { movies: [...], total_pages, total_results }
       setMovieResults(results.movies || []);
     } catch (error) {
-      console.error('Error searching movies:', error);
+      console.error('Error buscando películas:', error);
     } finally {
       setSearchingMovies(false);
     }
@@ -180,17 +310,21 @@ const PreferencesScreen = ({ navigation, route }) => {
     try {
       setSaving(true);
       
-      // Preparar datos para enviar al backend (solo id y title)
-      const moviesToSync = watchedMovies.map(m => ({
-        id: m.id,
-        title: m.title,
-        rating: m.rating || null,
-      }));
+      // Preparar datos para enviar al backend (solo id y title válidos)
+      const moviesToSync = watchedMovies
+        .filter(m => m.id && m.title) // Filtrar películas sin id o title
+        .map(m => ({
+          id: parseInt(m.id), // Asegurar que id sea número
+          title: String(m.title).substring(0, 200), // Truncar a 200 caracteres
+          rating: m.rating ? parseInt(m.rating) : null,
+        }));
       
       const directorsToSync = selectedDirectors.map(d => ({
         id: d.id,
         name: d.name,
       }));
+      
+      console.log('🎬 Sincronizando películas:', moviesToSync.length, 'películas');
       
       // Guardar todo usando sync (más eficiente)
       await Promise.all([
@@ -216,7 +350,17 @@ const PreferencesScreen = ({ navigation, route }) => {
       );
     } catch (error) {
       console.error('Error saving preferences:', error);
-      Alert.alert('Error', 'No se pudieron guardar las preferencias');
+      console.error('Error response:', error.response?.data);
+      
+      let errorMessage = 'No se pudieron guardar las preferencias';
+      
+      if (error.response?.status === 422) {
+        errorMessage = 'Error de validación: ' + 
+          (error.response.data?.message || 'Verifica que todos los campos sean correctos');
+        console.error('Validation errors:', error.response.data?.errors);
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setSaving(false);
     }
@@ -229,6 +373,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'genres' && styles.activeTab]}
         onPress={() => setActiveTab('genres')}
       >
+        <Text style={styles.tabEmoji}>🎭</Text>
         <Text style={[styles.tabText, activeTab === 'genres' && styles.activeTabText]}>
           Géneros
         </Text>
@@ -238,6 +383,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'directors' && styles.activeTab]}
         onPress={() => setActiveTab('directors')}
       >
+        <Text style={styles.tabEmoji}>🎬</Text>
         <Text style={[styles.tabText, activeTab === 'directors' && styles.activeTabText]}>
           Directores
         </Text>
@@ -247,6 +393,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'movies' && styles.activeTab]}
         onPress={() => setActiveTab('movies')}
       >
+        <Text style={styles.tabEmoji}>🍿</Text>
         <Text style={[styles.tabText, activeTab === 'movies' && styles.activeTabText]}>
           Películas
         </Text>
@@ -256,8 +403,9 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'radius' && styles.activeTab]}
         onPress={() => setActiveTab('radius')}
       >
+        <Text style={styles.tabEmoji}>📍</Text>
         <Text style={[styles.tabText, activeTab === 'radius' && styles.activeTabText]}>
-          Radio
+          Distancia
         </Text>
       </TouchableOpacity>
     </View>
@@ -448,72 +596,221 @@ const PreferencesScreen = ({ navigation, route }) => {
   );
 
   // Renderizar radio
-  const renderRadius = () => (
-    <View style={styles.tabContent}>
-      <Text style={styles.sectionTitle}>Radio de búsqueda</Text>
-      <Text style={styles.sectionSubtitle}>
-        Define qué tan lejos quieres buscar personas
-      </Text>
-      
-      <View style={styles.radiusContainer}>
-        <Text style={styles.radiusValue}>{searchRadius} km</Text>
+  const renderRadius = () => {
+    const getRadiusCategory = () => {
+      if (searchRadius <= 10) return { emoji: '🏠', text: 'Muy cerca', desc: 'Solo tu vecindario' };
+      if (searchRadius <= 20) return { emoji: '🚶', text: 'Cerca', desc: 'Tu ciudad' };
+      if (searchRadius <= 35) return { emoji: '🚗', text: 'Normal', desc: 'Área urbana' };
+      return { emoji: '🚄', text: 'Lejos', desc: 'Ciudades cercanas' };
+    };
+    
+    const category = getRadiusCategory();
+    
+    return (
+      <View style={styles.tabContent}>
+        <Text style={styles.sectionTitle}>Distancia de búsqueda</Text>
+        <Text style={styles.sectionSubtitle}>
+          El área amarilla muestra hasta dónde buscarás movie buddies
+        </Text>
         
-        <Slider
-          style={styles.slider}
-          minimumValue={5}
-          maximumValue={500}
-          step={5}
-          value={searchRadius}
-          onValueChange={setSearchRadius}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbTintColor={colors.primary}
-        />
+        {userLocation ? (
+          <View style={styles.mapContainer}>
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              initialRegion={{
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+                latitudeDelta: Math.max(0.01, Math.min(10, searchRadius / 111)),
+                longitudeDelta: Math.max(0.01, Math.min(10, searchRadius / 111)),
+              }}
+              mapType="standard"
+              showsUserLocation={false}
+              showsMyLocationButton={false}
+              zoomEnabled={true}
+              scrollEnabled={true}
+            >
+              {/* Marcador de ubicación del usuario */}
+              <Marker
+                coordinate={{
+                  latitude: userLocation.latitude,
+                  longitude: userLocation.longitude,
+                }}
+                title="Tu ubicación"
+                description={`${userLocation.city || ''}, ${userLocation.country || ''}`}
+              >
+                <View style={styles.markerContainer}>
+                  <Text style={styles.markerEmoji}>📍</Text>
+                </View>
+              </Marker>
+              
+              {/* Círculo del radio de búsqueda */}
+              <Circle
+                center={{
+                  latitude: userLocation.latitude,
+                  longitude: userLocation.longitude,
+                }}
+                radius={searchRadius * 1000} // Convertir km a metros
+                fillColor="rgba(255, 215, 0, 0.2)" // Amarillo con transparencia
+                strokeColor={colors.primary}
+                strokeWidth={3}
+              />
+            </MapView>
+            
+            {/* Indicador de distancia sobre el mapa */}
+            <View style={styles.mapOverlay}>
+              <View style={styles.mapBadge}>
+                <Text style={styles.mapBadgeEmoji}>{category.emoji}</Text>
+                <Text style={styles.mapBadgeText}>{searchRadius} km</Text>
+              </View>
+              
+              {/* Botón para actualizar ubicación GPS */}
+              <TouchableOpacity
+                style={styles.gpsButton}
+                onPress={updateLocationFromGPS}
+                disabled={updatingLocation}
+              >
+                {updatingLocation ? (
+                  <ActivityIndicator color={colors.primary} size="small" />
+                ) : (
+                  <Text style={styles.gpsButtonText}>📍 Actualizar GPS</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.noLocationBox}>
+            <Text style={styles.noLocationEmoji}>📍</Text>
+            <Text style={styles.noLocationText}>No se ha detectado tu ubicación</Text>
+            <Text style={styles.noLocationSubtext}>
+              Asegúrate de haber dado permisos de ubicación al registrarte
+            </Text>
+            
+            {/* Botón para obtener ubicación */}
+            <TouchableOpacity
+              style={styles.updateLocationButton}
+              onPress={updateLocationFromGPS}
+              disabled={updatingLocation}
+            >
+              {updatingLocation ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <>
+                  <Text style={styles.updateLocationButtonText}>Obtener Ubicación</Text>
+                  <Text style={styles.updateLocationButtonEmoji}>🌍</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
         
-        <View style={styles.radiusLabels}>
-          <Text style={styles.radiusLabel}>5 km (cerca)</Text>
-          <Text style={styles.radiusLabel}>500 km (lejos)</Text>
+        <View style={styles.radiusControlBox}>
+          <Text style={styles.radiusControlLabel}>Ajusta tu radio de búsqueda</Text>
+          
+          <Slider
+            style={styles.slider}
+            minimumValue={5}
+            maximumValue={50}
+            step={5}
+            value={searchRadius}
+            onValueChange={setSearchRadius}
+            minimumTrackTintColor={colors.primary}
+            maximumTrackTintColor={colors.border}
+            thumbTintColor={colors.primary}
+          />
+          
+          <View style={styles.radiusLabels}>
+            <Text style={styles.radiusLabel}>5 km</Text>
+            <Text style={styles.radiusLabel}>25 km</Text>
+            <Text style={styles.radiusLabel}>50 km</Text>
+          </View>
+          
+          <View style={styles.radiusCategoryBanner}>
+            <Text style={styles.radiusCategoryEmoji}>{category.emoji}</Text>
+            <View>
+              <Text style={styles.radiusCategoryTitle}>{category.text}</Text>
+              <Text style={styles.radiusCategoryDesc}>{category.desc}</Text>
+            </View>
+          </View>
+        </View>
+        
+        <View style={styles.radiusInfoCard}>
+          <View style={styles.radiusInfoHeader}>
+            <Text style={styles.radiusInfoIcon}>💡</Text>
+            <Text style={styles.radiusInfoTitle}>Mapa gratuito sin límites</Text>
+          </View>
+          <Text style={styles.radiusInfoText}>
+            El área amarilla en el mapa muestra exactamente hasta dónde buscaremos personas que compartan tus gustos.
+          </Text>
+          <Text style={styles.radiusInfoSubtext}>
+            ✓ Mapa basado en OpenStreetMap (gratis)
+            {"\n"}✓ Sin límite de uso
+            {"\n"}✓ Cálculos de distancia precisos
+            {"\n"}✓ Tu privacidad está protegida
+          </Text>
         </View>
       </View>
-      
-      <View style={styles.radiusInfo}>
-        <Text style={styles.radiusInfoText}>
-          ℹ️ Buscaremos personas dentro de {searchRadius}km de tu ubicación actual que tengan gustos similares en películas.
-        </Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <LinearGradient
+        colors={[colors.secondary, colors.secondaryLight]}
+        style={styles.loadingContainer}
+      >
+        <Text style={styles.loadingEmoji}>🎬</Text>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Cargando preferencias...</Text>
-      </View>
+      </LinearGradient>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {isInitialSetup ? 'Configura tus preferencias' : 'Mis Preferencias'}
-        </Text>
-        <Text style={styles.headerSubtitle}>
-          {isInitialSetup 
-            ? 'Para encontrar mejores movie buddies' 
-            : 'Edita tus gustos de películas'}
-        </Text>
-      </View>
+      <LinearGradient
+        colors={[colors.secondary, colors.secondaryLight]}
+        style={styles.headerGradient}
+      >
+        <Animated.View 
+          style={[
+            styles.header,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          <View style={styles.headerIconBox}>
+            <Text style={styles.headerIcon}>⚙️</Text>
+          </View>
+          <Text style={styles.headerTitle}>
+            {isInitialSetup ? 'Configura tus preferencias' : 'Mis Preferencias'}
+          </Text>
+          <Text style={styles.headerSubtitle}>
+            {isInitialSetup 
+              ? 'Para encontrar mejores movie buddies' 
+              : 'Edita tus gustos de películas'}
+          </Text>
+        </Animated.View>
+      </LinearGradient>
 
       {renderTabs()}
 
-      <ScrollView style={styles.scrollView}>
-        {activeTab === 'genres' && renderGenres()}
-        {activeTab === 'directors' && renderDirectors()}
-        {activeTab === 'movies' && renderMovies()}
-        {activeTab === 'radius' && renderRadius()}
-      </ScrollView>
+      <LinearGradient
+        colors={[colors.secondary, colors.secondaryLight]}
+        style={styles.scrollViewGradient}
+      >
+        <ScrollView 
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+        >
+          {activeTab === 'genres' && renderGenres()}
+          {activeTab === 'directors' && renderDirectors()}
+          {activeTab === 'movies' && renderMovies()}
+          {activeTab === 'radius' && renderRadius()}
+        </ScrollView>
+      </LinearGradient>
 
       <View style={styles.footer}>
         <TouchableOpacity
@@ -522,11 +819,14 @@ const PreferencesScreen = ({ navigation, route }) => {
           disabled={saving}
         >
           {saving ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.textDark} />
           ) : (
-            <Text style={styles.saveButtonText}>
-              {isInitialSetup ? 'Continuar' : 'Guardar cambios'}
-            </Text>
+            <>
+              <Text style={styles.saveButtonText}>
+                {isInitialSetup ? 'Continuar' : 'Guardar cambios'}
+              </Text>
+              <Text style={styles.saveButtonIcon}>→</Text>
+            </>
           )}
         </TouchableOpacity>
       </View>
@@ -537,57 +837,93 @@ const PreferencesScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.secondary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+  },
+  loadingEmoji: {
+    fontSize: 80,
+    marginBottom: 20,
   },
   loadingText: {
     marginTop: 15,
     color: colors.textSecondary,
     fontSize: 16,
   },
+  headerGradient: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+  },
   header: {
     padding: 20,
-    paddingTop: 60,
-    backgroundColor: colors.card,
+    paddingTop: 0,
+    alignItems: 'center',
+  },
+  headerIconBox: {
+    width: 64,
+    height: 64,
+    backgroundColor: colors.primary,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  headerIcon: {
+    fontSize: 32,
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 5,
+    fontWeight: '900',
+    color: colors.primary,
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   headerSubtitle: {
     fontSize: 15,
     color: colors.textSecondary,
+    textAlign: 'center',
   },
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    shadowColor: colors.textDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   tab: {
     flex: 1,
-    paddingVertical: 15,
+    paddingVertical: 14,
     alignItems: 'center',
+    gap: 6,
   },
   activeTab: {
     borderBottomWidth: 3,
     borderBottomColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+  },
+  tabEmoji: {
+    fontSize: 20,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   activeTabText: {
     color: colors.primary,
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+  scrollViewGradient: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,
@@ -596,15 +932,17 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 5,
+    fontSize: 24,
+    fontWeight: '900',
+    color: colors.primary,
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   sectionSubtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textSecondary,
-    marginBottom: 20,
+    marginBottom: 24,
+    lineHeight: 22,
   },
   genreGrid: {
     flexDirection: 'row',
@@ -612,9 +950,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   genreChip: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 25,
+    borderRadius: 20,
     backgroundColor: colors.card,
     borderWidth: 2,
     borderColor: colors.border,
@@ -622,15 +960,20 @@ const styles = StyleSheet.create({
   genreChipSelected: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   genreChipText: {
     fontSize: 15,
     color: colors.text,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   genreChipTextSelected: {
-    color: '#fff',
-    fontWeight: '700',
+    color: colors.textDark,
+    fontWeight: '800',
   },
   searchContainer: {
     position: 'relative',
@@ -638,11 +981,11 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     backgroundColor: colors.card,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     fontSize: 16,
     color: colors.text,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
     paddingRight: 50,
   },
@@ -653,10 +996,11 @@ const styles = StyleSheet.create({
   },
   resultsContainer: {
     backgroundColor: colors.card,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 20,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
+    overflow: 'hidden',
   },
   resultItem: {
     flexDirection: 'row',
@@ -677,6 +1021,8 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     backgroundColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
   directorPhotoPlaceholder: {
     width: 50,
@@ -687,22 +1033,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   directorInitials: {
-    color: '#fff',
+    color: colors.textDark,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '900',
   },
   moviePoster: {
     width: 60,
     height: 90,
     borderRadius: 8,
     backgroundColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
   moviePosterPlaceholder: {
     width: 60,
     height: 90,
     borderRadius: 8,
     backgroundColor: colors.card,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
@@ -714,6 +1062,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
     flex: 1,
+    fontWeight: '600',
   },
   movieResultInfo: {
     flex: 1,
@@ -726,12 +1075,12 @@ const styles = StyleSheet.create({
   addButton: {
     fontSize: 16,
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   listTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary,
     marginTop: 10,
     marginBottom: 10,
   },
@@ -740,6 +1089,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     paddingVertical: 30,
+    fontStyle: 'italic',
   },
   selectedList: {
     gap: 10,
@@ -751,13 +1101,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     padding: 15,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
   },
   selectedItemText: {
     fontSize: 16,
     color: colors.text,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   movieYearSmall: {
     fontSize: 13,
@@ -765,20 +1115,146 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   removeButton: {
-    fontSize: 22,
-    color: colors.primary,
-    fontWeight: '600',
+    fontSize: 24,
+    color: colors.accent,
+    fontWeight: '700',
     paddingHorizontal: 10,
   },
-  radiusContainer: {
-    marginTop: 20,
+  mapContainer: {
+    height: 400,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 24,
+    borderWidth: 3,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  radiusValue: {
-    fontSize: 48,
-    fontWeight: 'bold',
+  map: {
+    width: '100%',
+    height: '100%',
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    gap: 12,
+  },
+  mapBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 8,
+    shadowColor: colors.textDark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  mapBadgeEmoji: {
+    fontSize: 24,
+  },
+  mapBadgeText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: colors.textDark,
+    letterSpacing: 0.5,
+  },
+  gpsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    shadowColor: colors.textDark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+    minHeight: 44,
+  },
+  gpsButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.primary,
+  },
+  markerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  markerEmoji: {
+    fontSize: 40,
+  },
+  noLocationBox: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  noLocationEmoji: {
+    fontSize: 60,
+    marginBottom: 16,
+  },
+  noLocationText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 8,
     textAlign: 'center',
+  },
+  noLocationSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
     marginBottom: 20,
+  },
+  updateLocationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 10,
+    minHeight: 50,
+  },
+  updateLocationButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textDark,
+  },
+  updateLocationButtonEmoji: {
+    fontSize: 20,
+  },
+  radiusControlBox: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  radiusControlLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   slider: {
     width: '100%',
@@ -787,43 +1263,112 @@ const styles = StyleSheet.create({
   radiusLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 8,
+    paddingHorizontal: 4,
+    marginBottom: 16,
   },
   radiusLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
+    fontWeight: '600',
   },
-  radiusInfo: {
-    backgroundColor: colors.card,
-    padding: 15,
+  radiusCategoryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    padding: 16,
     borderRadius: 12,
-    marginTop: 30,
-    borderWidth: 1,
-    borderColor: colors.border,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
-  radiusInfoText: {
+  radiusCategoryEmoji: {
+    fontSize: 36,
+  },
+  radiusCategoryTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.primary,
+    marginBottom: 2,
+  },
+  radiusCategoryDesc: {
     fontSize: 14,
     color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  radiusInfoCard: {
+    backgroundColor: colors.card,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  radiusInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  radiusInfoIcon: {
+    fontSize: 24,
+  },
+  radiusInfoTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  radiusInfoText: {
+    fontSize: 15,
+    color: colors.text,
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  radiusInfoBold: {
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  radiusInfoSubtext: {
+    fontSize: 13,
+    color: colors.textSecondary,
     lineHeight: 20,
+    marginTop: 8,
+    paddingLeft: 8,
   },
   footer: {
     padding: 20,
     backgroundColor: colors.card,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    shadowColor: colors.textDark,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 8,
   },
   saveButton: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 18,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   saveButtonDisabled: {
     opacity: 0.6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: colors.textDark,
     fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  saveButtonIcon: {
+    fontSize: 24,
+    color: colors.textDark,
     fontWeight: 'bold',
   },
 });

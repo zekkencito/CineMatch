@@ -19,13 +19,25 @@ export const authService = {
   // Login
   async login(email, password) {
     try {
+      console.log('📤 Login attempt:', { email, password: '***' });
       const response = await api.post('/login', { email, password });
+      console.log('✅ Login response:', { 
+        status: response.status, 
+        hasToken: !!response.data.token,
+        hasUser: !!response.data.user 
+      });
+      
       if (response.data.token) {
         await storage.saveToken(response.data.token);
         await storage.saveUser(response.data.user);
       }
       return response.data;
     } catch (error) {
+      console.error('❌ Login error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       throw error.response?.data || error;
     }
   },
