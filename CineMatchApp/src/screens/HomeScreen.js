@@ -9,6 +9,7 @@ import {
   Dimensions,
   Platform,
   Animated,
+  Image,
 } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
 import { LinearGradient } from 'expo-linear-gradient';
