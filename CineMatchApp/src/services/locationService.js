@@ -1,15 +1,7 @@
-/**
- * 🗺️ Servicio de Ubicación GPS (Solo Expo Location)
- * Obtiene ubicación directamente del dispositivo sin APIs externas
- */
-
 import * as Location from 'expo-location';
 
 export const locationService = {
-  /**
-   * Solicitar permisos de ubicación
-   * @returns {Promise<boolean>} true si se otorgaron permisos
-   */
+
   async requestLocationPermission() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -20,10 +12,6 @@ export const locationService = {
     }
   },
 
-  /**
-   * Obtener ubicación actual del dispositivo (GPS)
-   * @returns {Promise<Object>} { latitude, longitude, city, country }
-   */
   async getCurrentLocation() {
     try {
       // Solicitar permisos primero

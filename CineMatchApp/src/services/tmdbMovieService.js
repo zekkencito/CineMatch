@@ -1,11 +1,3 @@
-/**
- * 🎬 Servicio de Películas - Integración TMDB + Laravel
- * 
- * Este servicio maneja:
- * 1. Datos de películas desde TMDB (The Movie Database)
- * 2. Preferencias de usuario en Laravel
- */
-
 import api from '../config/api';
 import axios from 'axios';
 import {
@@ -16,9 +8,6 @@ import {
   IMAGE_SIZES,
 } from '../config/tmdb';
 
-// ============================================
-// 🌐 TMDB API - Obtener datos de películas
-// ============================================
 
 export const tmdbService = {
   /**
@@ -36,11 +25,6 @@ export const tmdbService = {
     }
   },
 
-  /**
-   * Buscar películas en TMDB
-   * @param {string} query - Término de búsqueda
-   * @param {number} page - Página de resultados
-   */
   async searchMovies(query, page = 1) {
     try {
       const response = await axios.get(`${TMDB_BASE_URL}/search/movie`, {
@@ -69,10 +53,7 @@ export const tmdbService = {
     }
   },
 
-  /**
-   * Obtener películas populares
-   * @param {number} page - Página de resultados
-   */
+ 
   async getPopularMovies(page = 1) {
     try {
       const response = await axios.get(`${TMDB_BASE_URL}/movie/popular`, {
@@ -98,10 +79,7 @@ export const tmdbService = {
     }
   },
 
-  /**
-   * Buscar directores/actores en TMDB
-   * @param {string} query - Nombre del director/actor
-   */
+
   async searchPeople(query) {
     try {
       const response = await axios.get(`${TMDB_BASE_URL}/search/person`, {
@@ -129,10 +107,7 @@ export const tmdbService = {
     }
   },
 
-  /**
-   * Obtener detalles de película con créditos (directores)
-   * @param {number} movieId - ID de la película en TMDB
-   */
+
   async getMovieDetails(movieId) {
     try {
       const response = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
@@ -166,14 +141,9 @@ export const tmdbService = {
   },
 };
 
-// ============================================
-// 🗄️ Laravel API - Guardar preferencias
-// ============================================
 
 export const movieService = {
-  /**
-   * Obtener géneros guardados en Laravel
-   */
+
   async getGenres() {
     try {
       const response = await api.get('/genres');
@@ -185,9 +155,7 @@ export const movieService = {
     }
   },
 
-  /**
-   * Obtener directores guardados en Laravel
-   */
+
   async getDirectors() {
     try {
       const response = await api.get('/directors');
@@ -198,30 +166,20 @@ export const movieService = {
     }
   },
 
-  /**
-   * Buscar películas (usa TMDB)
-   */
   async searchMovies(query) {
     return await tmdbService.searchMovies(query);
   },
 
-  /**
-   * Obtener películas populares (usa TMDB)
-   */
   async getPopularMovies(page = 1) {
     return await tmdbService.getPopularMovies(page);
   },
 
-  /**
-   * Buscar directores (usa TMDB)
-   */
+
   async searchDirectors(query) {
     return await tmdbService.searchPeople(query);
   },
 
-  /**
-   * Obtener detalles de película (usa TMDB)
-   */
+
   async getMovieDetails(movieId) {
     return await tmdbService.getMovieDetails(movieId);
   },

@@ -5,7 +5,7 @@ import colors from '../constants/colors';
 const MatchItem = ({ match, onPress }) => {
   // Extraer géneros en común
   const user = match.user || match;
-  const genres = user.favorite_genres?.map(g => g.name).join(', ') || 'Movie fan';
+  const genres = user.favorite_genres?.map(g => g.name).join(', ') || 'Fan de Películas';
   
   // Placeholder consistente basado en ID
   const getPlaceholderImage = () => {
@@ -31,7 +31,7 @@ const MatchItem = ({ match, onPress }) => {
           🎬 {genres}
         </Text>
         <Text style={styles.bio} numberOfLines={1}>
-          {user.bio || 'Movie enthusiast'}
+          {user.bio || 'Entusiasta de las películas'}
         </Text>
       </View>
       <View style={styles.badge}>

@@ -48,7 +48,7 @@ const HomeScreen = ({ navigation }) => {
       setUsers(validUsers);
     } catch (error) {
       console.error('Error loading users:', error);
-      Alert.alert('Error', 'Problema al cargar usuarios. Por favor, revisa tu conexión e inténtalo de nuevo.');
+      Alert.alert('Error', 'Problema al cargar Amigos Palomeros. Por favor, revisa tu conexión e inténtalo de nuevo.');
       setUsers([]);
     } finally {
       setLoading(false);
@@ -70,11 +70,11 @@ const HomeScreen = ({ navigation }) => {
       const result = await matchService.sendLike(swipedUser.id, type);
       if (result.matched) {
         Alert.alert(
-          "🎬 Encontramos un compañero de películas!",
+          "🎬 Encontramos un Amigo de Butaca!",
           `¡${swipedUser.name} y tú tienen gustos similares! Pueden comenzar a chatear.`,
           [
             { text: 'Seguir buscando', style: 'cancel' },
-            { text: 'Chatear ahora', onPress: () => navigation.navigate('Matches') },
+            { text: 'Chatear ahora', onPress: () => navigation.navigate('Amigos de Butaca') },
           ]
         );
       }
@@ -84,10 +84,10 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleSwipedAll = () => {
-    console.log('Todos los usuarios han sido vistos');
+    console.log('Todos los Amigos Palomeros han sido vistos');
     Alert.alert(
       "🎬 Viste a todos",
-      "Ya viste a todos los usuarios disponibles. Actualizaremos la lista por ti.",
+      "Ya viste a todos los Amigos Palomeros disponibles. Actualizaremos la lista por ti.",
       [
         { 
           text: 'OK', 
@@ -138,7 +138,7 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.loadingBox}>
           <Text style={styles.loadingEmoji}>🎬</Text>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Finding your matches...</Text>
+          <Text style={styles.loadingText}>Encontrando Amigos de Butaca...</Text>
         </View>
       </LinearGradient>
     );
@@ -152,7 +152,7 @@ const HomeScreen = ({ navigation }) => {
       >
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyEmoji}>🎭</Text>
-          <Text style={styles.emptyText}>No hay más amigos palomeros cerca</Text>
+          <Text style={styles.emptyText}>No hay más Amigos Palomeros cerca</Text>
           <Text style={styles.emptySubtext}>Vuelve a revisar más tarde para encontrar más amantes del cine!</Text>
           <TouchableOpacity 
             style={styles.reloadButton} 
@@ -173,10 +173,14 @@ const HomeScreen = ({ navigation }) => {
     >
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
         <View style={styles.logoBox}>
-          <Text style={styles.logoEmoji}>🎬</Text>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
         <Text style={styles.logo}>CineMatch</Text>
-        <Text style={styles.subtitle}>Swipe to find your movie soulmate</Text>
+        <Text style={styles.subtitle}>Desliza para encontrar a tus amigos cinéfilos</Text>
       </Animated.View>
 
       <View style={styles.swiperContainer}>
@@ -203,7 +207,7 @@ const HomeScreen = ({ navigation }) => {
           infinite={false}
           overlayLabels={{
             left: {
-              title: 'PASS',
+              title: 'LO SIENTO',
               style: {
                 label: {
                   backgroundColor: colors.textDark,
@@ -225,7 +229,7 @@ const HomeScreen = ({ navigation }) => {
               },
             },
             right: {
-              title: 'MATCH',
+              title: 'PALOMITAS',
               style: {
                 label: {
                   backgroundColor: colors.primary,
@@ -354,6 +358,10 @@ const styles = StyleSheet.create({
   },
   logoEmoji: {
     fontSize: 32,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   logo: {
     fontSize: 26,

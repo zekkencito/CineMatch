@@ -15,7 +15,14 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Slider from '@react-native-community/slider';
-import MapView, { Circle, Marker } from 'react-native-maps';
+// Importación condicional de react-native-maps (solo iOS/Android)
+let MapView, Circle, Marker;
+if (Platform.OS !== 'web') {
+  const maps = require('react-native-maps');
+  MapView = maps.default;
+  Circle = maps.Circle;
+  Marker = maps.Marker;
+}
 import * as Location from 'expo-location';
 import colors from '../constants/colors';
 import tmdbMovieService from '../services/tmdbMovieService';
@@ -349,8 +356,8 @@ const PreferencesScreen = ({ navigation, route }) => {
         }]
       );
     } catch (error) {
-      console.error('Error saving preferences:', error);
-      console.error('Error response:', error.response?.data);
+      console.error('Error guardando tus preferencias:', error);
+      console.error('Error en respuesta:', error.response?.data);
       
       let errorMessage = 'No se pudieron guardar las preferencias';
       
@@ -615,47 +622,64 @@ const PreferencesScreen = ({ navigation, route }) => {
         
         {userLocation ? (
           <View style={styles.mapContainer}>
-            <MapView
-              ref={mapRef}
-              style={styles.map}
-              initialRegion={{
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
-                latitudeDelta: Math.max(0.01, Math.min(10, searchRadius / 111)),
-                longitudeDelta: Math.max(0.01, Math.min(10, searchRadius / 111)),
-              }}
-              mapType="standard"
-              showsUserLocation={false}
-              showsMyLocationButton={false}
-              zoomEnabled={true}
-              scrollEnabled={true}
-            >
-              {/* Marcador de ubicación del usuario */}
-              <Marker
-                coordinate={{
-                  latitude: userLocation.latitude,
-                  longitude: userLocation.longitude,
-                }}
-                title="Tu ubicación"
-                description={`${userLocation.city || ''}, ${userLocation.country || ''}`}
-              >
-                <View style={styles.markerContainer}>
-                  <Text style={styles.markerEmoji}>📍</Text>
+            {Platform.OS === 'web' ? (
+              // Fallback para web - mostrar vista estática
+              <View style={styles.webMapPlaceholder}>
+                <View style={styles.webMapContent}>
+                  <Text style={styles.webMapEmoji}>🗺️</Text>
+                  <Text style={styles.webMapTitle}>Mapa no disponible en web</Text>
+                  <Text style={styles.webMapText}>
+                    El mapa interactivo solo está disponible en la app móvil
+                  </Text>
+                  <View style={styles.webMapInfo}>
+                    <Text style={styles.webMapInfoText}>📍 {userLocation.city || 'Tu ubicación'}</Text>
+                    <Text style={styles.webMapInfoText}>🎯 Radio: {searchRadius} km</Text>
+                  </View>
                 </View>
-              </Marker>
-              
-              {/* Círculo del radio de búsqueda */}
-              <Circle
-                center={{
+              </View>
+            ) : (
+              <MapView
+                ref={mapRef}
+                style={styles.map}
+                initialRegion={{
                   latitude: userLocation.latitude,
                   longitude: userLocation.longitude,
+                  latitudeDelta: Math.max(0.01, Math.min(10, searchRadius / 111)),
+                  longitudeDelta: Math.max(0.01, Math.min(10, searchRadius / 111)),
                 }}
-                radius={searchRadius * 1000} // Convertir km a metros
-                fillColor="rgba(255, 215, 0, 0.2)" // Amarillo con transparencia
-                strokeColor={colors.primary}
-                strokeWidth={3}
-              />
-            </MapView>
+                mapType="standard"
+                showsUserLocation={false}
+                showsMyLocationButton={false}
+                zoomEnabled={true}
+                scrollEnabled={true}
+              >
+                {/* Marcador de ubicación del usuario */}
+                <Marker
+                  coordinate={{
+                    latitude: userLocation.latitude,
+                    longitude: userLocation.longitude,
+                  }}
+                  title="Tu ubicación"
+                  description={`${userLocation.city || 'Tu ciudad'}, ${userLocation.country || 'Tu país'}`}
+                >
+                  <View style={styles.markerContainer}>
+                    <Text style={styles.markerEmoji}>📍</Text>
+                  </View>
+                </Marker>
+                
+                {/* Círculo del radio de búsqueda */}
+                <Circle
+                  center={{
+                    latitude: userLocation.latitude,
+                    longitude: userLocation.longitude,
+                  }}
+                  radius={searchRadius * 1000} // Convertir km a metros
+                  fillColor="rgba(255, 215, 0, 0.2)" // Amarillo con transparencia
+                  strokeColor={colors.primary}
+                  strokeWidth={3}
+                />
+              </MapView>
+            )}
             
             {/* Indicador de distancia sobre el mapa */}
             <View style={styles.mapOverlay}>
@@ -781,6 +805,13 @@ const PreferencesScreen = ({ navigation, route }) => {
             }
           ]}
         >
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>← Volver</Text>
+          </TouchableOpacity>
+          
           <View style={styles.headerIconBox}>
             <Text style={styles.headerIcon}>⚙️</Text>
           </View>
@@ -1137,6 +1168,50 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  webMapPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  webMapContent: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  webMapEmoji: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  webMapTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  webMapText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  webMapInfo: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: colors.secondary,
+    borderRadius: 12,
+    gap: 8,
+    width: '100%',
+  },
+  webMapInfoText: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '600',
+  },
   mapOverlay: {
     position: 'absolute',
     top: 16,
@@ -1370,6 +1445,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.textDark,
     fontWeight: 'bold',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    zIndex: 10,
+  },
+  backButtonText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 

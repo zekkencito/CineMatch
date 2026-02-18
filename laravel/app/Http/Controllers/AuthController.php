@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Location;
+use App\Models\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -53,6 +54,14 @@ class AuthController extends Controller
                 'search_radius' => $request->search_radius ?? 2000, // 2000km por defecto
             ]);
         }
+
+        // Crear suscripción free por defecto
+        $user->subscription()->create([
+            'plan' => 'free',
+            'status' => 'active',
+            'max_radius' => 50,
+            'daily_likes_limit' => 10,
+        ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

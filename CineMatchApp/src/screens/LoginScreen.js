@@ -24,6 +24,9 @@ const LoginScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   
+  // Referencias para navegación entre inputs
+  const passwordInputRef = useRef(null);
+  
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -92,10 +95,14 @@ const LoginScreen = ({ navigation }) => {
           {/* Logo Area */}
           <View style={styles.logoContainer}>
             <View style={styles.logoBox}>
-              <Text style={styles.logoEmoji}>🎬</Text>
+              <Image
+                source={require('../../assets/logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
             <Text style={styles.logo}>CineMatch</Text>
-            <Text style={styles.subtitle}>Find Your Perfect Movie Match</Text>
+            <Text style={styles.subtitle}>Encuentra a tus Amigos de Butaca</Text>
           </View>
 
           {/* Form */}
@@ -104,24 +111,30 @@ const LoginScreen = ({ navigation }) => {
               <Text style={styles.inputLabel}>Email</Text>
               <TextInput
                 style={styles.input}
-                placeholder="your@email.com"
+                placeholder="tucorreo@email.com"
                 placeholderTextColor={colors.textSecondary}
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
+                blurOnSubmit={false}
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Password</Text>
+              <Text style={styles.inputLabel}>Contraseña</Text>
               <TextInput
+                ref={passwordInputRef}
                 style={styles.input}
                 placeholder="••••••••"
                 placeholderTextColor={colors.textSecondary}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
               />
             </View>
 
@@ -135,7 +148,7 @@ const LoginScreen = ({ navigation }) => {
                 <ActivityIndicator color={colors.textDark} size="small" />
               ) : (
                 <>
-                  <Text style={styles.loginButtonText}>Sign In</Text>
+                  <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
                   <Text style={styles.loginButtonIcon}>→</Text>
                 </>
               )}
@@ -143,17 +156,17 @@ const LoginScreen = ({ navigation }) => {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
+              <Text style={styles.dividerText}>O</Text>
               <View style={styles.dividerLine} />
             </View>
 
             <TouchableOpacity
               style={styles.registerButton}
-              onPress={() => navigation.navigate('Register')}
+              onPress={() => navigation.navigate('Registro')}
               activeOpacity={0.8}
             >
               <Text style={styles.registerButtonText}>
-                Create New Account
+                Crear Nueva Cuenta
               </Text>
             </TouchableOpacity>
           </View>
@@ -161,9 +174,9 @@ const LoginScreen = ({ navigation }) => {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              By continuing, you agree to our{' '}
-              <Text style={styles.footerLink}>Terms</Text> &{' '}
-              <Text style={styles.footerLink}>Privacy Policy</Text>
+              Para continuar, acepta nuestros{' '}
+              <Text style={styles.footerLink}>Términos</Text> &{' '}
+              <Text style={styles.footerLink}>Política de Privacidad</Text>
             </Text>
           </View>
         </Animated.View>
@@ -204,6 +217,10 @@ const styles = StyleSheet.create({
   },
   logoEmoji: {
     fontSize: 42,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   logo: {
     fontSize: 36,

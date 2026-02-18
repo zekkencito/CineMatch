@@ -108,31 +108,31 @@ const ProfileScreen = ({ navigation }) => {
       title: 'Preferencias de Películas',
       icon: '🎬',
       subtitle: 'Personaliza tus gustos y preferencias',
-      onPress: () => navigation.navigate('Preferences'),
+      onPress: () => navigation.navigate('Preferencias'),
     },
     {
       title: 'Editar Perfil',
       icon: '✏️',
       subtitle: 'Actualiza tu información personal',
-      onPress: () => Alert.alert('Próximamente', 'Edit profile feature coming soon!'),
+      onPress: () => navigation.navigate('Editar Perfil'),
     },
     {
       title: 'Suscripción',
       icon: '⭐',
       subtitle: 'Características Premium',
-      onPress: () => Alert.alert('Próximamente', 'Subscription feature coming soon!'),
+      onPress: () => navigation.navigate('Suscripción'),
     },
     {
       title: 'Ajustes',
       icon: '⚙️',
       subtitle: 'Preferencias de la app y privacidad',
-      onPress: () => Alert.alert('Próximamente', 'Settings feature coming soon!'),
+      onPress: () => Alert.alert('Próximamente', 'Función de ajustes próximamente!'),
     },
     {
       title: 'Ayuda y Soporte',
       icon: '💬',
       subtitle: 'Obtén ayuda o contáctanos',
-      onPress: () => Alert.alert('Próximamente', 'Help & Support feature coming soon!'),
+      onPress: () => Alert.alert('Próximamente', 'Función de ayuda y soporte próximamente!'),
     },
   ];
 

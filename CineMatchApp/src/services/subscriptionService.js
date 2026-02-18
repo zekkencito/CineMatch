@@ -1,33 +1,30 @@
 import api from '../config/api';
 
 export const subscriptionService = {
-  // Obtener planes de suscripción
+  // Obtener plan actual del usuario
+  async getCurrentPlan() {
+    try {
+      const response = await api.get('/subscription/current');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Obtener planes disponibles
   async getPlans() {
     try {
-      const response = await api.get('/subscription-plans');
+      const response = await api.get('/subscription/plans');
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  // Suscribirse a un plan
-  async subscribe(planId, paymentData) {
+  // Actualizar a premium
+  async upgradeToPremium(duration = 30) {
     try {
-      const response = await api.post('/subscriptions', {
-        plan_id: planId,
-        payment_data: paymentData
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-
-  // Obtener suscripción actual
-  async getCurrentSubscription() {
-    try {
-      const response = await api.get('/subscriptions/current');
+      const response = await api.post('/subscription/upgrade', { duration });
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -37,7 +34,17 @@ export const subscriptionService = {
   // Cancelar suscripción
   async cancelSubscription() {
     try {
-      const response = await api.delete('/subscriptions/current');
+      const response = await api.post('/subscription/cancel');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Obtener conteo de likes diarios
+  async getDailyLikesCount() {
+    try {
+      const response = await api.get('/subscription/likes-count');
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

@@ -15,7 +15,14 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import MapView, { Circle, Marker } from 'react-native-maps';
+// Importación condicional de react-native-maps (solo iOS/Android)
+let MapView, Circle, Marker;
+if (Platform.OS !== 'web') {
+  const maps = require('react-native-maps');
+  MapView = maps.default;
+  Circle = maps.Circle;
+  Marker = maps.Marker;
+}
 import Slider from '@react-native-community/slider';
 import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
@@ -35,6 +42,13 @@ const RegisterScreen = ({ navigation }) => {
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [searchRadius, setSearchRadius] = useState(15);
   const { register } = useAuth();
+  
+  // Referencias para navegación entre inputs
+  const emailInputRef = useRef(null);
+  const ageInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
+  const confirmPasswordInputRef = useRef(null);
+  const bioInputRef = useRef(null);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -58,27 +72,27 @@ const RegisterScreen = ({ navigation }) => {
     const { name, email, password, confirmPassword, age } = formData;
 
     if (!name || !email || !password || !age) {
-      Alert.alert('Error', 'Please fill in required fields');
+      Alert.alert('Error', 'Por favor, completa todos los campos requeridos');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert('Error', 'Las contraseñas no coinciden');
       return;
     }
 
     if (parseInt(age) < 18) {
-      Alert.alert('Error', 'You must be 18 or older');
+      Alert.alert('Error', 'Debes tener 18 años o más');
       return;
     }
 
     if (!locationData) {
-      Alert.alert('Error', 'Please get your GPS location first');
+      Alert.alert('Error', 'Por favor, obtén tu ubicación GPS primero');
       return;
     }
 
     if (!locationData.latitude || !locationData.longitude) {
-      Alert.alert('Error', 'Invalid GPS coordinates. Please try getting location again.');
+      Alert.alert('Error', 'Coordenadas GPS inválidas. Intenta obtener la ubicación nuevamente.');
       return;
     }
 
@@ -110,7 +124,7 @@ const RegisterScreen = ({ navigation }) => {
         'Ahora configura tus preferencias de películas',
         [{
           text: 'Continuar',
-          onPress: () => navigation.replace('Preferences', { isInitialSetup: true })
+          onPress: () => navigation.replace('Preferencias', { isInitialSetup: true })
         }]
       );
     } catch (error) {
@@ -121,11 +135,11 @@ const RegisterScreen = ({ navigation }) => {
         const errorMessages = Object.keys(error.errors).map(key => 
           `${key}: ${error.errors[key].join(', ')}`
         ).join('\n');
-        Alert.alert('Validation Errors', errorMessages);
+        Alert.alert('Errores de Validación', errorMessages);
       } else if (error.message) {
         Alert.alert('Error', error.message);
       } else {
-        Alert.alert('Error', 'Failed to register. Please try again.');
+        Alert.alert('Error', 'Error al registrar. Por favor, intenta nuevamente.');
       }
     } finally {
       setLoading(false);
@@ -137,7 +151,7 @@ const RegisterScreen = ({ navigation }) => {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (permissionResult.granted === false) {
-        Alert.alert('Permission Required', 'Please allow access to your photos');
+        Alert.alert('Permiso Requerido', 'Por favor, permite el acceso a tus fotos');
         return;
       }
 
@@ -153,7 +167,7 @@ const RegisterScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert('Error', 'Error al seleccionar imagen');
     }
   };
 
@@ -185,10 +199,14 @@ const RegisterScreen = ({ navigation }) => {
             ]}
           >
             <View style={styles.logoBox}>
-              <Text style={styles.logoEmoji}>🎬</Text>
+              <Image
+                source={require('../../assets/logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join the cinephile community</Text>
+            <Text style={styles.title}>Crear Cuenta</Text>
+            <Text style={styles.subtitle}>Únete a la comunidad de cinéfilos</Text>
           </Animated.View>
 
           <Animated.View
@@ -208,7 +226,7 @@ const RegisterScreen = ({ navigation }) => {
               ) : (
                 <View style={styles.photoPlaceholder}>
                   <Text style={styles.photoIcon}>📷</Text>
-                  <Text style={styles.photoText}>Add Photo</Text>
+                  <Text style={styles.photoText}>Añadir Foto</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -223,80 +241,101 @@ const RegisterScreen = ({ navigation }) => {
             ]}
           >
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Name *</Text>
+              <Text style={styles.inputLabel}>Nombre *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Your name"
+                placeholder="Tu nombre"
                 placeholderTextColor={colors.textSecondary}
                 value={formData.name}
                 onChangeText={(value) => updateFormData('name', value)}
+                returnKeyType="next"
+                onSubmitEditing={() => emailInputRef.current?.focus()}
+                blurOnSubmit={false}
               />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email *</Text>
               <TextInput
+                ref={emailInputRef}
                 style={styles.input}
-                placeholder="your@email.com"
+                placeholder="tucorreo@email.com"
                 placeholderTextColor={colors.textSecondary}
                 value={formData.email}
                 onChangeText={(value) => updateFormData('email', value)}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                returnKeyType="next"
+                onSubmitEditing={() => ageInputRef.current?.focus()}
+                blurOnSubmit={false}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Age *</Text>
+              <Text style={styles.inputLabel}>Edad *</Text>
               <TextInput
+                ref={ageInputRef}
                 style={styles.input}
                 placeholder="18+"
                 placeholderTextColor={colors.textSecondary}
                 value={formData.age}
                 onChangeText={(value) => updateFormData('age', value)}
                 keyboardType="numeric"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
+                blurOnSubmit={false}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password *</Text>
+              <Text style={styles.inputLabel}>Contraseña *</Text>
               <TextInput
+                ref={passwordInputRef}
                 style={styles.input}
-                placeholder="Enter password"
+                placeholder="Ingresa tu contraseña"
                 placeholderTextColor={colors.textSecondary}
                 value={formData.password}
                 onChangeText={(value) => updateFormData('password', value)}
                 secureTextEntry
+                returnKeyType="next"
+                onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
+                blurOnSubmit={false}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Confirm Password *</Text>
+              <Text style={styles.inputLabel}>Confirmar Contraseña *</Text>
               <TextInput
+                ref={confirmPasswordInputRef}
                 style={styles.input}
-                placeholder="Confirm password"
+                placeholder="Confirma tu contraseña"
                 placeholderTextColor={colors.textSecondary}
                 value={formData.confirmPassword}
                 onChangeText={(value) => updateFormData('confirmPassword', value)}
                 secureTextEntry
+                returnKeyType="next"
+                onSubmitEditing={() => bioInputRef.current?.focus()}
+                blurOnSubmit={false}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Bio (Optional)</Text>
+              <Text style={styles.inputLabel}>Biografía (Opcional)</Text>
               <TextInput
+                ref={bioInputRef}
                 style={[styles.input, styles.textArea]}
-                placeholder="Tell us about yourself..."
+                placeholder="Cuéntanos sobre ti..."
                 placeholderTextColor={colors.textSecondary}
                 value={formData.bio}
                 onChangeText={(value) => updateFormData('bio', value)}
                 multiline
                 numberOfLines={4}
+                returnKeyType="done"
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Location *</Text>
+              <Text style={styles.inputLabel}>Ubicación *</Text>
               <LocationPicker onLocationChange={setLocationData} />
               
               {locationData && (
@@ -305,40 +344,55 @@ const RegisterScreen = ({ navigation }) => {
                   <Text style={styles.mapSubtitle}>Hasta dónde buscaremos personas con tus gustos</Text>
                   
                   <View style={styles.mapContainer}>
-                    <MapView
-                      style={styles.map}
-                      initialRegion={{
-                        latitude: locationData.latitude,
-                        longitude: locationData.longitude,
-                        latitudeDelta: Math.max(0.01, Math.min(10, searchRadius / 111)),
-                        longitudeDelta: Math.max(0.01, Math.min(10, searchRadius / 111)),
-                      }}
-                      mapType="standard"
-                      showsUserLocation={false}
-                      zoomEnabled={true}
-                      scrollEnabled={true}
-                    >
-                      <Marker
-                        coordinate={{
+                    {Platform.OS === 'web' ? (
+                      // Fallback para web
+                      <View style={styles.webMapPlaceholder}>
+                        <Text style={styles.webMapEmoji}>🗺️</Text>
+                        <Text style={styles.webMapTitle}>Mapa interactivo</Text>
+                        <Text style={styles.webMapText}>
+                          Disponible en la app móvil
+                        </Text>
+                        <View style={styles.webMapInfo}>
+                          <Text style={styles.webMapInfoText}>📍 {locationData.city || 'Tu ubicación'}</Text>
+                          <Text style={styles.webMapInfoText}>🎯 Radio: {searchRadius} km</Text>
+                        </View>
+                      </View>
+                    ) : (
+                      <MapView
+                        style={styles.map}
+                        initialRegion={{
                           latitude: locationData.latitude,
                           longitude: locationData.longitude,
+                          latitudeDelta: Math.max(0.01, Math.min(10, searchRadius / 111)),
+                          longitudeDelta: Math.max(0.01, Math.min(10, searchRadius / 111)),
                         }}
-                        title="Tu ubicación"
+                        mapType="standard"
+                        showsUserLocation={false}
+                        zoomEnabled={true}
+                        scrollEnabled={true}
                       >
-                        <Text style={styles.markerEmoji}>📍</Text>
-                      </Marker>
-                      
-                      <Circle
-                        center={{
-                          latitude: locationData.latitude,
-                          longitude: locationData.longitude,
-                        }}
-                        radius={searchRadius * 1000}
-                        fillColor="rgba(255, 215, 0, 0.2)"
-                        strokeColor="rgba(255, 215, 0, 0.8)"
-                        strokeWidth={3}
-                      />
-                    </MapView>
+                        <Marker
+                          coordinate={{
+                            latitude: locationData.latitude,
+                            longitude: locationData.longitude,
+                          }}
+                          title="Tu ubicación"
+                        >
+                          <Text style={styles.markerEmoji}>📍</Text>
+                        </Marker>
+                        
+                        <Circle
+                          center={{
+                            latitude: locationData.latitude,
+                            longitude: locationData.longitude,
+                          }}
+                          radius={searchRadius * 1000}
+                          fillColor="rgba(255, 215, 0, 0.2)"
+                          strokeColor="rgba(255, 215, 0, 0.8)"
+                          strokeWidth={3}
+                        />
+                      </MapView>
+                    )}
                     
                     <View style={styles.mapOverlay}>
                       <View style={styles.distanceBadge}>
@@ -378,7 +432,7 @@ const RegisterScreen = ({ navigation }) => {
               {loading ? (
                 <ActivityIndicator color={colors.textDark} />
               ) : (
-                <Text style={styles.registerButtonText}>Create Account</Text>
+                <Text style={styles.registerButtonText}>Crear Cuenta</Text>
               )}
             </TouchableOpacity>
 
@@ -387,7 +441,7 @@ const RegisterScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('Login')}
             >
               <Text style={styles.loginButtonText}>
-                Already have an account? <Text style={{ fontWeight: 'bold', color: colors.primary }}>Login</Text>
+              ¿Ya tienes una cuenta? <Text style={{ fontWeight: 'bold', color: colors.primary }}>Iniciar sesión</Text>
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -432,6 +486,10 @@ const styles = StyleSheet.create({
   },
   logoEmoji: {
     fontSize: 38,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   title: {
     fontSize: 32,
@@ -569,6 +627,46 @@ const styles = StyleSheet.create({
   map: {
     width: '100%',
     height: '100%',
+  },
+  webMapPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  webMapEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  webMapTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  webMapText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  webMapInfo: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: colors.secondary,
+    borderRadius: 12,
+    gap: 6,
+    width: '100%',
+  },
+  webMapInfoText: {
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   mapOverlay: {
     position: 'absolute',

@@ -26,27 +26,27 @@ const MainNavigator = () => {
       }}
     >
       <Tab.Screen
-        name="Home"
+        name="Amigos Palomeros"
         component={HomeScreen}
         options={{
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>🎬</Text>,
-          tabBarLabel: 'Discover',
+          tabBarLabel: 'Amigos Palomeros',
         }}
       />
       <Tab.Screen
-        name="Matches"
+        name="Amigos de Butaca"
         component={MatchesScreen}
         options={{
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>💬</Text>,
-          tabBarLabel: 'Matches',
+          tabBarLabel: 'Amigos de Butaca',
         }}
       />
       <Tab.Screen
-        name="Profile"
+        name="Perfil"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>👤</Text>,
-          tabBarLabel: 'Profile',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 24, color: colors.primary }}>👤</Text>,
+          tabBarLabel: 'Perfil',
         }}
       />
     </Tab.Navigator>

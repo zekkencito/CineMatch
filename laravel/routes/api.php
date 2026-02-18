@@ -7,6 +7,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\MatchController;
 use App\Http\Controllers\MovieController;
 use App\Http\Controllers\PreferencesController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\SubscriptionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -66,5 +68,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/matches', [MatchController::class, 'getMatches']);
     Route::get('/matches/check/{userId}', [MatchController::class, 'checkMatch']);
     Route::get('/likes', [MatchController::class, 'getLikes']);
+    
+    // Mensajes (Chat)
+    Route::get('/matches/{matchId}/messages', [MessageController::class, 'getMessages']);
+    Route::post('/messages', [MessageController::class, 'sendMessage']);
+    Route::get('/messages/unread-count', [MessageController::class, 'getUnreadCount']);
+    
+    // Suscripciones
+    Route::get('/subscription/current', [SubscriptionController::class, 'getCurrentPlan']);
+    Route::get('/subscription/plans', [SubscriptionController::class, 'getPlans']);
+    Route::post('/subscription/upgrade', [SubscriptionController::class, 'upgradeToPremium']);
+    Route::post('/subscription/cancel', [SubscriptionController::class, 'cancelSubscription']);
+    Route::get('/subscription/likes-count', [SubscriptionController::class, 'getDailyLikesCount']);
     
 });

@@ -94,4 +94,44 @@ class User extends Authenticatable
         return $this->hasMany(UserMatch::class, 'user_one_id')
             ->orWhere('user_two_id', $this->id);
     }
+
+    // Suscripción del usuario
+    public function subscription()
+    {
+        return $this->hasOne(Subscription::class);
+    }
+
+    /**
+     * Verificar si el usuario tiene suscripción premium activa
+     */
+    public function isPremium()
+    {
+        return $this->subscription && $this->subscription->isPremium();
+    }
+
+    /**
+     * Obtener límites de la suscripción
+     */
+    public function getSubscriptionLimits()
+    {
+        if (!$this->subscription) {
+            return [
+                'max_radius' => 50,
+                'daily_likes_limit' => 10,
+                'can_see_likes' => false,
+                'can_undo_swipes' => false,
+                'has_advanced_filters' => false,
+                'is_featured' => false,
+            ];
+        }
+
+        return [
+            'max_radius' => $this->subscription->max_radius,
+            'daily_likes_limit' => $this->subscription->daily_likes_limit,
+            'can_see_likes' => $this->subscription->can_see_likes,
+            'can_undo_swipes' => $this->subscription->can_undo_swipes,
+            'has_advanced_filters' => $this->subscription->has_advanced_filters,
+            'is_featured' => $this->subscription->is_featured,
+        ];
+    }
 }

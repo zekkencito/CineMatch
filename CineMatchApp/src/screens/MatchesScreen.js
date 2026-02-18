@@ -51,8 +51,8 @@ const MatchesScreen = ({ navigation }) => {
         }),
       ]).start();
     } catch (error) {
-      console.error('Error al cargar los  matches:', error);
-      Alert.alert('Error', '  Error al cargar los matches. Por favor, verifica tu conexión e inténtalo de nuevo.');
+      console.error('Error al cargar los  Amigos de Butaca:', error);
+      Alert.alert('Error', '  Error al cargar los Amigos de Butaca. Por favor, verifica tu conexión e inténtalo de nuevo.');
       setMatches([]);
     } finally {
       setLoading(false);
@@ -72,7 +72,7 @@ const MatchesScreen = ({ navigation }) => {
         <View style={styles.loadingBox}>
           <Text style={styles.loadingEmoji}>🎬</Text>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading your movie buddies...</Text>
+          <Text style={styles.loadingText}>Cargando tus amigos de butaca...</Text>
         </View>
       </LinearGradient>
     );
@@ -100,7 +100,7 @@ const MatchesScreen = ({ navigation }) => {
         </View>
         <Text style={styles.subtitle}>
           {matches.length === 0 
-            ? 'Aún no tienes amigos de butaca'
+            ? 'Aún no tienes Amigos de Butaca'
             : `${matches.length} ${matches.length === 1 ? 'amigo de butaca' : 'amigos de butaca'} que comparten tu gusto`
           }
         </Text>
@@ -117,7 +117,7 @@ const MatchesScreen = ({ navigation }) => {
           ]}
         >
           <Text style={styles.emptyEmoji}>🎭</Text>
-          <Text style={styles.emptyText}>Aún no tienes amigos de butaca</Text>
+          <Text style={styles.emptyText}>Aún no tienes Amigos de Butaca</Text>
           <Text style={styles.emptySubtext}>
             Comienza a hacer swipes para encontrar personas que compartan tu gusto en películas.
           </Text>

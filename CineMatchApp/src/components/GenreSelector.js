@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import colors from '../constants/colors';
 
-const GenreSelector = ({ genres, selectedGenres, onToggle, title = 'Select Genres' }) => {
+const GenreSelector = ({ genres, selectedGenres, onToggle, title = 'Seleccionar Géneros' }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>

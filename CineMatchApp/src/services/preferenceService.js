@@ -1,8 +1,3 @@
-/**
- * 📍 Servicio de Preferencias de Usuario
- * Maneja géneros, directores, películas vistas y ubicación
- * Con fallback a AsyncStorage cuando backend no disponible
- */
 
 import api from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,9 +9,6 @@ const STORAGE_KEYS = {
   radius: '@preferences_radius',
 };
 
-// ============================================
-// 🔧 Funciones auxiliares de AsyncStorage
-// ============================================
 
 const saveToLocal = async (key, data) => {
   try {
@@ -36,18 +28,9 @@ const loadFromLocal = async (key, defaultValue = []) => {
   }
 };
 
-// ============================================
-// 📦 Servicio de Preferencias
-// ============================================
 
 export const preferenceService = {
-  // ============================================
-  // 🎭 GÉNEROS
-  // ============================================
 
-  /**
-   * Obtener géneros favoritos del usuario
-   */
   async getFavoriteGenres() {
     try {
       const response = await api.get('/preferences/genres');
@@ -59,10 +42,7 @@ export const preferenceService = {
     }
   },
 
-  /**
-   * Agregar género favorito
-   * @param {number} genreId - ID del género
-   */
+
   async addFavoriteGenre(genreId) {
     try {
       const response = await api.post('/preferences/genres', {
@@ -78,10 +58,7 @@ export const preferenceService = {
     }
   },
 
-  /**
-   * Eliminar género favorito
-   * @param {number} genreId - ID del género
-   */
+
   async removeFavoriteGenre(genreId) {
     try {
       const response = await api.delete(`/preferences/genres/${genreId}`);
@@ -95,10 +72,7 @@ export const preferenceService = {
     }
   },
 
-  /**
-   * Actualizar todos los géneros favoritos (sync)
-   * @param {Array<number>} genreIds - Array de IDs de géneros
-   */
+
   async syncFavoriteGenres(genreIds) {
     try {
       const response = await api.post('/preferences/genres/sync', {
@@ -115,13 +89,7 @@ export const preferenceService = {
     }
   },
 
-  // ============================================
-  // 🎬 DIRECTORES
-  // ============================================
 
-  /**
-   * Obtener directores favoritos del usuario
-   */
   async getFavoriteDirectors() {
     try {
       const response = await api.get('/preferences/directors');
@@ -133,11 +101,7 @@ export const preferenceService = {
     }
   },
 
-  /**
-   * Agregar director favorito
-   * @param {number} directorId - ID del director (TMDB)
-   * @param {string} name - Nombre del director
-   */
+
   async addFavoriteDirector(directorId, name) {
     try {
       const response = await api.post('/preferences/directors', {
@@ -155,10 +119,7 @@ export const preferenceService = {
     }
   },
 
-  /**
-   * Eliminar director favorito
-   * @param {number} directorId - ID del director
-   */
+
   async removeFavoriteDirector(directorId) {
     try {
       const response = await api.delete(`/preferences/directors/${directorId}`);
@@ -173,10 +134,7 @@ export const preferenceService = {
     }
   },
 
-  /**
-   * Sincronizar todos los directores favoritos (reemplaza todos)
-   * @param {Array} directors - Array de {id, name}
-   */
+
   async syncFavoriteDirectors(directors) {
     try {
       const response = await api.post('/preferences/directors/sync', {
@@ -192,13 +150,6 @@ export const preferenceService = {
     }
   },
 
-  // ============================================
-  // 🎥 PELÍCULAS VISTAS
-  // ============================================
-
-  /**
-   * Obtener películas vistas por el usuario
-   */
   async getWatchedMovies() {
     try {
       const response = await api.get('/preferences/movies/watched');
@@ -210,12 +161,7 @@ export const preferenceService = {
     }
   },
 
-  /**
-   * Marcar película como vista
-   * @param {number} movieId - ID de la película (TMDB)
-   * @param {string} title - Título de la película
-   * @param {number} rating - Rating opcional (1-10)
-   */
+
   async addWatchedMovie(movieId, title, rating = null) {
     try {
       const response = await api.post('/preferences/movies/watched', {
@@ -234,10 +180,7 @@ export const preferenceService = {
     }
   },
 
-  /**
-   * Eliminar película de vistas
-   * @param {number} movieId - ID de la película
-   */
+
   async removeWatchedMovie(movieId) {
     try {
       const response = await api.delete(`/preferences/movies/watched/${movieId}`);
@@ -252,10 +195,7 @@ export const preferenceService = {
     }
   },
 
-  /**
-   * Sincronizar todas las películas vistas (reemplaza todas)
-   * @param {Array} movies - Array de {id, title}
-   */
+
   async syncWatchedMovies(movies) {
     try {
       console.log('📤 Enviando películas al backend:', movies);
@@ -279,18 +219,7 @@ export const preferenceService = {
     }
   },
 
-  // ============================================
-  // 📍 UBICACIÓN
-  // ============================================
 
-  /**
-   * Actualizar ubicación y radio de búsqueda
-   * @param {number} latitude - Latitud
-   * @param {number} longitude - Longitud
-   * @param {number} searchRadius - Radio en km (5-500)
-   * @param {string} city - Ciudad (opcional)
-   * @param {string} country - País (opcional)
-   */
   async updateLocation({ latitude, longitude, searchRadius, city, country }) {
     try {
       const response = await api.put('/location', {
@@ -309,9 +238,7 @@ export const preferenceService = {
     }
   },
 
-  /**
-   * Obtener ubicación actual del usuario
-   */
+
   async getLocation() {
     try {
       const response = await api.get('/me');

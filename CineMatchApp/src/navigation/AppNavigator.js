@@ -6,6 +6,8 @@ import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import ChatScreen from '../screens/ChatScreen';
 import PreferencesScreen from '../screens/PreferencesScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import SubscriptionScreen from '../screens/SubscriptionScreen';
 import { ActivityIndicator, View } from 'react-native';
 import colors from '../constants/colors';
 
@@ -30,11 +32,21 @@ const AppNavigator = () => {
           <Stack.Screen 
             name="Chat" 
             component={ChatScreen}
+            options={{ headerShown: true, title: 'Chat' }}
+          />
+          <Stack.Screen 
+            name="Preferencias" 
+            component={PreferencesScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen 
-            name="Preferences" 
-            component={PreferencesScreen}
+            name="Editar Perfil" 
+            component={EditProfileScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Suscripción" 
+            component={SubscriptionScreen}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>
