@@ -16,6 +16,9 @@ expo-env.d.ts
 *.p8
 *.p12
 *.key
+*.keystore
+# Keep debug keystore but ignore release keystores
+!debug.keystore
 *.mobileprovision
 
 # Metro
@@ -34,6 +37,12 @@ yarn-error.*
 .env
 .env*.local
 !.env.example
+
+# Android release signing (keystores and sensitive properties)
+android/app/my-release-key.keystore
+android/app/*-release-key.keystore
+android/app/*.keystore
+!android/app/debug.keystore
 
 # typescript
 *.tsbuildinfo
