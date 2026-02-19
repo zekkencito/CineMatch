@@ -81,8 +81,12 @@ export const AuthProvider = ({ children }) => {
   const updateUser = async (userData) => {
     try {
       const updatedUser = await authService.updateProfile(userData);
-      setUser(updatedUser);
-      return updatedUser;
+      // Merge returned fields with current user to avoid overwriting complete user with partial response
+      const merged = { ...(user || {}), ...(updatedUser || {}) };
+      setUser(merged);
+      // Persist merged user to storage (authService.updateProfile may have saved partial data)
+      await storage.saveUser(merged);
+      return merged;
     } catch (error) {
       throw error;
     }
