@@ -1,6 +1,6 @@
 /**
  * 💬 Pantalla de Chat Individual
- * Conversación en tiempo real con polling cada 2 segundos
+ * Conversación con actualización manual (pull-to-refresh)
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -15,6 +15,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
@@ -27,9 +28,9 @@ const ChatScreen = ({ route, navigation }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
   const flatListRef = useRef(null);
-  const pollingInterval = useRef(null);
 
   // Usuario con el que estamos chateando
   const otherUser = match.user || match;
@@ -51,40 +52,38 @@ const ChatScreen = ({ route, navigation }) => {
 
     // Cargar mensajes iniciales
     loadMessages();
-
-    // Iniciar polling cada 2 segundos
-    pollingInterval.current = setInterval(() => {
-      loadMessages(true); // true = silencioso (sin loading)
-    }, 2000);
-
-    // Limpiar al desmontar
-    return () => {
-      if (pollingInterval.current) {
-        clearInterval(pollingInterval.current);
-      }
-    };
   }, []);
 
-  const loadMessages = async (silent = false) => {
+  const loadMessages = async (isRefreshing = false) => {
     try {
-      if (!silent) setLoading(true);
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       
-      const data = await chatService.getMessages(matchId);
+      const data = await chatService.getMessages(matchId, false);
       setMessages(data);
 
-      // Scroll automático al último mensaje
-      setTimeout(() => {
-        if (flatListRef.current && data.length > 0) {
-          flatListRef.current.scrollToEnd({ animated: true });
-        }
-      }, 100);
+      // Scroll automático al último mensaje (solo en carga inicial)
+      if (!isRefreshing) {
+        setTimeout(() => {
+          if (flatListRef.current && data.length > 0) {
+            flatListRef.current.scrollToEnd({ animated: true });
+          }
+        }, 100);
+      }
     } catch (error) {
       console.error('Error loading messages:', error);
-      if (!silent) {
+      if (!isRefreshing) {
         Alert.alert('Error', 'No se pudieron cargar los mensajes');
       }
     } finally {
-      if (!silent) setLoading(false);
+      if (isRefreshing) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -99,7 +98,7 @@ const ChatScreen = ({ route, navigation }) => {
       await chatService.sendMessage(matchId, receiverId, messageText);
       
       // Recargar mensajes inmediatamente después de enviar
-      await loadMessages(true);
+      await loadMessages(false);
     } catch (error) {
       console.error('Error sending message:', error);
       Alert.alert('Error', 'No se pudo enviar el mensaje. Intenta de nuevo.');
@@ -156,14 +155,14 @@ const ChatScreen = ({ route, navigation }) => {
   }
 
   return (
-    <LinearGradient
-      colors={[colors.secondary, colors.secondaryLight]}
+    <KeyboardAvoidingView
+      behavior='padding'
       style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      <LinearGradient
+        colors={[colors.secondary, colors.secondaryLight]}
+        style={styles.flex}
       >
         {/* Lista de mensajes */}
         <FlatList
@@ -175,6 +174,16 @@ const ChatScreen = ({ route, navigation }) => {
           ListEmptyComponent={renderEmpty}
           onContentSizeChange={() =>
             flatListRef.current?.scrollToEnd({ animated: true })
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadMessages(true)}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+              title="Actualizando..."
+              titleColor={colors.textSecondary}
+            />
           }
         />
 
@@ -204,13 +213,16 @@ const ChatScreen = ({ route, navigation }) => {
             )}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+      </LinearGradient>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  flex: {
     flex: 1,
   },
   loadingContainer: {
@@ -222,9 +234,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: colors.textSecondary,
-  },
-  keyboardView: {
-    flex: 1,
   },
   messagesList: {
     padding: 16,

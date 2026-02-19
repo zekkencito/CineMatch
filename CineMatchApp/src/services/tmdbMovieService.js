@@ -150,7 +150,6 @@ export const movieService = {
       return response.data.genres || response.data;
     } catch (error) {
       // Si falla Laravel, usar TMDB directamente
-      console.log('Fetching genres from TMDB instead');
       return await tmdbService.getGenres();
     }
   },

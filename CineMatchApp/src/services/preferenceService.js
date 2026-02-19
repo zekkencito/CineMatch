@@ -37,7 +37,6 @@ export const preferenceService = {
       return response.data.genres || [];
     } catch (error) {
       // Fallback a local storage
-      console.log('⚠️ Backend unavailable, using local storage for genres');
       return await loadFromLocal(STORAGE_KEYS.genres, []);
     }
   },
@@ -50,7 +49,6 @@ export const preferenceService = {
       });
       return response.data;
     } catch (error) {
-      console.log('⚠️ Backend unavailable, adding genre locally');
       const current = await loadFromLocal(STORAGE_KEYS.genres, []);
       const updated = [...current, genreId];
       await saveToLocal(STORAGE_KEYS.genres, updated);
@@ -64,7 +62,6 @@ export const preferenceService = {
       const response = await api.delete(`/preferences/genres/${genreId}`);
       return response.data;
     } catch (error) {
-      console.log('⚠️ Backend unavailable, removing genre locally');
       const current = await loadFromLocal(STORAGE_KEYS.genres, []);
       const updated = current.filter(id => id !== genreId);
       await saveToLocal(STORAGE_KEYS.genres, updated);
@@ -83,7 +80,6 @@ export const preferenceService = {
       return response.data;
     } catch (error) {
       // Fallback a local storage
-      console.log('⚠️ Backend unavailable, saving genres locally');
       await saveToLocal(STORAGE_KEYS.genres, genreIds);
       return { success: true, saved_locally: true };
     }
@@ -96,7 +92,6 @@ export const preferenceService = {
       return response.data.directors || [];
     } catch (error) {
       // Fallback a local storage
-      console.log('⚠️ Backend unavailable, using local storage for directors');
       return await loadFromLocal(STORAGE_KEYS.directors, []);
     }
   },
@@ -111,7 +106,6 @@ export const preferenceService = {
       return response.data;
     } catch (error) {
       // Fallback a local storage
-      console.log('⚠️ Backend unavailable, saving director locally');
       const current = await loadFromLocal(STORAGE_KEYS.directors, []);
       const updated = [...current, { id: directorId, name }];
       await saveToLocal(STORAGE_KEYS.directors, updated);
@@ -126,7 +120,6 @@ export const preferenceService = {
       return response.data;
     } catch (error) {
       // Fallback a local storage
-      console.log('⚠️ Backend unavailable, removing director locally');
       const current = await loadFromLocal(STORAGE_KEYS.directors, []);
       const updated = current.filter(d => d.id !== directorId);
       await saveToLocal(STORAGE_KEYS.directors, updated);
@@ -144,7 +137,6 @@ export const preferenceService = {
       return response.data;
     } catch (error) {
       // Fallback a local storage
-      console.log('⚠️ Backend unavailable, syncing directors locally');
       await saveToLocal(STORAGE_KEYS.directors, directors);
       return { success: true, saved_locally: true };
     }
@@ -156,7 +148,6 @@ export const preferenceService = {
       return response.data.movies || [];
     } catch (error) {
       // Fallback a local storage
-      console.log('⚠️ Backend unavailable, using local storage for movies');
       return await loadFromLocal(STORAGE_KEYS.movies, []);
     }
   },
@@ -172,7 +163,6 @@ export const preferenceService = {
       return response.data;
     } catch (error) {
       // Fallback a local storage
-      console.log('⚠️ Backend unavailable, saving movie locally');
       const current = await loadFromLocal(STORAGE_KEYS.movies, []);
       const updated = [...current, { id: movieId, title, rating }];
       await saveToLocal(STORAGE_KEYS.movies, updated);
@@ -187,7 +177,6 @@ export const preferenceService = {
       return response.data;
     } catch (error) {
       // Fallback a local storage
-      console.log('⚠️ Backend unavailable, removing movie locally');
       const current = await loadFromLocal(STORAGE_KEYS.movies, []);
       const updated = current.filter(m => m.id !== movieId);
       await saveToLocal(STORAGE_KEYS.movies, updated);
@@ -198,7 +187,6 @@ export const preferenceService = {
 
   async syncWatchedMovies(movies) {
     try {
-      console.log('📤 Enviando películas al backend:', movies);
       const response = await api.post('/preferences/movies/sync', {
         movies: movies,
       });
@@ -209,7 +197,6 @@ export const preferenceService = {
       
       // Si es error de red (no hay backend), guardar localmente
       if (!error.response || error.response.status >= 500) {
-        console.log('⚠️ Backend unavailable, syncing movies locally');
         await saveToLocal(STORAGE_KEYS.movies, movies);
         return { success: true, saved_locally: true };
       }
@@ -232,7 +219,6 @@ export const preferenceService = {
       return response.data;
     } catch (error) {
       // Fallback a local storage solo para el radio
-      console.log('⚠️ Backend unavailable, saving radius locally');
       await saveToLocal(STORAGE_KEYS.radius, searchRadius);
       return { success: true, saved_locally: true };
     }
@@ -245,7 +231,6 @@ export const preferenceService = {
       return response.data.user?.location || null;
     } catch (error) {
       // Intentar obtener solo el radio desde local storage
-      console.log('⚠️ Backend unavailable, loading radius from local storage');
       const radius = await loadFromLocal(STORAGE_KEYS.radius, 50);
       return { radius };
     }

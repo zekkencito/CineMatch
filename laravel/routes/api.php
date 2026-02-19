@@ -78,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/subscription/current', [SubscriptionController::class, 'getCurrentPlan']);
     Route::get('/subscription/plans', [SubscriptionController::class, 'getPlans']);
     Route::post('/subscription/upgrade', [SubscriptionController::class, 'upgradeToPremium']);
+    Route::post('/subscription/create-order', [SubscriptionController::class, 'createPayPalOrder']);
     Route::post('/subscription/cancel', [SubscriptionController::class, 'cancelSubscription']);
     Route::get('/subscription/likes-count', [SubscriptionController::class, 'getDailyLikesCount']);
     

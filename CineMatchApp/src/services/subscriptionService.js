@@ -22,9 +22,11 @@ export const subscriptionService = {
   },
 
   // Actualizar a premium
-  async upgradeToPremium(duration = 30) {
+  async upgradeToPremium(duration = 30, payment = null) {
     try {
-      const response = await api.post('/subscription/upgrade', { duration });
+      const payload = { duration };
+      if (payment) payload.payment = payment;
+      const response = await api.post('/subscription/upgrade', payload);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

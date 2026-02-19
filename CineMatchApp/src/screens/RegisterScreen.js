@@ -96,14 +96,6 @@ const RegisterScreen = ({ navigation }) => {
       return;
     }
 
-    console.log('📍 Registration data:', {
-      name,
-      email,
-      age: parseInt(age),
-      hasPassword: !!password,
-      location: locationData,
-    });
-
     setLoading(true);
     try {
       await register({

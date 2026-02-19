@@ -12,6 +12,7 @@ import {
   Animated,
   Platform,
   Dimensions,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Slider from '@react-native-community/slider';
@@ -27,6 +28,14 @@ import * as Location from 'expo-location';
 import colors from '../constants/colors';
 import tmdbMovieService from '../services/tmdbMovieService';
 import preferenceService from '../services/preferenceService';
+import { subscriptionService } from '../services/subscriptionService';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faClapperboard } from '@fortawesome/free-solid-svg-icons'; 
+import { faMasksTheater } from '@fortawesome/free-solid-svg-icons';
+import { faEarthAmericas } from '@fortawesome/free-solid-svg-icons';
+import { faTicket } from '@fortawesome/free-solid-svg-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+  import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const PreferencesScreen = ({ navigation, route }) => {
   const isInitialSetup = route?.params?.isInitialSetup || false;
@@ -52,7 +61,8 @@ const PreferencesScreen = ({ navigation, route }) => {
   const [searchingMovies, setSearchingMovies] = useState(false);
   
   // Radio de búsqueda y ubicación
-  const [searchRadius, setSearchRadius] = useState(50);
+  const [searchRadius, setSearchRadius] = useState(7);
+  const [isPremium, setIsPremium] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [updatingLocation, setUpdatingLocation] = useState(false);
   const mapRef = useRef(null);
@@ -106,8 +116,14 @@ const PreferencesScreen = ({ navigation, route }) => {
       
       // Cargar géneros de TMDB
       const genres = await tmdbMovieService.getGenres();
-      console.log(`📚 Géneros cargados: ${genres.length}`, genres.map(g => g.name).join(', '));
       setAllGenres(genres);
+      // Detectar si el usuario es premium para ajustar límites
+      try {
+        const planResp = await subscriptionService.getCurrentPlan();
+        setIsPremium(Boolean(planResp?.subscription?.is_premium));
+      } catch (err) {
+        console.warn('No se pudo determinar plan del usuario:', err);
+      }
       
       // Si no es setup inicial, cargar preferencias guardadas
       if (!isInitialSetup) {
@@ -122,7 +138,11 @@ const PreferencesScreen = ({ navigation, route }) => {
         setSelectedDirectors(favDirectors);
         setWatchedMovies(watched);
         // Soportar tanto 'radius' como 'search_radius' del backend
-        setSearchRadius(location?.radius || location?.search_radius || 50);
+        // Validar que esté entre 1 y el máximo permitido (7 para gratis, 100 para premium)
+          const radiusFromBackend = location?.radius || location?.search_radius || 7;
+          const maxAllowed = isPremium ? 20000 : 7;
+          const validatedRadius = Math.min(Math.max(radiusFromBackend, 1), maxAllowed);
+        setSearchRadius(validatedRadius);
         
         // Guardar ubicación para el mapa
         if (location?.latitude && location?.longitude) {
@@ -323,22 +343,28 @@ const PreferencesScreen = ({ navigation, route }) => {
         .map(m => ({
           id: parseInt(m.id), // Asegurar que id sea número
           title: String(m.title).substring(0, 200), // Truncar a 200 caracteres
+          poster_path: m.poster_path || null,
           rating: m.rating ? parseInt(m.rating) : null,
         }));
       
       const directorsToSync = selectedDirectors.map(d => ({
         id: d.id,
         name: d.name,
+        profile_path: d.profile_path || null,
       }));
-      
-      console.log('🎬 Sincronizando películas:', moviesToSync.length, 'películas');
       
       // Guardar todo usando sync (más eficiente)
       await Promise.all([
         preferenceService.syncFavoriteGenres(selectedGenres),
         preferenceService.syncFavoriteDirectors(directorsToSync),
         preferenceService.syncWatchedMovies(moviesToSync),
-        preferenceService.updateLocation({ searchRadius }),
+        preferenceService.updateLocation({ 
+          searchRadius,
+          latitude: userLocation?.latitude,
+          longitude: userLocation?.longitude,
+          city: userLocation?.city,
+          country: userLocation?.country,
+        }),
       ]);
       
       Alert.alert(
@@ -380,7 +406,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'genres' && styles.activeTab]}
         onPress={() => setActiveTab('genres')}
       >
-        <Text style={styles.tabEmoji}>🎭</Text>
+        <FontAwesomeIcon icon={faMasksTheater} size={32} color={activeTab === 'genres' ? colors.primary : 'white'} />
         <Text style={[styles.tabText, activeTab === 'genres' && styles.activeTabText]}>
           Géneros
         </Text>
@@ -390,7 +416,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'directors' && styles.activeTab]}
         onPress={() => setActiveTab('directors')}
       >
-        <Text style={styles.tabEmoji}>🎬</Text>
+        <FontAwesomeIcon icon={faClapperboard} size={32} color={activeTab === 'directors' ? colors.primary : 'white'} />
         <Text style={[styles.tabText, activeTab === 'directors' && styles.activeTabText]}>
           Directores
         </Text>
@@ -400,7 +426,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'movies' && styles.activeTab]}
         onPress={() => setActiveTab('movies')}
       >
-        <Text style={styles.tabEmoji}>🍿</Text>
+        <FontAwesomeIcon icon={faTicket} size={32} color={activeTab === 'movies' ? colors.primary : 'white'} />
         <Text style={[styles.tabText, activeTab === 'movies' && styles.activeTabText]}>
           Películas
         </Text>
@@ -410,7 +436,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'radius' && styles.activeTab]}
         onPress={() => setActiveTab('radius')}
       >
-        <Text style={styles.tabEmoji}>📍</Text>
+        <FontAwesomeIcon icon={faEarthAmericas} size={32} color={activeTab === 'radius' ? colors.primary : 'white'} />
         <Text style={[styles.tabText, activeTab === 'radius' && styles.activeTabText]}>
           Distancia
         </Text>
@@ -508,13 +534,32 @@ const PreferencesScreen = ({ navigation, route }) => {
       {selectedDirectors.length === 0 ? (
         <Text style={styles.emptyText}>No has agregado directores aún</Text>
       ) : (
-        <View style={styles.selectedList}>
+        <View style={styles.selectedGrid}>
           {selectedDirectors.map(director => (
-            <View key={director.id} style={styles.selectedItem}>
-              <Text style={styles.selectedItemText}>{director.name}</Text>
-              <TouchableOpacity onPress={() => removeDirector(director.id)}>
-                <Text style={styles.removeButton}>✕</Text>
+            <View key={director.id} style={styles.selectedDirectorCard}>
+              <TouchableOpacity 
+                style={styles.removeButtonCard}
+                onPress={() => removeDirector(director.id)}
+              >
+                <Text style={styles.removeButtonCardText}>✕</Text>
               </TouchableOpacity>
+              
+              {director.profile_path ? (
+                <Image
+                  source={{ uri: `https://image.tmdb.org/t/p/w185${director.profile_path}` }}
+                  style={styles.selectedDirectorPhoto}
+                />
+              ) : (
+                <View style={styles.selectedDirectorPhotoPlaceholder}>
+                  <Text style={styles.selectedDirectorInitials}>
+                    {director.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                  </Text>
+                </View>
+              )}
+              
+              <Text style={styles.selectedDirectorName} numberOfLines={2}>
+                {director.name}
+              </Text>
             </View>
           ))}
         </View>
@@ -566,9 +611,11 @@ const PreferencesScreen = ({ navigation, route }) => {
               )}
               <View style={styles.movieResultInfo}>
                 <Text style={styles.resultText}>{movie.title}</Text>
-                <Text style={styles.movieYear}>
-                  {movie.release_date?.substring(0, 4)}
-                </Text>
+                {movie.release_date && (
+                  <Text style={styles.movieYear}>
+                    {movie.release_date.substring(0, 4)}
+                  </Text>
+                )}
               </View>
               <Text style={styles.addButton}>+ Agregar</Text>
             </TouchableOpacity>
@@ -583,18 +630,33 @@ const PreferencesScreen = ({ navigation, route }) => {
       {watchedMovies.length === 0 ? (
         <Text style={styles.emptyText}>No has agregado películas aún</Text>
       ) : (
-        <View style={styles.selectedList}>
+        <View style={styles.selectedGrid}>
           {watchedMovies.map(movie => (
-            <View key={movie.id} style={styles.selectedItem}>
-              <View>
-                <Text style={styles.selectedItemText}>{movie.title}</Text>
-                {movie.release_year && (
-                  <Text style={styles.movieYearSmall}>{movie.release_year}</Text>
-                )}
-              </View>
-              <TouchableOpacity onPress={() => removeMovie(movie.id)}>
-                <Text style={styles.removeButton}>✕</Text>
+            <View key={movie.id} style={styles.selectedMovieCard}>
+              <TouchableOpacity 
+                style={styles.removeButtonCard}
+                onPress={() => removeMovie(movie.id)}
+              >
+                <Text style={styles.removeButtonCardText}>✕</Text>
               </TouchableOpacity>
+              
+              {movie.poster_path ? (
+                <Image
+                  source={{ uri: `https://image.tmdb.org/t/p/w342${movie.poster_path}` }}
+                  style={styles.selectedMoviePoster}
+                />
+              ) : (
+                <View style={styles.selectedMoviePosterPlaceholder}>
+                  <Text style={styles.moviePosterIcon}>🎬</Text>
+                </View>
+              )}
+              
+              <Text style={styles.selectedMovieTitle} numberOfLines={2}>
+                {movie.title}
+              </Text>
+              {movie.release_year && (
+                <Text style={styles.selectedMovieYear}>{movie.release_year}</Text>
+              )}
             </View>
           ))}
         </View>
@@ -605,12 +667,14 @@ const PreferencesScreen = ({ navigation, route }) => {
   // Renderizar radio
   const renderRadius = () => {
     const getRadiusCategory = () => {
-      if (searchRadius <= 10) return { emoji: '🏠', text: 'Muy cerca', desc: 'Solo tu vecindario' };
-      if (searchRadius <= 20) return { emoji: '🚶', text: 'Cerca', desc: 'Tu ciudad' };
-      if (searchRadius <= 35) return { emoji: '🚗', text: 'Normal', desc: 'Área urbana' };
-      return { emoji: '🚄', text: 'Lejos', desc: 'Ciudades cercanas' };
+      if (searchRadius <= 5) return { emoji: <FontAwesome5 name="walking" size={24} color="black" />, text: 'Muy cerca', desc: 'Solo tu vecindario' };
+      if (searchRadius <= 50) return { emoji: <FontAwesome5 name="car" size={24} color="black" />, text: 'Regional', desc: 'Área urbana / ciudades cercanas' };
+      if (searchRadius <= 500) return { emoji: <FontAwesome5 name="bus" size={24} color="black" />, text: 'Extendido', desc: 'Regiones cercanas' };
+      if (searchRadius <= 2000) return { emoji: <FontAwesome5 name="plane" size={24} color="black" />, text: 'Continental', desc: 'Varias provincias/estados' };
+      if (searchRadius <= 10000) return { emoji: <FontAwesome5 name="globe" size={24} color="black" />, text: 'Intercontinental', desc: 'Amplia cobertura regional' };
+      return { emoji: <FontAwesome5 name="globe-americas" size={24} color="black" />, text: 'Global', desc: 'Cobertura mundial (hasta 20000 km)' };
     };
-    
+  
     const category = getRadiusCategory();
     
     return (
@@ -663,7 +727,7 @@ const PreferencesScreen = ({ navigation, route }) => {
                   description={`${userLocation.city || 'Tu ciudad'}, ${userLocation.country || 'Tu país'}`}
                 >
                   <View style={styles.markerContainer}>
-                    <Text style={styles.markerEmoji}>📍</Text>
+                    <MaterialIcons name="gps-fixed" size={24} color="black" />
                   </View>
                 </Marker>
                 
@@ -697,7 +761,7 @@ const PreferencesScreen = ({ navigation, route }) => {
                 {updatingLocation ? (
                   <ActivityIndicator color={colors.primary} size="small" />
                 ) : (
-                  <Text style={styles.gpsButtonText}>📍 Actualizar GPS</Text>
+                  <Text style={styles.gpsButtonText}><MaterialIcons name="gps-fixed" size={16} color={colors.primary} /> Actualizar GPS</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -733,20 +797,28 @@ const PreferencesScreen = ({ navigation, route }) => {
           
           <Slider
             style={styles.slider}
-            minimumValue={5}
-            maximumValue={50}
-            step={5}
+            minimumValue={1}
+            maximumValue={isPremium ? 20000 : 7}
+            step={isPremium ? 10 : 1}
             value={searchRadius}
             onValueChange={setSearchRadius}
             minimumTrackTintColor={colors.primary}
             maximumTrackTintColor={colors.border}
             thumbTintColor={colors.primary}
           />
-          
+
           <View style={styles.radiusLabels}>
-            <Text style={styles.radiusLabel}>5 km</Text>
-            <Text style={styles.radiusLabel}>25 km</Text>
-            <Text style={styles.radiusLabel}>50 km</Text>
+            {(() => {
+              const max = isPremium ? 20000 : 7;
+              const mid = isPremium ? Math.max(10, Math.round(max / 10)) : Math.round((1 + max) / 2);
+              return (
+                <>
+                  <Text style={styles.radiusLabel}>1 km</Text>
+                  <Text style={styles.radiusLabel}>{mid} km</Text>
+                  <Text style={styles.radiusLabel}>{max} km</Text>
+                </>
+              );
+            })()}
           </View>
           
           <View style={styles.radiusCategoryBanner}>
@@ -758,21 +830,7 @@ const PreferencesScreen = ({ navigation, route }) => {
           </View>
         </View>
         
-        <View style={styles.radiusInfoCard}>
-          <View style={styles.radiusInfoHeader}>
-            <Text style={styles.radiusInfoIcon}>💡</Text>
-            <Text style={styles.radiusInfoTitle}>Mapa gratuito sin límites</Text>
-          </View>
-          <Text style={styles.radiusInfoText}>
-            El área amarilla en el mapa muestra exactamente hasta dónde buscaremos personas que compartan tus gustos.
-          </Text>
-          <Text style={styles.radiusInfoSubtext}>
-            ✓ Mapa basado en OpenStreetMap (gratis)
-            {"\n"}✓ Sin límite de uso
-            {"\n"}✓ Cálculos de distancia precisos
-            {"\n"}✓ Tu privacidad está protegida
-          </Text>
-        </View>
+        
       </View>
     );
   };
@@ -812,9 +870,7 @@ const PreferencesScreen = ({ navigation, route }) => {
             <Text style={styles.backButtonText}>← Volver</Text>
           </TouchableOpacity>
           
-          <View style={styles.headerIconBox}>
-            <Text style={styles.headerIcon}>⚙️</Text>
-          </View>
+
           <Text style={styles.headerTitle}>
             {isInitialSetup ? 'Configura tus preferencias' : 'Mis Preferencias'}
           </Text>
@@ -828,20 +884,28 @@ const PreferencesScreen = ({ navigation, route }) => {
 
       {renderTabs()}
 
-      <LinearGradient
-        colors={[colors.secondary, colors.secondaryLight]}
-        style={styles.scrollViewGradient}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.flex}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView 
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
+        <LinearGradient
+          colors={[colors.secondary, colors.secondaryLight]}
+          style={styles.scrollViewGradient}
         >
-          {activeTab === 'genres' && renderGenres()}
-          {activeTab === 'directors' && renderDirectors()}
-          {activeTab === 'movies' && renderMovies()}
-          {activeTab === 'radius' && renderRadius()}
-        </ScrollView>
-      </LinearGradient>
+          <ScrollView 
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+            {activeTab === 'genres' && renderGenres()}
+            {activeTab === 'directors' && renderDirectors()}
+            {activeTab === 'movies' && renderMovies()}
+            {activeTab === 'radius' && renderRadius()}
+          </ScrollView>
+        </LinearGradient>
+      </KeyboardAvoidingView>
 
       <View style={styles.footer}>
         <TouchableOpacity
@@ -869,6 +933,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.secondary,
+  },
+  flex: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -914,6 +981,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: colors.primary,
     marginBottom: 6,
+    marginTop: 40,
     letterSpacing: 0.5,
   },
   headerSubtitle: {
@@ -939,7 +1007,6 @@ const styles = StyleSheet.create({
   activeTab: {
     borderBottomWidth: 3,
     borderBottomColor: colors.primary,
-    backgroundColor: colors.primaryLight,
   },
   tabEmoji: {
     fontSize: 20,
@@ -1124,6 +1191,119 @@ const styles = StyleSheet.create({
   },
   selectedList: {
     gap: 10,
+  },
+  selectedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 8,
+  },
+  selectedDirectorCard: {
+    width: (Dimensions.get('window').width - 64) / 3,
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 12,
+    paddingTop: 8,
+    borderWidth: 2,
+    borderColor: colors.border,
+    position: 'relative',
+  },
+  selectedMovieCard: {
+    width: (Dimensions.get('window').width - 64) / 3,
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 8,
+    paddingTop: 8,
+    borderWidth: 2,
+    borderColor: colors.border,
+    position: 'relative',
+  },
+  removeButtonCard: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: colors.accent,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    shadowColor: colors.textDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  removeButtonCardText: {
+    fontSize: 16,
+    color: colors.card,
+    fontWeight: '700',
+  },
+  selectedDirectorPhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    marginBottom: 8,
+  },
+  selectedDirectorPhotoPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  selectedDirectorInitials: {
+    color: colors.textDark,
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  selectedDirectorName: {
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  selectedMoviePoster: {
+    width: 80,
+    height: 120,
+    borderRadius: 8,
+    backgroundColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    marginBottom: 6,
+  },
+  selectedMoviePosterPlaceholder: {
+    width: 80,
+    height: 120,
+    borderRadius: 8,
+    backgroundColor: colors.card,
+    borderWidth: 2,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  selectedMovieTitle: {
+    fontSize: 12,
+    color: colors.text,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 15,
+  },
+  selectedMovieYear: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+    textAlign: 'center',
   },
   selectedItem: {
     flexDirection: 'row',
@@ -1363,7 +1543,6 @@ const styles = StyleSheet.create({
   radiusCategoryTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: colors.primary,
     marginBottom: 2,
   },
   radiusCategoryDesc: {

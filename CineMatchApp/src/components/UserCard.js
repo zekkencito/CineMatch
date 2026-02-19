@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import colors from '../constants/colors';
 
 const { width, height } = Dimensions.get('window');
 
 const UserCard = ({ user }) => {
+  
   // Validar que user existe y tiene las propiedades necesarias
   if (!user || !user.id) {
     return null;
@@ -23,6 +24,15 @@ const UserCard = ({ user }) => {
     return placeholders[user.id % placeholders.length];
   };
 
+  // Obtener URL del poster de TMDB
+  const getMoviePosterUrl = (movie) => {
+    if (movie.poster_path) {
+      return `https://image.tmdb.org/t/p/w300${movie.poster_path}`;
+    }
+    // Si no hay poster_path, intentar construir con tmdb_movie_id
+    return null;
+  };
+
   return (
     <View style={styles.card}>
       <Image 
@@ -32,78 +42,95 @@ const UserCard = ({ user }) => {
       />
       
       {/* Badge de Match % */}
-      {user.match_percentage && (
+      {(user.match_percentage && user.match_percentage > 0) ? (
         <View style={styles.matchBadge}>
-          <Text style={styles.matchPercentage}>{user.match_percentage}%</Text>
+          <Text style={styles.matchPercentage}>{String(user.match_percentage)}%</Text>
           <Text style={styles.matchLabel}>MATCH</Text>
         </View>
-      )}
-      
+      ) : null}
+
+      {/* Vista con toda la info */}
       <View style={styles.infoContainer}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name}>{user.name}, {user.age}</Text>
-          {user.distance && (
-            <View style={styles.distanceBadge}>
-              <Text style={styles.distanceText}>📍 {user.distance}km</Text>
-            </View>
-          )}
-        </View>
-        
-        {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
-        
-        {/* Compatibilidad */}
-        {(user.common_genres_count > 0 || user.common_directors_count > 0 || user.common_movies_count > 0) && (
-          <View style={styles.compatibilityContainer}>
-            <Text style={styles.compatibilityTitle}>🎬 En común:</Text>
-            <View style={styles.compatibilityRow}>
-              {user.common_genres_count > 0 && (
-                <Text style={styles.compatibilityText}>
-                  {user.common_genres_count} género{user.common_genres_count > 1 ? 's' : ''}
-                </Text>
-              )}
-              {user.common_directors_count > 0 && (
-                <Text style={styles.compatibilityText}>
-                  {user.common_directors_count} director{user.common_directors_count > 1 ? 'es' : ''}
-                </Text>
-              )}
-              {user.common_movies_count > 0 && (
-                <Text style={styles.compatibilityText}>
-                  {user.common_movies_count} película{user.common_movies_count > 1 ? 's' : ''}
-                </Text>
-              )}
-            </View>
-          </View>
-        )}
-        
-        {user.favorite_genres && user.favorite_genres.length > 0 && (
-          <View style={styles.genresContainer}>
-            {user.favorite_genres.slice(0, 3).map((genre, index) => (
-              <View key={index} style={styles.genreTag}>
-                <Text style={styles.genreText}>{genre.name || genre}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-        
-        {/* Películas favoritas */}
-        {user.watched_movies_list && user.watched_movies_list.length > 0 && (
-          <View style={styles.moviesSection}>
-            <Text style={styles.moviesSectionTitle}>🎬 Películas vistas:</Text>
-            <View style={styles.moviesContainer}>
-              {user.watched_movies_list.slice(0, 3).map((movie, index) => (
-                <View key={index} style={styles.movieTag}>
-                  <Text style={styles.movieText} numberOfLines={1}>
-                    {movie.title}
-                  </Text>
-                  {movie.rating && (
-                    <Text style={styles.movieRating}>⭐ {movie.rating}</Text>
-                  )}
+        <ScrollView 
+          contentContainerStyle={styles.infoContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          scrollEnabled={true}
+        >
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>
+                {user.age ? (user.name || 'Usuario') + ', ' + String(user.age) : (user.name || 'Usuario')}
+              </Text>
+              {(user.distance && user.distance > 0) ? (
+                <View style={styles.distanceBadge}>
+                  <Text style={styles.distanceText}>📍 {String(user.distance)}km</Text>
                 </View>
-              ))}
+              ) : null}
             </View>
-          </View>
-        )}
-      </View>
+            
+            {(user.bio && typeof user.bio === 'string' && user.bio.length > 0) ? (
+              <Text style={styles.bio}>{user.bio}</Text>
+            ) : null}
+            
+            {/* Compatibilidad */}
+            {((user.common_genres_count && user.common_genres_count > 0) || 
+              (user.common_directors_count && user.common_directors_count > 0) || 
+              (user.common_movies_count && user.common_movies_count > 0)) ? (
+              <View style={styles.compatibilityContainer}>
+                <Text style={styles.compatibilityTitle}>🎬 En común:</Text>
+                <View style={styles.compatibilityRow}>
+                  {(user.common_genres_count && user.common_genres_count > 0) ? (
+                    <Text style={styles.compatibilityText}>
+                      {String(user.common_genres_count)} género{user.common_genres_count > 1 ? 's' : ''}
+                    </Text>
+                  ) : null}
+                  {(user.common_directors_count && user.common_directors_count > 0) ? (
+                    <Text style={styles.compatibilityText}>
+                      {String(user.common_directors_count)} director{user.common_directors_count > 1 ? 'es' : ''}
+                    </Text>
+                  ) : null}
+                  {(user.common_movies_count && user.common_movies_count > 0) ? (
+                    <Text style={styles.compatibilityText}>
+                      {String(user.common_movies_count)} película{user.common_movies_count > 1 ? 's' : ''}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+            
+            {/* Géneros favoritos */}
+            {(user.favorite_genres && user.favorite_genres.length > 0) ? (
+              <View style={styles.genresSection}>
+                <Text style={styles.genresSectionTitle}>🎭 Géneros favoritos:</Text>
+                <View style={styles.genresContainer}>
+                  {user.favorite_genres
+                    .filter(genre => genre != null)
+                    .slice(0, 5)
+                    .map((genre, index) => {
+                      const genreName = typeof genre === 'object' && genre.name
+                        ? genre.name
+                        : (typeof genre === 'string' ? genre : 'Género');
+                      return (
+                        <View key={'genre-' + index} style={styles.genreTag}>
+                          <Text style={styles.genreText}>{genreName}</Text>
+                        </View>
+                      );
+                    })
+                  }
+                </View>
+              </View>
+            ) : null}
+            
+            {/* Indicador para ver películas */}
+            {(user.watched_movies_list && user.watched_movies_list.length > 0) ? (
+              <View style={styles.tapHintContainer}>
+                <Text style={styles.tapHintText}>
+                  🎬 Toca la tarjeta para ver {user.watched_movies_list.length} película{user.watched_movies_list.length > 1 ? 's' : ''}
+                </Text>
+              </View>
+            ) : null}
+          </ScrollView>
+        </View>
     </View>
   );
 };
@@ -112,87 +139,176 @@ const styles = StyleSheet.create({
   card: {
     width: width - 40,
     height: height * 0.7,
-    borderRadius: 20,
-    backgroundColor: colors.card,
+    borderRadius: 24,
+    backgroundColor: '#ffffff',
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    paddingTop: 0,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: '#F5C518',
   },
   image: {
     width: '100%',
-    height: '70%',
+    height: '42%',
   },
   matchBadge: {
     position: 'absolute',
-    top: 20,
-    right: 20,
-    backgroundColor: 'rgba(229, 9, 20, 0.95)',
+    top: 16,
+    right: 16,
+    backgroundColor: '#000',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#F5C518',
   },
   matchPercentage: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: '900',
+    color: '#F5C518',
   },
   matchLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#F5C518',
     marginTop: -2,
+    letterSpacing: 1,
   },
   infoContainer: {
-    padding: 20,
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  infoContent: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 16,
+  },
+  moviesOnlyContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#000',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#F5C518',
+  },
+  backButtonText: {
+    color: '#F5C518',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  moviesOnlyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#000',
+    marginBottom: 14,
+    letterSpacing: 0.5,
+  },
+  moviesGridContent: {
+    paddingBottom: 16,
+  },
+  moviesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  gridMovieContainer: {
+    width: (width - 80) / 3,
+    marginBottom: 4,
+  },
+  gridMoviePoster: {
+    width: '100%',
+    aspectRatio: 2/3,
+    borderRadius: 8,
+    backgroundColor: '#E8E8E8',
+    borderWidth: 2,
+    borderColor: '#F5C518',
+  },
+  gridMoviePosterPlaceholder: {
+    width: '100%',
+    aspectRatio: 2/3,
+    borderRadius: 8,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 2,
+    borderColor: '#E8E8E8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridMovieTitle: {
+    fontSize: 9,
+    color: '#000',
+    fontWeight: '600',
+    marginTop: 4,
+    textAlign: 'center',
+    lineHeight: 11,
   },
   nameRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    paddingBottom: 12,
+    borderBottomWidth: 3,
+    borderBottomColor: '#F5C518',
   },
   name: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text,
+    fontWeight: '900',
+    color: '#000',
     flex: 1,
+    letterSpacing: 0.8,
   },
   distanceBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#000',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
   distanceText: {
-    fontSize: 12,
-    color: colors.text,
-    fontWeight: '600',
+    fontSize: 11,
+    color: '#F5C518',
+    fontWeight: '700',
   },
   bio: {
-    fontSize: 16,
-    color: colors.textSecondary,
+    fontSize: 14,
+    color: '#444',
     marginBottom: 12,
+    lineHeight: 21,
+    fontWeight: '500',
   },
   compatibilityContainer: {
-    backgroundColor: 'rgba(229, 9, 20, 0.15)',
+    backgroundColor: '#FFF9E6',
     padding: 12,
     borderRadius: 12,
     marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#F5C518',
   },
   compatibilityTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#000',
+    marginBottom: 8,
+    letterSpacing: 0.3,
   },
   compatibilityRow: {
     flexDirection: 'row',
@@ -200,63 +316,63 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   compatibilityText: {
-    fontSize: 13,
-    color: colors.text,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    fontSize: 12,
+    color: '#000',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
+    fontWeight: '700',
+    borderWidth: 2,
+    borderColor: '#F5C518',
   },
   genresContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
-  genreTag: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  genreText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  moviesSection: {
-    marginTop: 12,
-  },
-  moviesSectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.text,
+  genresSection: {
+    marginTop: 4,
     marginBottom: 8,
   },
-  moviesContainer: {
-    gap: 6,
+  genresSectionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#000',
+    marginBottom: 10,
+    letterSpacing: 0.3,
   },
-  movieTag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 12,
+  genreTag: {
+    backgroundColor: '#000',
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#F5C518',
+  },
+  genreText: {
+    color: '#F5C518',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  tapHintContainer: {
+    backgroundColor: '#000',
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 2,
+    borderColor: '#F5C518',
     alignItems: 'center',
   },
-  movieText: {
-    color: colors.text,
+  tapHintText: {
+    color: '#F5C518',
     fontSize: 13,
-    fontWeight: '500',
-    flex: 1,
+    fontWeight: '700',
+    textAlign: 'center',
   },
-  movieRating: {
-    color: colors.text,
-    fontSize: 11,
-    fontWeight: '600',
-    marginLeft: 8,
+  moviePosterIcon: {
+    fontSize: 32,
   },
 });
 

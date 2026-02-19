@@ -8,16 +8,21 @@ import {
   Alert,
   Animated,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { matchService } from '../services/matchService';
 import MatchItem from '../components/MatchItem';
 import colors from '../constants/colors';
+import { faMasksTheater } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faTicket } from '@fortawesome/free-solid-svg-icons';
 
 const MatchesScreen = ({ navigation }) => {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -28,34 +33,46 @@ const MatchesScreen = ({ navigation }) => {
     }, [])
   );
 
-  const loadMatches = async () => {
+  const loadMatches = async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       const data = await matchService.getMatches();
       // Filtrar matches válidos y extraer información del usuario
       const validMatches = (data || []).filter(m => m && m.user && m.user.id);
-      console.log(`Loaded ${validMatches.length} matches`);
       setMatches(validMatches);
       
-      // Animar cuando se cargan los datos
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      // Animar cuando se cargan los datos (solo en carga inicial)
+      if (!isRefreshing) {
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
     } catch (error) {
       console.error('Error al cargar los  Amigos de Butaca:', error);
-      Alert.alert('Error', '  Error al cargar los Amigos de Butaca. Por favor, verifica tu conexión e inténtalo de nuevo.');
+      if (!isRefreshing) {
+        Alert.alert('Error', '  Error al cargar los Amigos de Butaca. Por favor, verifica tu conexión e inténtalo de nuevo.');
+      }
       setMatches([]);
     } finally {
-      setLoading(false);
+      if (isRefreshing) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -94,7 +111,7 @@ const MatchesScreen = ({ navigation }) => {
       >
         <View style={styles.headerTop}>
           <View style={styles.iconBox}>
-            <Text style={styles.iconEmoji}>🍿</Text>
+            <FontAwesomeIcon icon={faTicket} size={32} color={colors.primary} />
           </View>
           <Text style={styles.title}>Amigos de Butaca</Text>
         </View>
@@ -116,7 +133,7 @@ const MatchesScreen = ({ navigation }) => {
             }
           ]}
         >
-          <Text style={styles.emptyEmoji}>🎭</Text>
+          <FontAwesomeIcon icon={faMasksTheater} size={64} color={colors.primary} />
           <Text style={styles.emptyText}>Aún no tienes Amigos de Butaca</Text>
           <Text style={styles.emptySubtext}>
             Comienza a hacer swipes para encontrar personas que compartan tu gusto en películas.
@@ -130,6 +147,16 @@ const MatchesScreen = ({ navigation }) => {
             <MatchItem match={item} onPress={handleMatchPress} />
           )}
           contentContainerStyle={styles.listContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadMatches(true)}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+              title="Actualizando..."
+              titleColor={colors.textSecondary}
+            />
+          }
         />
       )}
     </LinearGradient>
@@ -158,42 +185,30 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === 'ios' ? 60 : 45,
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    gap: 12,
+    paddingBottom: 24,
+    gap: 14,
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  iconBox: {
-    width: 48,
-    height: 48,
-    backgroundColor: colors.primary,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
+    gap: 14,
   },
   iconEmoji: {
-    fontSize: 28,
+    fontSize: 32,
   },
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '900',
     color: colors.primary,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 15,
     color: colors.textSecondary,
     marginLeft: 4,
+    fontWeight: '500',
   },
   listContainer: {
     paddingHorizontal: 20,

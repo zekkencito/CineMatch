@@ -8,7 +8,6 @@ const getApiUrl = () => {
   // 1. Si hay EXPO_PUBLIC_API_URL en .env, úsala (prioridad máxima)
   const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envApiUrl) {
-    console.log('📌 Usando API_URL desde .env:', envApiUrl);
     return envApiUrl;
   }
 
@@ -17,20 +16,16 @@ const getApiUrl = () => {
   if (debuggerHost) {
     const ip = debuggerHost.split(':')[0]; // Extraer solo la IP
     const autoUrl = `http://${ip}:8000/api`;
-    console.log('🔍 Auto-detectada API_URL:', autoUrl);
     return autoUrl;
   }
 
   // 3. Fallback a configuración manual (cambiar solo si falla auto-detección)
   const FALLBACK_IP = '192.168.100.12'; // Tu última IP conocida
   const fallbackUrl = `http://${FALLBACK_IP}:8000/api`;
-  console.log('⚠️ Usando IP fallback:', fallbackUrl);
   return fallbackUrl;
 };
 
 const API_URL = getApiUrl();
-
-console.log('🔗 API URL:', API_URL); // Para debug
 
 const api = axios.create({
   baseURL: API_URL,
@@ -45,6 +40,7 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem('token');
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -64,14 +60,6 @@ api.interceptors.response.use(
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('user');
     }
-    
-    // Log para debugging
-    console.error('❌ API Error:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      message: error.message,
-    });
     
     return Promise.reject(error);
   }

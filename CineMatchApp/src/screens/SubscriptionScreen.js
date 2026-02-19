@@ -8,23 +8,85 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  RefreshControl,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { subscriptionService } from '../services/subscriptionService';
+import { paymentService } from '../services/paymentService';
+import paymentConfig from '../config/paymentConfig';
 import colors from '../constants/colors';
+import preferenceService from '../services/preferenceService';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import {
+  faStar,
+  faFilm,
+  faGlobeAmericas,
+  faHeart,
+  faEye,
+  faUndo,
+  faFilter,
+  faInfoCircle,
+  faRocket,
+  faCheck,
+  faArrowLeft,
+} from '@fortawesome/free-solid-svg-icons';
 
 const SubscriptionScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
   const [currentPlan, setCurrentPlan] = useState(null);
   const [plans, setPlans] = useState(null);
 
   useEffect(() => {
     loadSubscriptionData();
+
+    // Escuchar deep links de retorno de PayPal
+    const handleDeepLink = (event) => {
+      const url = event.url;
+      console.log('Deep link received:', url);
+      
+      // cinematch://payment/return?orderId=XXX&status=success
+      if (url && url.includes('payment/return')) {
+        const urlObj = new URL(url);
+        const orderId = urlObj.searchParams.get('orderId');
+        const status = urlObj.searchParams.get('status');
+        
+        if (status === 'success' && orderId) {
+          // Guardar orden y verificar automáticamente
+          setPendingOrder({ orderID: orderId });
+          setTimeout(() => {
+            handleVerifyPaymentAuto(orderId);
+          }, 500);
+        } else if (status === 'cancelled') {
+          Alert.alert('Pago cancelado', 'Has cancelado el pago. Puedes intentarlo nuevamente.');
+        }
+      }
+    };
+
+    // Listener para URLs mientras la app está abierta
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // Verificar si la app se abrió desde un deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
-  const loadSubscriptionData = async () => {
-    setLoading(true);
+  const loadSubscriptionData = async (isRefreshing = false) => {
+    if (isRefreshing) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
       const [planResponse, plansResponse] = await Promise.all([
         subscriptionService.getCurrentPlan(),
@@ -40,16 +102,24 @@ const SubscriptionScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error loading subscription:', error);
-      Alert.alert('Error', 'No se pudo cargar la información de suscripciones');
+      if (!isRefreshing) {
+        Alert.alert('Error', 'No se pudo cargar la información de suscripciones');
+      }
     } finally {
-      setLoading(false);
+      if (isRefreshing) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
+
+  const [pendingOrder, setPendingOrder] = useState(null);
 
   const handleUpgrade = async () => {
     Alert.alert(
       '💳 Actualizar a Premium',
-      '¿Deseas actualizar a Premium por $70/mes?',
+      '¿Deseas actualizar a Premium por $9.99/mes?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -57,17 +127,37 @@ const SubscriptionScreen = ({ navigation }) => {
           onPress: async () => {
             setUpgrading(true);
             try {
-              const response = await subscriptionService.upgradeToPremium(30);
-              if (response.success) {
+              // Crear orden en el servidor
+              const createResp = await paymentService.createPayPalOrder(30);
+              if (!createResp.success) throw new Error(createResp.message || 'No se pudo crear la orden');
+
+              // Guardar orderId
+              setPendingOrder({ orderID: createResp.orderID, amount: createResp.amount, mock: createResp.mock });
+
+              // Si es mock (desarrollo), activar directamente
+              if (createResp.mock) {
                 Alert.alert(
-                  '🎉 ¡Bienvenido a Premium!',
-                  response.message,
-                  [{ text: 'OK', onPress: loadSubscriptionData }]
+                  '🧪 Modo desarrollo',
+                  'Estás en modo de prueba (PayPal no configurado). ¿Quieres simular un pago exitoso?',
+                  [
+                    { text: 'Cancelar', style: 'cancel', onPress: () => setPendingOrder(null) },
+                    { text: 'Simular pago', onPress: () => handleVerifyPayment() }
+                  ]
+                );
+              } else {
+                // Abrir URL de aprobación en navegador
+                await paymentService.openApprovalUrl(createResp.approveUrl);
+
+                // Mostrar instrucción para verificar al volver
+                Alert.alert(
+                  'Pago en progreso',
+                  'Se abrió PayPal en el navegador. Completa el pago y vuelve a la app, luego pulsa "Verificar pago" para activar tu suscripción.',
+                  [{ text: 'OK' }]
                 );
               }
             } catch (error) {
-              console.error('Error upgrading:', error);
-              Alert.alert('Error', 'No se pudo procesar el pago');
+              console.error('Error initiating PayPal flow:', error);
+              Alert.alert('Error', (error.message || error)?.toString() || 'No se pudo iniciar el pago');
             } finally {
               setUpgrading(false);
             }
@@ -75,6 +165,32 @@ const SubscriptionScreen = ({ navigation }) => {
         }
       ]
     );
+  };
+
+  const handleVerifyPaymentAuto = async (orderID) => {
+    setUpgrading(true);
+    try {
+      const response = await subscriptionService.upgradeToPremium(30, { orderID });
+      if (response.success) {
+        Alert.alert('🎉 ¡Premium activado!', response.message, [{ text: 'OK', onPress: () => { setPendingOrder(null); loadSubscriptionData(); } }]);
+      } else {
+        Alert.alert('No verificado', response.message || 'El pago no fue verificado.');
+      }
+    } catch (err) {
+      console.error('Verification error:', err);
+      Alert.alert('Error', err.message || 'No se pudo verificar el pago.');
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  const handleVerifyPayment = async () => {
+    if (!pendingOrder?.orderID) {
+      Alert.alert('Sin orden', 'No hay una orden pendiente para verificar. Por favor inicia el pago primero.');
+      return;
+    }
+
+    await handleVerifyPaymentAuto(pendingOrder.orderID);
   };
 
   const handleCancel = async () => {
@@ -90,6 +206,12 @@ const SubscriptionScreen = ({ navigation }) => {
             try {
               const response = await subscriptionService.cancelSubscription();
               if (response.success) {
+                try {
+                  // Al cancelar, restablecer el radio al valor por defecto (7 km)
+                  await preferenceService.updateLocation({ searchRadius: 7 });
+                } catch (e) {
+                  console.warn('No se pudo restablecer radio en el servidor:', e);
+                }
                 Alert.alert('Cancelado', response.message, [
                   { text: 'OK', onPress: loadSubscriptionData }
                 ]);
@@ -135,7 +257,10 @@ const SubscriptionScreen = ({ navigation }) => {
       <LinearGradient colors={[colors.secondary, colors.secondaryLight]} style={styles.headerGradient}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backButtonText}>← Volver</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <FontAwesomeIcon icon={faArrowLeft} size={18} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.backButtonText}>Volver</Text>
+            </View>
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>Suscripción Premium</Text>
@@ -144,13 +269,27 @@ const SubscriptionScreen = ({ navigation }) => {
       </LinearGradient>
 
       <LinearGradient colors={[colors.secondary, colors.secondaryLight]} style={styles.contentGradient}>
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadSubscriptionData(true)}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+              title="Actualizando..."
+              titleColor={colors.textSecondary}
+            />
+          }
+        >
         {/* Plan Actual */}
         <View style={styles.currentPlanCard}>
           <View style={styles.planHeader}>
-            <Text style={styles.planTitle}>
-              {isPremium ? '⭐ Premium' : '🎬 Plan Gratis'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <FontAwesomeIcon icon={isPremium ? faStar : faFilm} size={20} color={isPremium ? '#ffd700' : colors.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.planTitle}>{isPremium ? 'Premium' : 'Plan Gratis'}</Text>
+            </View>
             {isPremium && currentPlan?.status === 'active' && (
               <View style={styles.activeBadge}>
                 <Text style={styles.activeBadgeText}>ACTIVO</Text>
@@ -167,38 +306,38 @@ const SubscriptionScreen = ({ navigation }) => {
           <View style={styles.benefitsContainer}>
             <Text style={styles.benefitsTitle}>Tus beneficios actuales:</Text>
             <View style={styles.benefitItem}>
-              <Text style={styles.benefitIcon}>🌍</Text>
+              <FontAwesomeIcon icon={faGlobeAmericas} size={20} color={colors.primary} style={styles.benefitIcon} />
               <Text style={styles.benefitText}>
                 Radio de búsqueda: hasta 50 km
               </Text>
             </View>
             <View style={styles.benefitItem}>
-              <Text style={styles.benefitIcon}>❤️</Text>
+              <FontAwesomeIcon icon={faHeart} size={20} color={colors.primary} style={styles.benefitIcon} />
               <Text style={styles.benefitText}>
                 Palomitas diarias: {benefits.daily_likes_limit === 'unlimited' ? 'Ilimitadas' : benefits.daily_likes_limit}
               </Text>
             </View>
             {benefits.can_see_likes && (
               <View style={styles.benefitItem}>
-                <Text style={styles.benefitIcon}>💫</Text>
+                <FontAwesomeIcon icon={faEye} size={20} color={colors.primary} style={styles.benefitIcon} />
                 <Text style={styles.benefitText}>Ver quién quiere palomitas contigo</Text>
               </View>
             )}
             {benefits.can_undo_swipes && (
               <View style={styles.benefitItem}>
-                <Text style={styles.benefitIcon}>⏮️</Text>
+                <FontAwesomeIcon icon={faUndo} size={20} color={colors.primary} style={styles.benefitIcon} />
                 <Text style={styles.benefitText}>Deshacer Amigos Palomeros rechazados</Text>
               </View>
             )}
             {benefits.has_advanced_filters && (
               <View style={styles.benefitItem}>
-                <Text style={styles.benefitIcon}>🎬</Text>
+                <FontAwesomeIcon icon={faFilter} size={20} color={colors.primary} style={styles.benefitIcon} />
                 <Text style={styles.benefitText}>Filtros avanzados</Text>
               </View>
             )}
             {benefits.is_featured && (
               <View style={styles.benefitItem}>
-                <Text style={styles.benefitIcon}>🌟</Text>
+                <FontAwesomeIcon icon={faStar} size={20} color={colors.primary} style={styles.benefitIcon} />
                 <Text style={styles.benefitText}>Perfil destacado</Text>
               </View>
             )}
@@ -215,19 +354,53 @@ const SubscriptionScreen = ({ navigation }) => {
         {!isPremium && plans?.premium && (
           <View style={styles.premiumCard}>
             <View style={styles.premiumHeader}>
-              <Text style={styles.premiumTitle}>⭐ Actualiza a Premium</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <FontAwesomeIcon icon={faStar} size={20} color={'#ffd700'} style={{ marginRight: 8 }} />
+                <Text style={styles.premiumTitle}>Actualiza a Premium</Text>
+              </View>
               
             </View>
-            <Text style={styles.premiumPrice}>$9.99/mes</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+              <FontAwesomeIcon icon={faFilm} size={16} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.premiumPrice}>$9.99/mes</Text>
+            </View>
             <Text style={styles.premiumSubtitle}>Desbloquea todas las funciones:</Text>
 
             <View style={styles.featuresList}>
-              {plans.premium.features.map((feature, index) => (
-                <View key={index} style={styles.featureItem}>
-                  <Text style={styles.featureCheck}>✓</Text>
-                  <Text style={styles.featureText}>{feature}</Text>
-                </View>
-              ))}
+              {plans.premium.features.map((feature, index) => {
+                const t = String(feature || '');
+                const lower = t.toLowerCase();
+
+                // Decide icon for descriptive purpose (replace emoji)
+                const getDescriptorIcon = () => {
+                  if (lower.includes('radio') || lower.includes('distancia') || lower.includes('km')) return faGlobeAmericas;
+                  if (lower.includes('ilimit') || (lower.includes('likes') && lower.includes('ilimit'))) return faHeart;
+                  if (lower.includes('ver qui') || lower.includes('ver quién') || lower.includes('ver likes')) return faEye;
+                  if (lower.includes('deshacer') || lower.includes('undo')) return faUndo;
+                  if (lower.includes('filtro') || lower.includes('filtros')) return faFilter;
+                  if (lower.includes('destac') || lower.includes('perfil destacado')) return faStar;
+                  return null;
+                };
+
+                // Remove leading emoji/symbols from the feature text
+                let cleaned = t;
+                while (cleaned.length > 0 && !/[0-9A-Za-zÁÉÍÓÚáéíóúÑñÜü]/.test(cleaned.charAt(0))) {
+                  cleaned = cleaned.substring(1);
+                }
+                cleaned = cleaned.trim();
+
+                const descriptorIcon = getDescriptorIcon();
+
+                return (
+                  <View key={index} style={styles.featureItem}>
+                    <FontAwesomeIcon icon={faCheck} size={18} color={'#4caf50'} style={{ marginRight: 10 }} />
+                    {descriptorIcon && (
+                      <FontAwesomeIcon icon={descriptorIcon} size={16} color={colors.primary} style={{ marginRight: 8 }} />
+                    )}
+                    <Text style={styles.featureText}>{cleaned}</Text>
+                  </View>
+                );
+              })}
             </View>
 
             <TouchableOpacity 
@@ -238,7 +411,10 @@ const SubscriptionScreen = ({ navigation }) => {
               {upgrading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.upgradeButtonText}>🚀 Actualizar Ahora</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <FontAwesomeIcon icon={faRocket} size={30} color={'#fff'} style={{ marginRight: 8 }} />
+                  <Text style={styles.upgradeButtonText}>Actualizar Ahora</Text>
+                </View>
               )}
             </TouchableOpacity>
           </View>
@@ -246,7 +422,10 @@ const SubscriptionScreen = ({ navigation }) => {
 
         {/* Info adicional */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>ℹ️ Información</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <FontAwesomeIcon icon={faInfoCircle} size={18} color={colors.primary} style={{ marginRight: 8 }} />
+            <Text style={styles.infoTitle}>Información</Text>
+          </View>
           <Text style={styles.infoText}>
             • Cancela en cualquier momento{'\n'}
             • Sin cargos ocultos{'\n'}
@@ -292,6 +471,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: colors.primary,
     marginBottom: 6,
+    marginTop: 40,
     letterSpacing: 0.5,
   },
   headerSubtitle: {

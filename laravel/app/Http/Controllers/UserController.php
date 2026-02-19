@@ -20,10 +20,64 @@ class UserController extends Controller
         $userId = $currentUser->id;
 
         // Cargar todas las preferencias del usuario actual
-        $currentUser->load(['location', 'favoriteGenres']);
+        $currentUser->load(['location', 'favoriteGenres', 'subscription']);
+
+        // Determinar si el usuario es premium (esto permitirá relajar filtros)
+        $isPremium = false;
+        if ($currentUser->subscription && method_exists($currentUser->subscription, 'isPremium')) {
+            try {
+                $isPremium = (bool) $currentUser->subscription->isPremium();
+            } catch (\Exception $e) {
+                $isPremium = false;
+            }
+        }
 
         // Obtener géneros, directores y películas del usuario actual
         $currentGenreIds = $currentUser->favoriteGenres->pluck('id')->toArray();
+
+        // Mapar géneros locales (inglés) a los IDs de TMDB cuando sea necesario
+        $genreNameToTmdb = [
+            'Action' => 28,
+            'Adventure' => 12,
+            'Animation' => 16,
+            'Comedy' => 35,
+            'Crime' => 80,
+            'Documentary' => 99,
+            'Drama' => 18,
+            'Family' => 10751,
+            'Fantasy' => 14,
+            'History' => 36,
+            'Horror' => 27,
+            'Mystery' => 9648,
+            'Science Fiction' => 878,
+            'Thriller' => 53,
+            'Western' => 37,
+            'Music' => 10402,
+            'Romance' => 10749
+        ];
+
+        $mapToTmdb = function($genreCollection) use ($genreNameToTmdb) {
+            $tmdbIds = [];
+            foreach ($genreCollection as $g) {
+                // Si el id ya parece un ID TMDB (>= 100) usarlo directamente
+                if (intval($g->id) >= 100) {
+                    $tmdbIds[] = intval($g->id);
+                    continue;
+                }
+
+                // Intentar mapear por nombre (inglés)
+                $name = trim($g->name);
+                if (isset($genreNameToTmdb[$name])) {
+                    $tmdbIds[] = $genreNameToTmdb[$name];
+                }
+            }
+
+            // Asegurar valores únicos
+            return array_values(array_unique($tmdbIds));
+        };
+
+        // IDs TMDB normalizados del usuario actual
+        $currentGenreTmdbIds = $mapToTmdb($currentUser->favoriteGenres);
         
         $currentDirectorIds = DB::table('user_favorite_directors')
             ->where('user_id', $userId)
@@ -40,6 +94,10 @@ class UserController extends Controller
             ->pluck('to_user_id')
             ->toArray();
 
+        // Paginación (page, per_page)
+        $page = max(1, (int) $request->get('page', 1));
+        $perPage = max(5, min(100, (int) $request->get('per_page', 20))); // límites razonables
+
         // Query base - obtener usuarios potenciales
         $query = User::where('id', '!=', $userId)
             ->whereNotIn('id', $seenUserIds)
@@ -52,7 +110,7 @@ class UserController extends Controller
         foreach ($users as $user) {
             $user->watched_movies_list = DB::table('watched_movies')
                 ->where('user_id', $user->id)
-                ->select('tmdb_movie_id as id', 'title', 'rating')
+                ->select('tmdb_movie_id as id', 'title', 'poster_path', 'rating')
                 ->limit(10)
                 ->get();
         }
@@ -89,9 +147,9 @@ class UserController extends Controller
         }
 
         // Filtrar por géneros comunes y calcular match %
-        $usersWithMatch = $users->map(function($user) use ($currentGenreIds, $currentDirectorIds, $currentMovieIds, $currentUser) {
-            // Obtener géneros del usuario objetivo
-            $targetGenreIds = $user->favoriteGenres->pluck('id')->toArray();
+        $usersWithMatch = $users->map(function($user) use ($currentGenreTmdbIds, $currentDirectorIds, $currentMovieIds, $currentUser, $mapToTmdb, $isPremium) {
+            // Obtener géneros del usuario objetivo y normalizarlos a IDs TMDB
+            $targetGenreTmdbIds = $mapToTmdb($user->favoriteGenres);
             
             // Obtener directores del usuario objetivo
             $targetDirectorIds = DB::table('user_favorite_directors')
@@ -105,13 +163,13 @@ class UserController extends Controller
                 ->pluck('tmdb_movie_id')
                 ->toArray();
 
-            // Calcular intersecciones
-            $commonGenres = array_intersect($currentGenreIds, $targetGenreIds);
+            // Calcular intersecciones usando IDs TMDB normalizados
+            $commonGenres = array_intersect($currentGenreTmdbIds, $targetGenreTmdbIds);
             $commonDirectors = array_intersect($currentDirectorIds, $targetDirectorIds);
             $commonMovies = array_intersect($currentMovieIds, $targetMovieIds);
 
-            // Si no tiene al menos 1 género en común, excluir
-            if (empty($commonGenres)) {
+            // Si no tiene al menos 1 género en común, excluir (salvo si el usuario actual es Premium)
+            if (empty($commonGenres) && !$isPremium) {
                 return null;
             }
 
@@ -122,8 +180,8 @@ class UserController extends Controller
             $distanceMatch = 0;
 
             // Géneros (40% del total)
-            if (!empty($currentGenreIds) && !empty($targetGenreIds)) {
-                $genreMatch = (count($commonGenres) / max(count($currentGenreIds), count($targetGenreIds))) * 40;
+            if (!empty($currentGenreTmdbIds) && !empty($targetGenreTmdbIds)) {
+                $genreMatch = (count($commonGenres) / max(count($currentGenreTmdbIds), count($targetGenreTmdbIds))) * 40;
             }
 
             // Directores (30% del total)
@@ -158,12 +216,18 @@ class UserController extends Controller
         // Ordenar por match % (mejor match primero)
         $usersWithMatch = $usersWithMatch->sortByDesc('match_percentage')->values();
 
-        // Limitar a 20 usuarios
-        $usersWithMatch = $usersWithMatch->take(20);
+        // Paginación sobre la colección filtrada + meta
+        $total = $usersWithMatch->count();
+        $paginated = $usersWithMatch->forPage($page, $perPage)->values();
 
         return response()->json([
             'success' => true,
-            'users' => $usersWithMatch
+            'users' => $paginated,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+            ],
         ]);
     }
 
@@ -189,17 +253,26 @@ class UserController extends Controller
         $request->validate([
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
-            'search_radius' => 'nullable|integer|min:5|max:500',
-            'searchRadius' => 'nullable|integer|min:5|max:500', // Alias para camelCase
+            'search_radius' => 'nullable|integer|min:1',
+            'searchRadius' => 'nullable|integer|min:1', // Alias para camelCase
             'city' => 'nullable|string|max:255',
             'country' => 'nullable|string|max:255',
         ]);
 
         $user = $request->user();
-        
+
         // Usar searchRadius si search_radius no está presente
-        $radius = $request->search_radius ?? $request->searchRadius ?? 50;
-        
+        $desiredRadius = $request->search_radius ?? $request->searchRadius ?? 7;
+
+        // Determinar límite máximo según el plan del usuario
+        $maxAllowed = 7; // valor por defecto para usuarios free
+        if ($user->subscription && method_exists($user->subscription, 'isPremium') && $user->subscription->isPremium()) {
+            $maxAllowed = 20000; // permitir gran cobertura para premium
+        }
+
+        // Asegurar que el radio esté dentro de 1..$maxAllowed
+        $radius = (int) max(1, min($desiredRadius, $maxAllowed));
+
         $locationData = [
             'search_radius' => $radius,
         ];

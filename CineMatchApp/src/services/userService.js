@@ -5,9 +5,10 @@ export const userService = {
   async getUsers(params = {}) {
     try {
       const response = await api.get('/users', { params });
-      // La API devuelve { success: true, users: [...] }
-      return response.data.users || [];
+      // Devolver el payload completo { users, meta }
+      return response.data || { users: [], meta: {} };
     } catch (error) {
+      console.error('❌ userService.getUsers error:', error);
       throw error.response?.data || error;
     }
   },

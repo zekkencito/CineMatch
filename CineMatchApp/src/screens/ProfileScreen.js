@@ -16,7 +16,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
-
+import Ionicons from '@expo/vector-icons/Ionicons';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 const ProfileScreen = ({ navigation }) => {
   const { user, logout, updateUser } = useAuth();
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -106,31 +107,31 @@ const ProfileScreen = ({ navigation }) => {
   const menuItems = [
     {
       title: 'Preferencias de Películas',
-      icon: '🎬',
+      icon: <Ionicons name="film-sharp" size={30} color="white" />,
       subtitle: 'Personaliza tus gustos y preferencias',
       onPress: () => navigation.navigate('Preferencias'),
     },
     {
       title: 'Editar Perfil',
-      icon: '✏️',
+      icon: <Ionicons name="pencil-sharp" size={30} color="white" />,
       subtitle: 'Actualiza tu información personal',
       onPress: () => navigation.navigate('Editar Perfil'),
     },
     {
       title: 'Suscripción',
-      icon: '⭐',
+      icon: <Ionicons name="star" size={30} color="white" />,
       subtitle: 'Características Premium',
       onPress: () => navigation.navigate('Suscripción'),
     },
     {
       title: 'Ajustes',
-      icon: '⚙️',
+      icon: <Ionicons name="settings" size={30} color="white" />,
       subtitle: 'Preferencias de la app y privacidad',
       onPress: () => Alert.alert('Próximamente', 'Función de ajustes próximamente!'),
     },
     {
       title: 'Ayuda y Soporte',
-      icon: '💬',
+      icon: <Ionicons name="help-circle-sharp" size={30} color="white" />,
       subtitle: 'Obtén ayuda o contáctanos',
       onPress: () => Alert.alert('Próximamente', 'Función de ayuda y soporte próximamente!'),
     },
@@ -170,29 +171,29 @@ const ProfileScreen = ({ navigation }) => {
               )}
             </View>
             <View style={styles.editIconContainer}>
-              <Text style={styles.editIcon}>📷</Text>
+              <FontAwesome name="camera" size={24} color="black" />
             </View>
           </TouchableOpacity>
           
           <View style={styles.nameBox}>
             <Text style={styles.name}>{user?.name || 'Usuario'}</Text>
-            {user?.age && (
+            {user?.age ? (
               <View style={styles.ageBadge}>
-                <Text style={styles.ageText}>{user.age}</Text>
+                <Text style={styles.ageText}>{String(user.age)}</Text>
               </View>
-            )}
+            ) : null}
           </View>
           <Text style={styles.email}>{user?.email || 'No email'}</Text>
           
           {/* Información adicional del usuario */}
-          {(user?.location?.city || user?.location?.country) && (
+          {(user?.location?.city || user?.location?.country) ? (
             <View style={styles.locationInfo}>
               <Text style={styles.locationEmoji}>📍</Text>
               <Text style={styles.locationText}>
                 {[user?.location?.city, user?.location?.country].filter(Boolean).join(', ')}
               </Text>
             </View>
-          )}
+          ) : null}
         </Animated.View>
 
         {/* Menu Items */}
@@ -252,21 +253,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   avatarWrapper: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
     backgroundColor: colors.primary,
-    padding: 4,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    padding: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   avatar: {
     width: '100%',
     height: '100%',
-    borderRadius: 68,
+    borderRadius: 70,
   },
   uploadingOverlay: {
     position: 'absolute',
@@ -281,24 +282,24 @@ const styles = StyleSheet.create({
   },
   editIconContainer: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
+    bottom: 6,
+    right: 6,
     backgroundColor: colors.primary,
-    borderRadius: 22,
-    width: 44,
-    height: 44,
+    borderRadius: 24,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: colors.secondary,
-    shadowColor: colors.textDark,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
   editIcon: {
-    fontSize: 22,
+    fontSize: 24,
   },
   nameBox: {
     flexDirection: 'row',
@@ -307,20 +308,25 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   name: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '900',
     color: colors.primary,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   ageBadge: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
   },
   ageText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '900',
     color: colors.textDark,
   },
   email: {
@@ -331,22 +337,27 @@ const styles = StyleSheet.create({
   locationInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
-    borderRadius: 20,
-    borderWidth: 1,
+    gap: 8,
+    marginTop: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(245, 197, 24, 0.15)',
+    borderRadius: 24,
+    borderWidth: 2,
     borderColor: colors.primary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   locationEmoji: {
-    fontSize: 16,
+    fontSize: 18,
   },
   locationText: {
     fontSize: 14,
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   menuSection: {
     gap: 12,
@@ -392,45 +403,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    padding: 16,
-    borderRadius: 16,
+    padding: 18,
+    borderRadius: 18,
     gap: 14,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  menuIconBox: {
-    width: 44,
-    height: 44,
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 197, 24, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   menuIcon: {
-    fontSize: 22,
+    fontSize: 24,
   },
   menuContent: {
     flex: 1,
     gap: 2,
   },
   menuTitle: {
-    fontSize: 16,
+    fontSize: 17,
     color: colors.text,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   menuSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textSecondary,
+    fontWeight: '500',
   },
   menuArrow: {
-    fontSize: 24,
+    fontSize: 28,
     color: colors.primary,
-    fontWeight: 'bold',
+    fontWeight: '900',
   },
   logoutButton: {
     backgroundColor: colors.accent,
-    padding: 18,
-    borderRadius: 16,
+    padding: 20,
+    borderRadius: 18,
     alignItems: 'center',
     marginBottom: 20,
     flexDirection: 'row',
@@ -438,19 +448,20 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 3,
     borderColor: colors.textDark,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
   },
   logoutIcon: {
-    fontSize: 20,
+    fontSize: 22,
   },
   logoutButtonText: {
     color: colors.textDark,
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   version: {
     textAlign: 'center',

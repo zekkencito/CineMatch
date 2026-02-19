@@ -63,7 +63,11 @@ const EditProfileScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
       <LinearGradient
         colors={[colors.secondary, colors.secondaryLight]}
         style={styles.headerGradient}
@@ -76,16 +80,10 @@ const EditProfileScreen = ({ navigation }) => {
             <Text style={styles.backButtonText}>← Volver</Text>
           </TouchableOpacity>
           
-          
+          <Text style={styles.headerTitle}>Editar Perfil</Text>
+          <Text style={styles.headerSubtitle}>Actualiza tu información personal</Text>
         </View>
       </LinearGradient>
-            <Text style={styles.headerTitle}>Editar Perfil</Text>
-          <Text style={styles.headerSubtitle}>Actualiza tu información personal</Text>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
         <ScrollView 
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -175,8 +173,7 @@ const EditProfileScreen = ({ navigation }) => {
             </View>
           </LinearGradient>
         </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -189,7 +186,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
   },
   header: {
-    padding: 50,
+    padding: 20,
     paddingTop: 0,
     alignItems: 'center',
   },
@@ -228,7 +225,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: colors.primary,
     marginBottom: 6,
-    marginLeft: 130,
     marginTop: 40,
     letterSpacing: 0.5,
   },
@@ -236,9 +232,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textSecondary,
     textAlign: 'center',
-  },
-  keyboardView: {
-    flex: 1,
   },
   scrollView: {
     flex: 1,

@@ -68,7 +68,7 @@ class PreferencesController extends Controller
         // Obtener directores de la tabla user_favorite_directors
         $directors = DB::table('user_favorite_directors')
             ->where('user_id', $user->id)
-            ->select('tmdb_director_id as id', 'name')
+            ->select('tmdb_director_id as id', 'name', 'profile_path')
             ->get();
 
         return response()->json([
@@ -88,6 +88,7 @@ class PreferencesController extends Controller
             'directors' => 'required|array',
             'directors.*.id' => 'required|integer',
             'directors.*.name' => 'required|string|max:150',
+            'directors.*.profile_path' => 'nullable|string|max:255',
         ]);
 
         $user = $request->user();
@@ -103,6 +104,7 @@ class PreferencesController extends Controller
                 'user_id' => $user->id,
                 'tmdb_director_id' => $director['id'],
                 'name' => $director['name'],
+                'profile_path' => $director['profile_path'] ?? null,
             ];
         })->toArray();
 
@@ -113,7 +115,7 @@ class PreferencesController extends Controller
         // Obtener directores actualizados
         $directors = DB::table('user_favorite_directors')
             ->where('user_id', $user->id)
-            ->select('tmdb_director_id as id', 'name')
+            ->select('tmdb_director_id as id', 'name', 'profile_path')
             ->get();
 
         return response()->json([
@@ -133,6 +135,7 @@ class PreferencesController extends Controller
         $request->validate([
             'director_id' => 'required|integer',
             'name' => 'required|string|max:150',
+            'profile_path' => 'nullable|string|max:255',
         ]);
 
         $user = $request->user();
@@ -148,6 +151,7 @@ class PreferencesController extends Controller
                 'user_id' => $user->id,
                 'tmdb_director_id' => $request->director_id,
                 'name' => $request->name,
+                'profile_path' => $request->profile_path ?? null,
             ]);
         }
 
@@ -191,7 +195,7 @@ class PreferencesController extends Controller
         // Obtener películas de la tabla watched_movies
         $movies = DB::table('watched_movies')
             ->where('user_id', $user->id)
-            ->select('tmdb_movie_id as id', 'title', 'watched_date', 'rating')
+            ->select('tmdb_movie_id as id', 'title', 'poster_path', 'watched_date', 'rating')
             ->get();
 
         return response()->json([
@@ -211,6 +215,7 @@ class PreferencesController extends Controller
             'movies' => 'required|array',
             'movies.*.id' => 'required|integer',
             'movies.*.title' => 'required|string|max:200',
+            'movies.*.poster_path' => 'nullable|string|max:255',
             'movies.*.rating' => 'nullable|integer|min:1|max:5',
         ]);
 
@@ -227,6 +232,7 @@ class PreferencesController extends Controller
                 'user_id' => $user->id,
                 'tmdb_movie_id' => $movie['id'],
                 'title' => $movie['title'],
+                'poster_path' => $movie['poster_path'] ?? null,
                 'rating' => $movie['rating'] ?? null,
                 'watched_date' => now()->toDateString(),
             ];
@@ -239,7 +245,7 @@ class PreferencesController extends Controller
         // Obtener películas actualizadas
         $movies = DB::table('watched_movies')
             ->where('user_id', $user->id)
-            ->select('tmdb_movie_id as id', 'title', 'watched_date', 'rating')
+            ->select('tmdb_movie_id as id', 'title', 'poster_path', 'watched_date', 'rating')
             ->get();
 
         return response()->json([
@@ -259,6 +265,7 @@ class PreferencesController extends Controller
         $request->validate([
             'movie_id' => 'required|integer',
             'title' => 'required|string|max:200',
+            'poster_path' => 'nullable|string|max:255',
             'rating' => 'nullable|integer|min:1|max:5',
         ]);
 
@@ -275,6 +282,7 @@ class PreferencesController extends Controller
                 'user_id' => $user->id,
                 'tmdb_movie_id' => $request->movie_id,
                 'title' => $request->title,
+                'poster_path' => $request->poster_path ?? null,
                 'rating' => $request->rating,
                 'watched_date' => now()->toDateString(),
             ]);

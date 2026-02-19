@@ -26,13 +26,14 @@ class TestUsersSeeder extends Seeder
         $killBillId = 24; // Kill Bill: Vol. 1
         $killBill2Id = 393; // Kill Bill: Vol. 2
 
+        // Usuarios de prueba — coordenadas ajustadas para quedar dentro de 7 km
         $testUsers = [
             [
                 'name' => 'María García',
                 'email' => 'maria@test.com',
                 'age' => 28,
                 'bio' => 'Fan de Tarantino y la ciencia ficción. Kill Bill es mi película favorita.',
-                'latitude' => $baseLatitude + 0.5, // ~55km norte
+                'latitude' => $baseLatitude + 0.01,
                 'longitude' => $baseLongitude,
                 'city' => 'Janos',
                 'country' => 'México',
@@ -51,8 +52,8 @@ class TestUsersSeeder extends Seeder
                 'email' => 'carlos@test.com',
                 'age' => 32,
                 'bio' => 'Tarantino es un genio. Me encanta el cine de ciencia ficción y las historias románticas.',
-                'latitude' => $baseLatitude - 0.8, // ~88km sur
-                'longitude' => $baseLongitude + 0.3,
+                'latitude' => $baseLatitude - 0.02,
+                'longitude' => $baseLongitude + 0.01,
                 'city' => 'Casas Grandes',
                 'country' => 'México',
                 'genres' => [$sciFiGenreId, $romanceGenreId, $thrillerGenreId],
@@ -71,8 +72,8 @@ class TestUsersSeeder extends Seeder
                 'email' => 'ana@test.com',
                 'age' => 25,
                 'bio' => 'Romance, sci-fi y Tarantino. Kill Bill cambió mi vida.',
-                'latitude' => $baseLatitude + 1.2, // ~133km norte
-                'longitude' => $baseLongitude - 0.5,
+                'latitude' => $baseLatitude + 0.03,
+                'longitude' => $baseLongitude - 0.015,
                 'city' => 'Ascensión',
                 'country' => 'México',
                 'genres' => [$sciFiGenreId, $romanceGenreId, $dramaGenreId],
@@ -90,8 +91,8 @@ class TestUsersSeeder extends Seeder
                 'email' => 'roberto@test.com',
                 'age' => 30,
                 'bio' => 'Ciencia ficción y romance son mi combo perfecto. Tarantino es el mejor.',
-                'latitude' => $baseLatitude - 0.3,
-                'longitude' => $baseLongitude + 0.8, // ~88km este
+                'latitude' => $baseLatitude - 0.01,
+                'longitude' => $baseLongitude + 0.02,
                 'city' => 'Buenaventura',
                 'country' => 'México',
                 'genres' => [$sciFiGenreId, $romanceGenreId, $actionGenreId, $thrillerGenreId],
@@ -112,8 +113,8 @@ class TestUsersSeeder extends Seeder
                 'email' => 'laura@test.com',
                 'age' => 27,
                 'bio' => 'Fan del romance y la ciencia ficción. Kill Bill es arte puro.',
-                'latitude' => $baseLatitude + 0.2,
-                'longitude' => $baseLongitude - 1.0, // ~110km oeste
+                'latitude' => $baseLatitude + 0.015,
+                'longitude' => $baseLongitude - 0.02,
                 'city' => 'Galeana',
                 'country' => 'México',
                 'genres' => [$romanceGenreId, $sciFiGenreId, $dramaGenreId],
@@ -131,8 +132,8 @@ class TestUsersSeeder extends Seeder
                 'email' => 'diego@test.com',
                 'age' => 29,
                 'bio' => 'Tarantino forever. Ciencia ficción y romance son lo mío.',
-                'latitude' => $baseLatitude - 1.0,
-                'longitude' => $baseLongitude - 0.3, // ~111km sur
+                'latitude' => $baseLatitude - 0.025,
+                'longitude' => $baseLongitude - 0.01,
                 'city' => 'Madera',
                 'country' => 'México',
                 'genres' => [$sciFiGenreId, $romanceGenreId, $actionGenreId],
@@ -149,8 +150,8 @@ class TestUsersSeeder extends Seeder
                 'email' => 'sofia@test.com',
                 'age' => 26,
                 'bio' => 'Romance, sci-fi y todo lo que haga Tarantino.',
-                'latitude' => $baseLatitude + 0.7,
-                'longitude' => $baseLongitude + 0.5, // ~77km noreste
+                'latitude' => $baseLatitude + 0.02,
+                'longitude' => $baseLongitude + 0.015,
                 'city' => 'Nuevo Casas Grandes',
                 'country' => 'México',
                 'genres' => [$romanceGenreId, $sciFiGenreId, $thrillerGenreId, $dramaGenreId],
@@ -170,8 +171,8 @@ class TestUsersSeeder extends Seeder
                 'email' => 'javier@test.com',
                 'age' => 31,
                 'bio' => 'Ciencia ficción es mi pasión. Tarantino es un maestro.',
-                'latitude' => $baseLatitude - 0.5,
-                'longitude' => $baseLongitude + 1.2, // ~133km este
+                'latitude' => $baseLatitude - 0.005,
+                'longitude' => $baseLongitude + 0.03,
                 'city' => 'Gómez Farías',
                 'country' => 'México',
                 'genres' => [$sciFiGenreId, $actionGenreId, $romanceGenreId],
@@ -194,11 +195,25 @@ class TestUsersSeeder extends Seeder
             if ($existingUser) {
                 $user = $existingUser;
                 $this->command->info("⚙️  Actualizando preferencias: {$userData['name']} ({$userData['email']})");
-                
+
                 // Limpiar preferencias existentes
                 DB::table('user_favorite_genres')->where('user_id', $user->id)->delete();
                 DB::table('user_favorite_directors')->where('user_id', $user->id)->delete();
                 DB::table('watched_movies')->where('user_id', $user->id)->delete();
+
+                // Actualizar o insertar ubicación para usuarios existentes para que queden dentro del nuevo radio
+                DB::table('locations')->updateOrInsert(
+                    ['user_id' => $user->id],
+                    [
+                        'latitude' => $userData['latitude'],
+                        'longitude' => $userData['longitude'],
+                        'city' => $userData['city'],
+                        'country' => $userData['country'],
+                        'search_radius' => 7,
+                        'updated_at' => now(),
+                        'created_at' => now(),
+                    ]
+                );
             } else {
                 // Crear usuario nuevo
                 $user = User::create([
@@ -216,11 +231,11 @@ class TestUsersSeeder extends Seeder
                     'longitude' => $userData['longitude'],
                     'city' => $userData['city'],
                     'country' => $userData['country'],
-                    'search_radius' => 160,
+                    'search_radius' => 7,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-                
+
                 $this->command->info("✅ Usuario creado: {$userData['name']} ({$userData['email']})");
             }
 
@@ -251,11 +266,10 @@ class TestUsersSeeder extends Seeder
                 ]);
             }
 
-            $this->command->info("✅ Usuario creado: {$userData['name']} ({$userData['email']})");
+            $this->command->info("✅ Preferencias aplicadas: {$userData['name']} ({$userData['email']})");
         }
 
-        $this->command->info("\n🎉 {$count} usuarios de prueba creados exitosamente!");
-        $this->command->info("📧 Todos los usuarios tienen la contraseña: password123");
-        $this->command->info("🎬 Todos tienen en común: Ciencia ficción, Romance, Tarantino, Kill Bill");
+        $this->command->info("\n🎉 {$count} usuarios de prueba procesados exitosamente!");
+        $this->command->info("📧 Todos los usuarios (nuevos) tienen la contraseña: password123");
     }
 }
