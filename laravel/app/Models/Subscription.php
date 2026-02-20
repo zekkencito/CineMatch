@@ -14,8 +14,8 @@ class Subscription extends Model
         'user_id',
         'plan',
         'status',
-        'started_at',
-        'expires_at',
+        'start_date',
+        'end_date',
         'max_radius',
         'daily_likes_limit',
         'can_see_likes',
@@ -25,8 +25,8 @@ class Subscription extends Model
     ];
 
     protected $casts = [
-        'started_at' => 'datetime',
-        'expires_at' => 'datetime',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
         'max_radius' => 'integer',
         'daily_likes_limit' => 'integer',
         'can_see_likes' => 'boolean',
@@ -58,7 +58,7 @@ class Subscription extends Model
         }
 
         // Si es premium, verificar que no haya expirado
-        return $this->expires_at === null || $this->expires_at->isFuture();
+        return $this->end_date === null || $this->end_date->isFuture();
     }
 
     /**
@@ -77,8 +77,8 @@ class Subscription extends Model
         $this->update([
             'plan' => 'premium',
             'status' => 'active',
-            'started_at' => now(),
-            'expires_at' => now()->addDays($duration),
+            'start_date' => now(),
+            'end_date' => now()->addDays($duration),
             'max_radius' => 100,
             'daily_likes_limit' => -1, // Ilimitado
             'can_see_likes' => true,
@@ -103,7 +103,7 @@ class Subscription extends Model
      */
     public function checkExpiration()
     {
-        if ($this->plan === 'premium' && $this->expires_at && $this->expires_at->isPast()) {
+        if ($this->plan === 'premium' && $this->end_date && $this->end_date->isPast()) {
             $this->update([
                 'status' => 'expired',
                 'plan' => 'free',

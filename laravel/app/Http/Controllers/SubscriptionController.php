@@ -37,8 +37,8 @@ class SubscriptionController extends Controller
                 'plan' => $subscription->plan,
                 'status' => $subscription->status,
                 'is_premium' => $subscription->isPremium(),
-                'started_at' => $subscription->started_at,
-                'expires_at' => $subscription->expires_at,
+                'started_at' => $subscription->start_date,
+                'expires_at' => $subscription->end_date,
                 'benefits' => [
                     'max_radius' => $subscription->max_radius,
                     'daily_likes_limit' => $subscription->daily_likes_limit === -1 ? 'unlimited' : $subscription->daily_likes_limit,
@@ -159,7 +159,7 @@ class SubscriptionController extends Controller
             'subscription' => [
                 'plan' => $subscription->plan,
                 'status' => $subscription->status,
-                'expires_at' => $subscription->expires_at,
+                'expires_at' => $subscription->end_date,
                 'benefits' => [
                     'max_radius' => $subscription->max_radius,
                     'daily_likes_limit' => 'unlimited',
@@ -199,7 +199,7 @@ class SubscriptionController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Tu suscripción ha sido cancelada. Mantendrás los beneficios hasta la fecha de expiración.',
-            'expires_at' => $subscription->expires_at
+            'expires_at' => $subscription->end_date
         ]);
     }
 
