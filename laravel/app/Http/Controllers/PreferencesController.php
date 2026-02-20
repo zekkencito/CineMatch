@@ -35,7 +35,7 @@ class PreferencesController extends Controller
     {
         $request->validate([
             'genre_ids' => 'required|array',
-            'genre_ids.*' => 'integer|exists:genres,id',
+            'genre_ids.*' => 'integer|exists:genres,tmdb_id',
         ]);
 
         $user = $request->user();

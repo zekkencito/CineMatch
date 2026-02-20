@@ -301,13 +301,6 @@ class UserController extends Controller
         if ($user->location) {
             $user->location->update($locationData);
         } else {
-            // Si no tiene ubicación y se requieren lat/lon, validar
-            if (!isset($locationData['latitude']) || !isset($locationData['longitude'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Latitude and longitude are required for new locations'
-                ], 400);
-            }
             $user->location()->create($locationData);
         }
 
