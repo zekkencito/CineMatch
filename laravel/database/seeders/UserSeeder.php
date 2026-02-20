@@ -388,11 +388,12 @@ class UserSeeder extends Seeder
                 'is_active' => true
             ]);
 
-            // Agregar géneros favoritos
+            // Agregar géneros favoritos (usar TMDB IDs)
             foreach ($userData['genres'] as $genreId) {
                 DB::table('user_favorite_genres')->insert([
                     'user_id' => $user->id,
-                    'genre_id' => $genreId,
+                    'tmdb_genre_id' => $genreId,
+                    'name' => null,
                 ]);
             }
 
