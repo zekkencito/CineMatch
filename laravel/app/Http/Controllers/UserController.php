@@ -65,13 +65,29 @@ class UserController extends Controller
         // Obtener usuarios candidatos
         $users = $query->get();
 
-        // Cargar películas vistas de cada usuario
+        $tmdbGenreMap = [
+            28 => 'Acción', 12 => 'Aventura', 16 => 'Animación', 35 => 'Comedia', 80 => 'Crimen',
+            99 => 'Documental', 18 => 'Drama', 10751 => 'Familia', 14 => 'Fantasía', 36 => 'Historia',
+            27 => 'Terror', 10402 => 'Música', 9648 => 'Misterio', 10749 => 'Romance', 878 => 'Ciencia fricción',
+            10770 => 'Película de TV', 53 => 'Suspense', 10752 => 'Bélica', 37 => 'Western'
+        ];
+
+        // Cargar datos adicionales de cada usuario
         foreach ($users as $user) {
             $user->watched_movies_list = DB::table('watched_movies')
                 ->where('user_id', $user->id)
                 ->select('tmdb_movie_id as id', 'title', 'poster_path', 'rating')
                 ->limit(10)
                 ->get();
+                
+            $genreIds = DB::table('user_favorite_genres')
+                ->where('user_id', $user->id)
+                ->pluck('tmdb_genre_id')
+                ->toArray();
+                
+            $user->favorite_genres = array_values(array_filter(array_map(function($id) use ($tmdbGenreMap) {
+                return $tmdbGenreMap[$id] ?? null;
+            }, $genreIds)));
         }
 
         // Filtrar por distancia si el usuario tiene ubicación
