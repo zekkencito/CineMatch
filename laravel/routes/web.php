@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\SubscriptionController;
 
 /*
@@ -29,6 +32,17 @@ Route::get('/sembrar-datos', function () {
     } catch (\Exception $e) {
         return "Hubo un error: " . $e->getMessage();
     }
+});
+
+Route::get('/check-tables', function () {
+    $tables = ['users', 'personal_access_tokens', 'subscriptions', 'user_favorite_genres', 'watched_movies', 'locations'];
+    $result = [];
+    foreach ($tables as $table) {
+        $exists = Schema::hasTable($table);
+        $count = $exists ? DB::table($table)->count() : 'N/A';
+        $result[] = ($exists ? '✅' : '❌') . " {$table}: " . ($exists ? "{$count} rows" : 'NOT FOUND');
+    }
+    return implode('<br>', $result);
 });
 
 Route::get('/reset-database', function () {
