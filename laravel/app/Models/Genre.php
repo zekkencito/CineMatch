@@ -11,6 +11,7 @@ class Genre extends Model
 
     protected $fillable = [
         'name',
+        'tmdb_id',
     ];
 
     // Películas de este género
@@ -22,6 +23,13 @@ class Genre extends Model
     // Usuarios que tienen este género como favorito
     public function users()
     {
-        return $this->belongsToMany(User::class, 'user_favorite_genres');
+        return $this->belongsToMany(
+            User::class,
+            'user_favorite_genres',
+            'tmdb_genre_id',
+            'user_id',
+            'tmdb_id',
+            'id'
+        );
     }
 }

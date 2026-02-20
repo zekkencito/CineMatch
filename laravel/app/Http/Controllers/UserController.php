@@ -59,13 +59,19 @@ class UserController extends Controller
         $mapToTmdb = function($genreCollection) use ($genreNameToTmdb) {
             $tmdbIds = [];
             foreach ($genreCollection as $g) {
-                // Si el id ya parece un ID TMDB (>= 100) usarlo directamente
+                // Primero usar tmdb_id si está disponible (columna directa del modelo Genre)
+                if (!empty($g->tmdb_id)) {
+                    $tmdbIds[] = intval($g->tmdb_id);
+                    continue;
+                }
+
+                // Fallback: si el id ya parece un ID TMDB (>= 100) usarlo directamente
                 if (intval($g->id) >= 100) {
                     $tmdbIds[] = intval($g->id);
                     continue;
                 }
 
-                // Intentar mapear por nombre (inglés)
+                // Fallback final: mapear por nombre (inglés)
                 $name = trim($g->name);
                 if (isset($genreNameToTmdb[$name])) {
                     $tmdbIds[] = $genreNameToTmdb[$name];

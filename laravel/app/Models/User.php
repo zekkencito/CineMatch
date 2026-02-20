@@ -57,9 +57,17 @@ class User extends Authenticatable
     }
     
     // Géneros favoritos del usuario
+    // user_favorite_genres.tmdb_genre_id referencia genres.tmdb_id (IDs de TMDB)
     public function favoriteGenres()
     {
-        return $this->belongsToMany(Genre::class, 'user_favorite_genres');
+        return $this->belongsToMany(
+            Genre::class,
+            'user_favorite_genres', // tabla pivot
+            'user_id',              // FK en pivot -> users.id
+            'tmdb_genre_id',        // FK en pivot -> genres.tmdb_id
+            'id',                   // PK en users
+            'tmdb_id'               // PK en genres que tmdb_genre_id referencia
+        );
     }
 
     // Directores favoritos del usuario
