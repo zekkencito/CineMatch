@@ -90,6 +90,11 @@ const RegisterScreen = ({ navigation }) => {
       return;
     }
 
+    if (!profilePhoto) {
+      Alert.alert('Error', 'Por favor, añade una foto de perfil (es obligatoria)');
+      return;
+    }
+
     if (!locationData) {
       Alert.alert('Error', 'Por favor, obtén tu ubicación GPS primero');
       return;
@@ -112,6 +117,7 @@ const RegisterScreen = ({ navigation }) => {
         longitude: locationData.longitude,
         city: locationData.city,
         country: locationData.country,
+        profile_photo: profilePhoto,
       });
 
       // Navegar a PreferencesScreen para configurar gustos de películas
@@ -156,10 +162,12 @@ const RegisterScreen = ({ navigation }) => {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.7,
+        base64: true,
       });
 
       if (!result.canceled && result.assets[0]) {
-        setProfilePhoto(result.assets[0].uri);
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        setProfilePhoto(base64Image);
       }
     } catch (error) {
       console.error('Error picking image:', error);
