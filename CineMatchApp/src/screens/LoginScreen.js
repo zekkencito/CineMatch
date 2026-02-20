@@ -14,6 +14,7 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
 
@@ -22,12 +23,13 @@ const { width } = Dimensions.get('window');
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-  
+
   // Referencias para navegación entre inputs
   const passwordInputRef = useRef(null);
-  
+
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -64,7 +66,7 @@ const LoginScreen = ({ navigation }) => {
       await login(email, password);
     } catch (error) {
       Alert.alert(
-        'Error al iniciar sesión', 
+        'Error al iniciar sesión',
         error?.message || 'Credenciales inválidas. Por favor, inténtalo de nuevo.'
       );
     } finally {
@@ -81,7 +83,7 @@ const LoginScreen = ({ navigation }) => {
         colors={[colors.secondary, colors.secondaryLight, colors.secondary]}
         style={styles.gradient}
       >
-        <Animated.View 
+        <Animated.View
           style={[
             styles.content,
             {
@@ -126,17 +128,25 @@ const LoginScreen = ({ navigation }) => {
 
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Contraseña</Text>
-              <TextInput
-                ref={passwordInputRef}
-                style={styles.input}
-                placeholder="••••••••"
-                placeholderTextColor={colors.textSecondary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
-              />
+              <View>
+                <TextInput
+                  ref={passwordInputRef}
+                  style={[styles.input, { paddingRight: 50 }]}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.textSecondary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword((prev) => !prev)}
+                >
+                  <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <TouchableOpacity
@@ -255,6 +265,14 @@ const styles = StyleSheet.create({
     color: colors.text,
     borderWidth: 2,
     borderColor: colors.border,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 15,
   },
   loginButton: {
     backgroundColor: colors.primary,

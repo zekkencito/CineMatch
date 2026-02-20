@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 // Importación condicional de react-native-maps (solo iOS/Android)
 let MapView, Circle, Marker;
 if (Platform.OS !== 'web') {
@@ -38,18 +39,20 @@ const RegisterScreen = ({ navigation }) => {
     bio: '',
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [locationData, setLocationData] = useState(null);
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [searchRadius, setSearchRadius] = useState(7);
   const { register } = useAuth();
-  
+
   // Referencias para navegación entre inputs
   const emailInputRef = useRef(null);
   const ageInputRef = useRef(null);
   const passwordInputRef = useRef(null);
   const confirmPasswordInputRef = useRef(null);
   const bioInputRef = useRef(null);
-  
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -109,7 +112,7 @@ const RegisterScreen = ({ navigation }) => {
         city: locationData.city,
         country: locationData.country,
       });
-      
+
       // Navegar a PreferencesScreen para configurar gustos de películas
       Alert.alert(
         '✅ Cuenta creada',
@@ -121,10 +124,10 @@ const RegisterScreen = ({ navigation }) => {
       );
     } catch (error) {
       console.error('Registration error:', error);
-      
+
       // Mostrar errores de validación específicos si existen
       if (error.errors) {
-        const errorMessages = Object.keys(error.errors).map(key => 
+        const errorMessages = Object.keys(error.errors).map(key =>
           `${key}: ${error.errors[key].join(', ')}`
         ).join('\n');
         Alert.alert('Errores de Validación', errorMessages);
@@ -141,7 +144,7 @@ const RegisterScreen = ({ navigation }) => {
   const pickImage = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+
       if (permissionResult.granted === false) {
         Alert.alert('Permiso Requerido', 'Por favor, permite el acceso a tus fotos');
         return;
@@ -176,7 +179,7 @@ const RegisterScreen = ({ navigation }) => {
         colors={[colors.secondary, colors.secondaryLight]}
         style={styles.container}
       >
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
@@ -224,7 +227,7 @@ const RegisterScreen = ({ navigation }) => {
             </TouchableOpacity>
           </Animated.View>
 
-          <Animated.View 
+          <Animated.View
             style={[
               styles.form,
               {
@@ -281,34 +284,50 @@ const RegisterScreen = ({ navigation }) => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Contraseña *</Text>
-              <TextInput
-                ref={passwordInputRef}
-                style={styles.input}
-                placeholder="Ingresa tu contraseña"
-                placeholderTextColor={colors.textSecondary}
-                value={formData.password}
-                onChangeText={(value) => updateFormData('password', value)}
-                secureTextEntry
-                returnKeyType="next"
-                onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
-                blurOnSubmit={false}
-              />
+              <View>
+                <TextInput
+                  ref={passwordInputRef}
+                  style={[styles.input, { paddingRight: 50 }]}
+                  placeholder="Ingresa tu contraseña"
+                  placeholderTextColor={colors.textSecondary}
+                  value={formData.password}
+                  onChangeText={(value) => updateFormData('password', value)}
+                  secureTextEntry={!showPassword}
+                  returnKeyType="next"
+                  onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
+                  blurOnSubmit={false}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Confirmar Contraseña *</Text>
-              <TextInput
-                ref={confirmPasswordInputRef}
-                style={styles.input}
-                placeholder="Confirma tu contraseña"
-                placeholderTextColor={colors.textSecondary}
-                value={formData.confirmPassword}
-                onChangeText={(value) => updateFormData('confirmPassword', value)}
-                secureTextEntry
-                returnKeyType="next"
-                onSubmitEditing={() => bioInputRef.current?.focus()}
-                blurOnSubmit={false}
-              />
+              <View>
+                <TextInput
+                  ref={confirmPasswordInputRef}
+                  style={[styles.input, { paddingRight: 50 }]}
+                  placeholder="Confirma tu contraseña"
+                  placeholderTextColor={colors.textSecondary}
+                  value={formData.confirmPassword}
+                  onChangeText={(value) => updateFormData('confirmPassword', value)}
+                  secureTextEntry={!showConfirmPassword}
+                  returnKeyType="next"
+                  onSubmitEditing={() => bioInputRef.current?.focus()}
+                  blurOnSubmit={false}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
@@ -329,12 +348,12 @@ const RegisterScreen = ({ navigation }) => {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Ubicación *</Text>
               <LocationPicker onLocationChange={setLocationData} />
-              
+
               {locationData && (
                 <View style={styles.mapSection}>
                   <Text style={styles.mapTitle}>Radio de búsqueda</Text>
                   <Text style={styles.mapSubtitle}>Hasta dónde buscaremos personas con tus gustos</Text>
-                  
+
                   <View style={styles.mapContainer}>
                     {Platform.OS === 'web' ? (
                       // Fallback para web
@@ -372,7 +391,7 @@ const RegisterScreen = ({ navigation }) => {
                         >
                           <Text style={styles.markerEmoji}>📍</Text>
                         </Marker>
-                        
+
                         <Circle
                           center={{
                             latitude: locationData.latitude,
@@ -385,14 +404,14 @@ const RegisterScreen = ({ navigation }) => {
                         />
                       </MapView>
                     )}
-                    
+
                     <View style={styles.mapOverlay}>
                       <View style={styles.distanceBadge}>
                         <Text style={styles.distanceBadgeText}>{searchRadius} km</Text>
                       </View>
                     </View>
                   </View>
-                  
+
                   <View style={styles.radiusControl}>
                     <Text style={styles.radiusLabel}>Ajusta el radio:</Text>
                     <Slider
@@ -433,7 +452,7 @@ const RegisterScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('Login')}
             >
               <Text style={styles.loginButtonText}>
-              ¿Ya tienes una cuenta? <Text style={{ fontWeight: 'bold', color: colors.primary }}>Iniciar sesión</Text>
+                ¿Ya tienes una cuenta? <Text style={{ fontWeight: 'bold', color: colors.primary }}>Iniciar sesión</Text>
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -546,6 +565,14 @@ const styles = StyleSheet.create({
     color: colors.text,
     borderWidth: 2,
     borderColor: colors.border,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 15,
   },
   textArea: {
     height: 100,

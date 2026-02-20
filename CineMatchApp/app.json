@@ -45,7 +45,10 @@
               "host": "payment"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -55,6 +58,11 @@
     },
     "web": {
       "favicon": "./assets/logo.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "613cc5e8-d11c-4aec-9a58-c6124aeb4048"
+      }
     }
   }
 }

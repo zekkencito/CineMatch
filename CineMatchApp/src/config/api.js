@@ -5,28 +5,10 @@ import Constants from 'expo-constants';
 
 // Configuración automática según la plataforma
 const getApiUrl = () => {
-  // 1. Si hay EXPO_PUBLIC_API_URL en .env, úsala (prioridad máxima)
-  const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envApiUrl) {
-    console.log('📡 API Config: Usando URL de .env:', envApiUrl);
-    return envApiUrl;
-  }
-
-  // 2. Auto-detectar IP del Metro bundler (Expo) - solo en desarrollo
-  const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
-  if (debuggerHost) {
-    const ip = debuggerHost.split(':')[0]; // Extraer solo la IP
-    const autoUrl = `http://${ip}:8000/api`;
-    console.log('📡 API Config: Auto-detectada desde Metro:', autoUrl);
-    return autoUrl;
-  }
-
-  // 3. Fallback a configuración manual (cambiar solo si falla auto-detección)
-  const FALLBACK_IP = '192.168.100.12'; // Tu última IP conocida
-  const fallbackUrl = `http://${FALLBACK_IP}:8000/api`;
-  console.warn('⚠️ API Config: Usando IP fallback:', fallbackUrl);
-  console.warn('⚠️ Si estás en producción, configura EXPO_PUBLIC_API_URL en el archivo .env');
-  return fallbackUrl;
+  // Always use the production URL for standalone builds
+  const envApiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://cinematch-production-7ba5.up.railway.app/api';
+  console.log('📡 API Config: Usando URL:', envApiUrl);
+  return envApiUrl;
 };
 
 const API_URL = getApiUrl();
@@ -45,7 +27,7 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem('token');
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -65,7 +47,7 @@ api.interceptors.response.use(
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('user');
     }
-    
+
     return Promise.reject(error);
   }
 );
