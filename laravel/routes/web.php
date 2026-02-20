@@ -47,17 +47,30 @@ Route::get('/check-tables', function () {
 
 Route::get('/reset-database', function () {
     try {
-        // Primero ejecuta las migraciones frescas
-        Artisan::call('migrate:fresh', ['--force' => true]);
-        // Luego ejecuta los seeders
-        Artisan::call('db:seed', ['--force' => true]);
+        $output = "✅ Iniciando reset...\n\n";
         
-        $output = "✅ Base de datos reiniciada con éxito!\n\n";
-        $output .= "Migraciones ejecutadas: " . Artisan::output() . "\n";
-        $output .= "\n🎉 15 usuarios creados (ver UserSeeder)";
+        $exit1 = Artisan::call('migrate:fresh', ['--force' => true]);
+        $output .= "Migrate Exit Code: " . $exit1 . "\n";
+        $output .= "Migrate Output:\n" . Artisan::output() . "\n\n";
+        
+        $exit2 = Artisan::call('db:seed', ['--force' => true]);
+        $output .= "Seed Exit Code: " . $exit2 . "\n";
+        $output .= "Seed Output:\n" . Artisan::output() . "\n\n";
         
         return nl2br($output);
     } catch (\Exception $e) {
         return "❌ Error: " . $e->getMessage() . "\n\n" . $e->getTraceAsString();
+    }
+});
+
+Route::get('/fix-tokens', function () {
+    try {
+        Artisan::call('migrate', [
+            '--path' => 'vendor/laravel/sanctum/database/migrations',
+            '--force' => true
+        ]);
+        return "✅ Tabla de tokens (personal_access_tokens) creada exitosamente!<br><br>" . nl2br(Artisan::output());
+    } catch (\Exception $e) {
+        return "❌ Error: " . $e->getMessage();
     }
 });
