@@ -30,3 +30,20 @@ Route::get('/sembrar-datos', function () {
         return "Hubo un error: " . $e->getMessage();
     }
 });
+
+Route::get('/reset-database', function () {
+    try {
+        // Primero ejecuta las migraciones frescas
+        Artisan::call('migrate:fresh', ['--force' => true]);
+        // Luego ejecuta los seeders
+        Artisan::call('db:seed', ['--force' => true]);
+        
+        $output = "✅ Base de datos reiniciada con éxito!\n\n";
+        $output .= "Migraciones ejecutadas: " . Artisan::output() . "\n";
+        $output .= "\n🎉 15 usuarios creados (ver UserSeeder)";
+        
+        return nl2br($output);
+    } catch (\Exception $e) {
+        return "❌ Error: " . $e->getMessage() . "\n\n" . $e->getTraceAsString();
+    }
+});
