@@ -225,8 +225,9 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.emptySubtext}>Vuelve a revisar más tarde para encontrar más amantes del cine!</Text>
           <TouchableOpacity 
             style={styles.reloadButton} 
-            onPress={loadUsers}
+            onPress={() => loadUsers({ reset: true })}
             activeOpacity={0.8}
+            disabled={loading}
           >
             <Text style={styles.reloadButtonText}>Recargar ↻</Text>
           </TouchableOpacity>
@@ -255,8 +256,9 @@ const HomeScreen = ({ navigation }) => {
       {/* Botón flotante de refresh */}
       <TouchableOpacity
         style={styles.refreshButton}
-        onPress={loadUsers}
+        onPress={() => loadUsers({ reset: true })}
         activeOpacity={0.8}
+        disabled={loading}
       >
         <Text style={styles.refreshButtonIcon }>↻</Text>
       </TouchableOpacity>

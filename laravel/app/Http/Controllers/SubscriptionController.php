@@ -74,11 +74,15 @@ class SubscriptionController extends Controller
         $duration = $request->input('duration', 30); // 30 días por defecto
         $payment = $request->input('payment');
 
+        logger('upgradeToPremium - User: ' . Auth::id() . ' | Duration: ' . $duration . ' | Payment data: ' . json_encode($payment));
+
         $paid = false;
         if ($payment && (env('PAYPAL_CLIENT_ID') || env('PAYPAL_SECRET'))) {
             // Intentar una verificación ligera con PayPal Orders API (sandbox/production según env)
             try {
                 $orderId = $payment['orderID'] ?? $payment['id'] ?? null;
+                logger('upgradeToPremium - OrderID received: ' . $orderId);
+                
                 if ($orderId) {
                     $clientId = env('PAYPAL_CLIENT_ID');
                     $secret = env('PAYPAL_SECRET');
@@ -92,30 +96,52 @@ class SubscriptionController extends Controller
                     if ($tokenResp->ok()) {
                         $access = $tokenResp->json()['access_token'] ?? null;
                         if ($access) {
+                            logger('upgradeToPremium - Checking order: ' . $orderId);
                             $orderResp = \Illuminate\Support\Facades\Http::withToken($access)
                                 ->get("{$base}/v2/checkout/orders/{$orderId}");
+
+                            logger('upgradeToPremium - Order check response: ' . $orderResp->status() . ' - ' . $orderResp->body());
 
                             if ($orderResp->ok()) {
                                 $order = $orderResp->json();
                                 // Considerar pagado si status es COMPLETED or APPROVED
                                 $status = strtoupper($order['status'] ?? '');
+                                logger('upgradeToPremium - Order status: ' . $status);
+                                
                                 if (in_array($status, ['COMPLETED', 'APPROVED'])) {
                                     $paid = true;
+                                    logger('upgradeToPremium - Payment VERIFIED for user ' . Auth::id());
+                                } else {
+                                    logger('upgradeToPremium - Payment NOT verified. Status: ' . $status);
                                 }
+                            } else {
+                                logger('upgradeToPremium - Order check failed: ' . $orderResp->status());
                             }
+                        } else {
+                            logger('upgradeToPremium - No access token received');
                         }
+                    } else {
+                        logger('upgradeToPremium - Token request failed: ' . $tokenResp->status());
                     }
+                } else {
+                    logger('upgradeToPremium - No orderID provided');
                 }
             } catch (\Exception $e) {
                 // Registrar pero no bloquear: en dev local puede no verificarse
-                logger('PayPal verification failed: ' . $e->getMessage());
+                logger('upgradeToPremium - PayPal verification exception: ' . $e->getMessage());
             }
         } else {
+            logger('upgradeToPremium - No payment data or PayPal not configured');
             // Si no se proporciona pago, en entorno local permitimos la actualización (simulación)
             $paid = app()->environment('local') || app()->environment('testing');
         }
 
+        logger('upgradeToPremium - Paid status: ' . ($paid ? 'YES' : 'NO'));
+
+        logger('upgradeToPremium - Paid status: ' . ($paid ? 'YES' : 'NO'));
+
         if (!$paid) {
+            logger('upgradeToPremium - Payment verification FAILED for user ' . Auth::id());
             return response()->json([
                 'success' => false,
                 'message' => 'Payment not verified',
@@ -123,7 +149,9 @@ class SubscriptionController extends Controller
         }
 
         // Actualizar a premium
+        logger('upgradeToPremium - Upgrading user ' . Auth::id() . ' to premium for ' . $duration . ' days');
         $subscription->upgradeToPremium($duration);
+        logger('upgradeToPremium - Successfully upgraded user ' . Auth::id() . ' to premium');
 
         return response()->json([
             'success' => true,
@@ -302,6 +330,9 @@ class SubscriptionController extends Controller
                 return response()->json(['success' => false, 'message' => 'Invalid PayPal token response'], 500);
             }
 
+            // Obtener el ID del usuario autenticado para incluirlo en el return URL
+            $userId = Auth::id();
+            
             // Crear orden
             $body = [
                 'intent' => 'CAPTURE',
@@ -315,7 +346,7 @@ class SubscriptionController extends Controller
                     'brand_name' => 'CineMatch',
                     'landing_page' => 'NO_PREFERENCE',
                     'user_action' => 'PAY_NOW',
-                    'return_url' => url('/paypal/return'),
+                    'return_url' => url("/paypal/return?userId={$userId}"),
                     'cancel_url' => url('/paypal/cancel'),
                 ]
             ];
@@ -371,6 +402,9 @@ class SubscriptionController extends Controller
     {
         $token = $request->query('token');
         $payerId = $request->query('PayerID');
+        $userId = $request->query('userId');
+
+        logger('PayPal return - Token: ' . $token . ' | PayerID: ' . $payerId . ' | UserID: ' . $userId);
 
         if (!$token) {
             return view('paypal-result', [
@@ -434,10 +468,31 @@ class SubscriptionController extends Controller
             logger('PayPal capture status: ' . $status);
 
             if ($status === 'COMPLETED') {
+                // Si tenemos userId, actualizar la suscripción directamente aquí
+                if ($userId) {
+                    logger('PayPal - Upgrading user ' . $userId . ' to premium after successful payment');
+                    try {
+                        $user = \App\Models\User::find($userId);
+                        if ($user) {
+                            $subscription = $user->subscription;
+                            if (!$subscription) {
+                                $subscription = \App\Models\Subscription::create([
+                                    'user_id' => $user->id,
+                                ]);
+                            }
+                            $subscription->upgradeToPremium(30);
+                            logger('PayPal - User ' . $userId . ' successfully upgraded to premium');
+                        }
+                    } catch (\Exception $e) {
+                        logger('PayPal - Error upgrading user: ' . $e->getMessage());
+                    }
+                }
+                
                 return view('paypal-result', [
                     'success' => true,
-                    'message' => '¡Pago completado! Ahora puedes volver a la app y verificar tu suscripción Premium.',
+                    'message' => '¡Pago completado! Ya eres usuario Premium. Puedes cerrar esta ventana y volver a la app.',
                     'orderId' => $token,
+                    'deepLink' => "cinematch://payment/return?orderId={$token}&status=success",
                 ]);
             } else {
                 return view('paypal-result', [

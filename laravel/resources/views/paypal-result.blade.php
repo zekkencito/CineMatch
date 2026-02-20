@@ -64,15 +64,14 @@
         @endif
 
         @if(isset($orderId) && $orderId)
-            <button id="openAppBtn" class="btn" data-orderid="{{ $orderId }}" data-status="{{ $success ? 'success' : 'cancelled' }}">Abrir CineMatch</button>
-            <button id="copyLinkBtn" class="btn" style="margin-left:10px;background:transparent;border:1px solid rgba(255,255,255,0.12);">Copiar enlace</button>
+            <button id="openAppBtn" class="btn" data-orderid="{{ $orderId }}" data-status="{{ $success ? 'success' : 'cancelled' }}">Volver a CineMatch</button>
         @else
             <a href="#" class="btn" onclick="window.close(); return false;">Cerrar ventana</a>
         @endif
 
         <div class="footer">
             @if($success)
-                Redirigiendo automáticamente...<br>
+                Tu suscripción Premium ya está activa.<br>
                 <small>Si no abre la app automáticamente, pulsa "Volver a CineMatch"</small>
             @else
                 Puedes cerrar esta ventana y volver a intentarlo
@@ -88,12 +87,13 @@
             const status = 'success';
             const deepLink = `cinematch://payment/return?orderId=${orderId}&status=${status}`;
             
-            console.log('Intentando abrir app:', deepLink);
+            console.log('Intentando abrir app con deep link:', deepLink);
             
             // Método 1: window.location (inmediato)
             setTimeout(function() {
+                console.log('Ejecutando redirección a:', deepLink);
                 window.location.href = deepLink;
-            }, 500);
+            }, 800);
             
             // Método 2: Iframe invisible (mejor compatibilidad en algunos navegadores)
             setTimeout(function() {

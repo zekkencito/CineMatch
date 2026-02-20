@@ -182,6 +182,11 @@ const ProfileScreen = ({ navigation }) => {
                 <Text style={styles.ageText}>{String(user.age)}</Text>
               </View>
             ) : null}
+            {user?.subscription?.is_premium || user?.is_premium ? (
+              <View style={styles.premiumBadgeSmall}>
+                <Text style={styles.premiumBadgeText}>⭐ PREMIUM</Text>
+              </View>
+            ) : null}
           </View>
           <Text style={styles.email}>{user?.email || 'No email'}</Text>
           
@@ -328,6 +333,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
     color: colors.textDark,
+  },
+  premiumBadgeSmall: {
+    backgroundColor: '#ffd700',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  premiumBadgeText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: colors.textDark,
+    letterSpacing: 0.5,
   },
   email: {
     fontSize: 15,

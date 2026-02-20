@@ -92,6 +92,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refetchUser = async () => {
+    try {
+      const userData = await authService.getCurrentUser();
+      setUser(userData);
+      return userData;
+    } catch (error) {
+      console.error('Error refetching user:', error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -102,6 +113,7 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         updateUser,
+        refetchUser,
       }}
     >
       {children}

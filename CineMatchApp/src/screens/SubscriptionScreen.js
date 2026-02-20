@@ -12,6 +12,7 @@ import {
   Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '../context/AuthContext';
 import { subscriptionService } from '../services/subscriptionService';
 import { paymentService } from '../services/paymentService';
 import paymentConfig from '../config/paymentConfig';
@@ -33,6 +34,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 const SubscriptionScreen = ({ navigation }) => {
+  const { refetchUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
@@ -53,12 +55,33 @@ const SubscriptionScreen = ({ navigation }) => {
         const orderId = urlObj.searchParams.get('orderId');
         const status = urlObj.searchParams.get('status');
         
+        console.log('Payment return - OrderID:', orderId, 'Status:', status);
+        
         if (status === 'success' && orderId) {
-          // Guardar orden y verificar automáticamente
-          setPendingOrder({ orderID: orderId });
-          setTimeout(() => {
-            handleVerifyPaymentAuto(orderId);
-          }, 500);
+          // El pago se completó exitosamente, recargar datos del usuario
+          console.log('Payment successful, reloading user data...');
+          
+          // Recargar datos del usuario desde el servidor
+          refetchUser()
+            .then(() => {
+              console.log('User data reloaded successfully');
+              // Recargar datos de suscripción
+              loadSubscriptionData();
+              // Mostrar mensaje de éxito
+              Alert.alert(
+                '🎉 ¡Premium activado!',
+                '¡Felicidades! Ahora eres usuario Premium y tienes acceso a todas las funciones exclusivas.',
+                [{ text: 'OK' }]
+              );
+            })
+            .catch((error) => {
+              console.error('Error reloading user data:', error);
+              Alert.alert(
+                'Atención',
+                'El pago se completó correctamente, pero hubo un problema al actualizar tus datos. Por favor, cierra y vuelve a abrir la app.',
+                [{ text: 'OK' }]
+              );
+            });
         } else if (status === 'cancelled') {
           Alert.alert('Pago cancelado', 'Has cancelado el pago. Puedes intentarlo nuevamente.');
         }
@@ -172,6 +195,12 @@ const SubscriptionScreen = ({ navigation }) => {
     try {
       const response = await subscriptionService.upgradeToPremium(30, { orderID });
       if (response.success) {
+        // Recargar datos de usuario desde servidor para actualizar estado Premium
+        try {
+          await refetchUser();
+        } catch (e) {
+          console.warn('Could not refetch user after upgrade:', e);
+        }
         Alert.alert('🎉 ¡Premium activado!', response.message, [{ text: 'OK', onPress: () => { setPendingOrder(null); loadSubscriptionData(); } }]);
       } else {
         Alert.alert('No verificado', response.message || 'El pago no fue verificado.');
@@ -233,6 +262,15 @@ const SubscriptionScreen = ({ navigation }) => {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const calculateDaysRemaining = (expiresAt) => {
+    if (!expiresAt) return null;
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    const diffTime = expiry - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
   };
 
   if (loading) {
@@ -298,9 +336,15 @@ const SubscriptionScreen = ({ navigation }) => {
           </View>
 
           {isPremium && currentPlan?.expires_at && (
-            <Text style={styles.expiryText}>
-              Expira el {formatDate(currentPlan.expires_at)}
-            </Text>
+            <View style={styles.expiryContainer}>
+              <View style={styles.daysRemainingBox}>
+                <Text style={styles.daysRemainingNumber}>{calculateDaysRemaining(currentPlan.expires_at)}</Text>
+                <Text style={styles.daysRemainingLabel}>días restantes</Text>
+              </View>
+              <Text style={styles.expiryText}>
+                Expira el {formatDate(currentPlan.expires_at)}
+              </Text>
+            </View>
           )}
 
           <View style={styles.benefitsContainer}>
@@ -538,11 +582,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
+  expiryContainer: {
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  daysRemainingBox: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+    marginBottom: 10,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  daysRemainingNumber: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.textDark,
+    textAlign: 'center',
+    letterSpacing: 1,
+  },
+  daysRemainingLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textDark,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   expiryText: {
     color: colors.textSecondary,
     fontSize: 14,
-    marginBottom: 15,
     fontWeight: '600',
+    textAlign: 'center',
   },
   benefitsContainer: {
     marginVertical: 15,

@@ -121,11 +121,15 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         $user = $request->user();
-        $user->load(['location', 'favoriteGenres']);
+        $user->load(['location', 'favoriteGenres', 'subscription']);
+        
+        // Agregar campo is_premium en el objeto user
+        $userData = $user->toArray();
+        $userData['is_premium'] = $user->isPremium();
         
         return response()->json([
             'success' => true,
-            'user' => $user
+            'user' => $userData
         ]);
     }
 
