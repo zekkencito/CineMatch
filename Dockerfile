@@ -34,4 +34,5 @@ RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 8080
 
+# Force rebuild - entrypoint without migrations (2026-02-19)
 ENTRYPOINT ["/docker-entrypoint.sh"]
