@@ -21,6 +21,15 @@ return new class extends Migration
             $table->primary(['user_id', 'tmdb_director_id']);
             $table->index('user_id');
         });
+        // Recrear user_favorite_genres para usar tmdb_genre_id (usar IDs de TMDB directamente)
+        Schema::dropIfExists('user_favorite_genres');
+        Schema::create('user_favorite_genres', function (Blueprint $table) {
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->integer('tmdb_genre_id'); // ID de TMDB, no FK
+            $table->string('name', 100)->nullable(); // Nombre del género (opcional)
+            $table->primary(['user_id', 'tmdb_genre_id']);
+            $table->index('user_id');
+        });
 
         // Recrear watched_movies para usar tmdb_movie_id
         Schema::dropIfExists('watched_movies');
@@ -47,7 +56,13 @@ return new class extends Migration
             $table->foreignId('director_id')->constrained()->onDelete('cascade');
             $table->primary(['user_id', 'director_id']);
         });
-
+        // Restaurar user_favorite_genres original que referenciaba a la tabla genres
+        Schema::dropIfExists('user_favorite_genres');
+        Schema::create('user_favorite_genres', function (Blueprint $table) {
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('genre_id')->constrained()->onDelete('cascade');
+            $table->primary(['user_id', 'genre_id']);
+        });
         Schema::dropIfExists('watched_movies');
         Schema::create('watched_movies', function (Blueprint $table) {
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
