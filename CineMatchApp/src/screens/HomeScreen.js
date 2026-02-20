@@ -35,6 +35,9 @@ const HomeScreen = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const swiperRef = useRef(null);
+  const [swiperKey, setSwiperKey] = useState(0);
+  const [swiperStartIndex, setSwiperStartIndex] = useState(0);
+  const currentCardIndexRef = useRef(0);
   
   // Animación para fade in
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -120,6 +123,7 @@ const HomeScreen = ({ navigation }) => {
         setLoading(true);
         setPage(1);
         setFinished(false);
+        currentCardIndexRef.current = 0;
       } else {
         setIsFetchingMore(true);
       }
@@ -129,20 +133,23 @@ const HomeScreen = ({ navigation }) => {
       const fetched = (resp.users || []).filter(u => u && u.id && u.name);
 
       if (reset) {
+        setSwiperStartIndex(0);
         setUsers(fetched);
-        // Reset swiper to top
-        if (swiperRef.current && fetched.length > 0) swiperRef.current.jumpToCardIndex(0);
-      } else {
+        setSwiperKey(k => k + 1); // Re-monta el swiper limpio desde 0
+      } else if (fetched.length > 0) {
+        // Capturar índice actual ANTES de actualizar el estado
+        const resumeAt = currentCardIndexRef.current;
         setUsers(prev => [...prev, ...fetched]);
+        // Re-montar el swiper restaurando la posición donde estaba el usuario
+        setSwiperStartIndex(resumeAt);
+        setSwiperKey(k => k + 1);
       }
 
       const meta = resp.meta || {};
-      const totalLoaded = (reset ? 0 : users.length) + fetched.length;
       if (fetched.length < perPage || (meta.page && meta.per_page && meta.total && (meta.page * meta.per_page) >= meta.total)) {
         setFinished(true);
       }
 
-      // Increment page for next fetch (only if we actually fetched something)
       if (fetched.length > 0) setPage(p + 1);
 
     } catch (error) {
@@ -265,8 +272,10 @@ const HomeScreen = ({ navigation }) => {
 
       <View style={styles.swiperContainer}>
         <Swiper
+          key={swiperKey}
           ref={swiperRef}
           cards={users}
+          cardIndex={swiperStartIndex}
           renderCard={(user) => {
             if (!user || !user.id) {
               return null;
@@ -274,8 +283,9 @@ const HomeScreen = ({ navigation }) => {
             return <UserCard user={user} />;
           }}
           onSwiped={(cardIndex) => {
+            currentCardIndexRef.current = cardIndex + 1;
             const remaining = users.length - (cardIndex + 1);
-            if (!finished && remaining < 3 && !isFetchingMore) {
+            if (!finished && remaining < 5 && !isFetchingMore) {
               loadUsers({ reset: false });
             }
           }}
@@ -289,7 +299,6 @@ const HomeScreen = ({ navigation }) => {
               handleSwipedAll();
             }
           }}
-          cardIndex={0}
           backgroundColor="transparent"
           stackSize={3}
           stackScale={5}
