@@ -128,41 +128,48 @@ const PreferencesScreen = ({ navigation, route }) => {
         console.warn('No se pudo determinar plan del usuario:', err);
       }
 
-      // Si no es setup inicial, cargar preferencias guardadas
+      // Siempre cargar la ubicación, incluso en setup inicial, porque ya se guardó en el registro.
+      let location = null;
+      try {
+        location = await preferenceService.getLocation();
+      } catch (err) {
+        console.warn('No se pudo cargar la ubicación:', err);
+      }
+
       if (!isInitialSetup) {
-        const [favGenres, favDirectors, watched, location] = await Promise.all([
+        const [favGenres, favDirectors, watched] = await Promise.all([
           preferenceService.getFavoriteGenres(),
           preferenceService.getFavoriteDirectors(),
           preferenceService.getWatchedMovies(),
-          preferenceService.getLocation(),
         ]);
 
         setSelectedGenres(favGenres.map(g => g.tmdb_id || g.id));
         setSelectedDirectors(favDirectors);
         setWatchedMovies(watched);
-        // Soportar tanto 'radius' como 'search_radius' del backend
-        // Validar que esté entre 1 y el máximo permitido (7 para gratis, 100 para premium)
-        const radiusFromBackend = location?.radius || location?.search_radius || 7;
-        const maxAllowed = currentUserIsPremium ? 20000 : 7;
-        const validatedRadius = Math.min(Math.max(radiusFromBackend, 1), maxAllowed);
-        setSearchRadius(validatedRadius);
+      }
 
-        // Guardar ubicación para el mapa
-        if (location?.latitude && location?.longitude) {
-          const lat = parseFloat(location.latitude);
-          const lng = parseFloat(location.longitude);
+      // Procesar y configurar ubicación / radio
+      // Validar que esté entre 1 y el máximo permitido (7 para gratis, 100 para premium)
+      const radiusFromBackend = location?.radius || location?.search_radius || 7;
+      const maxAllowed = currentUserIsPremium ? 20000 : 7;
+      const validatedRadius = Math.min(Math.max(radiusFromBackend, 1), maxAllowed);
+      setSearchRadius(validatedRadius);
 
-          // Validar que sean coordenadas válidas
-          if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-            setUserLocation({
-              latitude: lat,
-              longitude: lng,
-              city: location.city || '',
-              country: location.country || '',
-            });
-          } else {
-            console.warn('Coordenadas inválidas:', location.latitude, location.longitude);
-          }
+      // Guardar ubicación para el mapa
+      if (location?.latitude && location?.longitude) {
+        const lat = parseFloat(location.latitude);
+        const lng = parseFloat(location.longitude);
+
+        // Validar que sean coordenadas válidas
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          setUserLocation({
+            latitude: lat,
+            longitude: lng,
+            city: location.city || '',
+            country: location.country || '',
+          });
+        } else {
+          console.warn('Coordenadas inválidas:', location.latitude, location.longitude);
         }
       }
     } catch (error) {
@@ -684,7 +691,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       <View style={styles.tabContent}>
         <Text style={styles.sectionTitle}>Distancia de búsqueda</Text>
         <Text style={styles.sectionSubtitle}>
-          El área amarilla muestra hasta dónde buscarás movie buddies
+          El área amarilla muestra hasta dónde buscarás Amigos de Butaca
         </Text>
 
         {userLocation ? (
@@ -885,7 +892,7 @@ const PreferencesScreen = ({ navigation, route }) => {
           </Text>
           <Text style={styles.headerSubtitle}>
             {isInitialSetup
-              ? 'Para encontrar mejores movie buddies'
+              ? 'Para encontrar mejores Amigos de Butaca'
               : 'Edita tus gustos de películas'}
           </Text>
         </Animated.View>
