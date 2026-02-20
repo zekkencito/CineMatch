@@ -23,6 +23,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:6',
             'age' => 'nullable|integer|min:18',
             'bio' => 'nullable|string|max:500',
+            'profile_photo' => 'nullable|string',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
             'city' => 'nullable|string|max:255',
@@ -42,6 +43,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'age' => $request->age,
             'bio' => $request->bio,
+            'profile_photo' => $request->profile_photo,
         ]);
 
         // Crear ubicación del usuario si se proporcionan coordenadas
