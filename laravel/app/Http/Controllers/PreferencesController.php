@@ -18,7 +18,11 @@ class PreferencesController extends Controller
     public function getGenres(Request $request)
     {
         $user = $request->user();
-        $genres = $user->favoriteGenres;
+        
+        $genres = DB::table('user_favorite_genres')
+            ->where('user_id', $user->id)
+            ->select('tmdb_genre_id as id')
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -35,21 +39,32 @@ class PreferencesController extends Controller
     {
         $request->validate([
             'genre_ids' => 'required|array',
-            'genre_ids.*' => 'integer|exists:genres,tmdb_id',
+            'genre_ids.*' => 'integer',
         ]);
 
         $user = $request->user();
         
         // Sincronizar (eliminar viejos, agregar nuevos)
-        $user->favoriteGenres()->sync($request->genre_ids);
+        DB::table('user_favorite_genres')->where('user_id', $user->id)->delete();
+        
+        $inserts = [];
+        foreach ($request->genre_ids as $gid) {
+            $inserts[] = ['user_id' => $user->id, 'tmdb_genre_id' => $gid];
+        }
+        
+        if (!empty($inserts)) {
+            DB::table('user_favorite_genres')->insert($inserts);
+        }
 
-        // Recargar géneros
-        $user->load('favoriteGenres');
+        $genres = DB::table('user_favorite_genres')
+            ->where('user_id', $user->id)
+            ->select('tmdb_genre_id as id')
+            ->get();
 
         return response()->json([
             'success' => true,
             'message' => 'Genres synced successfully',
-            'genres' => $user->favoriteGenres
+            'genres' => $genres
         ]);
     }
 

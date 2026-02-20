@@ -32,58 +32,11 @@ class UserController extends Controller
             }
         }
 
-        // Obtener géneros, directores y películas del usuario actual
-        $currentGenreIds = $currentUser->favoriteGenres->pluck('id')->toArray();
-
-        // Mapar géneros locales (inglés) a los IDs de TMDB cuando sea necesario
-        $genreNameToTmdb = [
-            'Action' => 28,
-            'Adventure' => 12,
-            'Animation' => 16,
-            'Comedy' => 35,
-            'Crime' => 80,
-            'Documentary' => 99,
-            'Drama' => 18,
-            'Family' => 10751,
-            'Fantasy' => 14,
-            'History' => 36,
-            'Horror' => 27,
-            'Mystery' => 9648,
-            'Science Fiction' => 878,
-            'Thriller' => 53,
-            'Western' => 37,
-            'Music' => 10402,
-            'Romance' => 10749
-        ];
-
-        $mapToTmdb = function($genreCollection) use ($genreNameToTmdb) {
-            $tmdbIds = [];
-            foreach ($genreCollection as $g) {
-                // Primero usar tmdb_id si está disponible (columna directa del modelo Genre)
-                if (!empty($g->tmdb_id)) {
-                    $tmdbIds[] = intval($g->tmdb_id);
-                    continue;
-                }
-
-                // Fallback: si el id ya parece un ID TMDB (>= 100) usarlo directamente
-                if (intval($g->id) >= 100) {
-                    $tmdbIds[] = intval($g->id);
-                    continue;
-                }
-
-                // Fallback final: mapear por nombre (inglés)
-                $name = trim($g->name);
-                if (isset($genreNameToTmdb[$name])) {
-                    $tmdbIds[] = $genreNameToTmdb[$name];
-                }
-            }
-
-            // Asegurar valores únicos
-            return array_values(array_unique($tmdbIds));
-        };
-
-        // IDs TMDB normalizados del usuario actual
-        $currentGenreTmdbIds = $mapToTmdb($currentUser->favoriteGenres);
+        // Obtener IDs TMDB directamente de la tabla (no requiere usar fallback)
+        $currentGenreTmdbIds = DB::table('user_favorite_genres')
+            ->where('user_id', $userId)
+            ->pluck('tmdb_genre_id')
+            ->toArray();
         
         $currentDirectorIds = DB::table('user_favorite_directors')
             ->where('user_id', $userId)
@@ -153,9 +106,12 @@ class UserController extends Controller
         }
 
         // Filtrar por géneros comunes y calcular match %
-        $usersWithMatch = $users->map(function($user) use ($currentGenreTmdbIds, $currentDirectorIds, $currentMovieIds, $currentUser, $mapToTmdb, $isPremium) {
-            // Obtener géneros del usuario objetivo y normalizarlos a IDs TMDB
-            $targetGenreTmdbIds = $mapToTmdb($user->favoriteGenres);
+        $usersWithMatch = $users->map(function($user) use ($currentGenreTmdbIds, $currentDirectorIds, $currentMovieIds, $currentUser, $isPremium) {
+            // Obtener géneros del usuario objetivo
+            $targetGenreTmdbIds = DB::table('user_favorite_genres')
+                ->where('user_id', $user->id)
+                ->pluck('tmdb_genre_id')
+                ->toArray();
             
             // Obtener directores del usuario objetivo
             $targetDirectorIds = DB::table('user_favorite_directors')
