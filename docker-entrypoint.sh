@@ -1,12 +1,34 @@
-#!/bin/bash
+﻿#!/bin/bash
+set -x
 echo "=== CineMatch Starting ==="
+echo "APP_KEY=${APP_KEY}"
+echo "DB_HOST=${DB_HOST}"
 
-printf "APP_NAME=CineMatch\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\n" "${APP_KEY}" > /app/.env
-printf "LOG_CHANNEL=stderr\nLOG_LEVEL=error\n" >> /app/.env
-printf "DB_CONNECTION=mysql\nDB_HOST=%s\nDB_PORT=%s\nDB_DATABASE=%s\nDB_USERNAME=%s\nDB_PASSWORD=%s\n" "${DB_HOST:-127.0.0.1}" "${DB_PORT:-3306}" "${DB_DATABASE:-laravel}" "${DB_USERNAME:-root}" "${DB_PASSWORD}" >> /app/.env
-printf "CACHE_DRIVER=array\nSESSION_DRIVER=array\nQUEUE_CONNECTION=sync\n" >> /app/.env
+# Write .env
+> /app/.env
+echo "APP_NAME=CineMatch" >> /app/.env
+echo "APP_ENV=production" >> /app/.env
+echo "APP_DEBUG=false" >> /app/.env
+echo "APP_KEY=${APP_KEY}" >> /app/.env
+echo "APP_URL=${APP_URL:-http://localhost}" >> /app/.env
+echo "LOG_CHANNEL=stderr" >> /app/.env
+echo "LOG_LEVEL=error" >> /app/.env
+echo "DB_CONNECTION=mysql" >> /app/.env
+echo "DB_HOST=${DB_HOST:-127.0.0.1}" >> /app/.env
+echo "DB_PORT=${DB_PORT:-3306}" >> /app/.env
+echo "DB_DATABASE=${DB_DATABASE:-laravel}" >> /app/.env
+echo "DB_USERNAME=${DB_USERNAME:-root}" >> /app/.env
+echo "DB_PASSWORD=${DB_PASSWORD}" >> /app/.env
+echo "CACHE_DRIVER=array" >> /app/.env
+echo "SESSION_DRIVER=array" >> /app/.env
+echo "QUEUE_CONNECTION=sync" >> /app/.env
 
-if [ -z "$APP_KEY" ]; then php artisan key:generate --force; fi
+# Generate key if missing
+if [ -z "$APP_KEY" ]; then
+  echo "Generating APP_KEY..."
+  php artisan key:generate --force
+fi
+
 php artisan config:clear 2>/dev/null || true
 
 echo "Starting server on port ${PORT:-8080}..."
