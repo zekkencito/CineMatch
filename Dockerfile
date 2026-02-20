@@ -24,8 +24,9 @@ COPY laravel/ .
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Set permissions
-RUN chmod -R 775 storage bootstrap/cache
+# Ensure directories exist and set permissions
+RUN mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache storage/logs bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /docker-entrypoint.sh
