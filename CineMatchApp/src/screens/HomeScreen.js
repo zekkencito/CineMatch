@@ -20,12 +20,14 @@ import { userService } from '../services/userService';
 import { matchService } from '../services/matchService';
 import UserCard from '../components/UserCard';
 import colors from '../constants/colors';
+import { useAuth } from '../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faMasksTheater } from '@fortawesome/free-solid-svg-icons';
+import { faMasksTheater, faStar } from '@fortawesome/free-solid-svg-icons';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
+  const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -38,13 +40,13 @@ const HomeScreen = ({ navigation }) => {
   const [swiperKey, setSwiperKey] = useState(0);
   const [swiperStartIndex, setSwiperStartIndex] = useState(0);
   const currentCardIndexRef = useRef(0);
-  
+
   // Animación para fade in
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  
+
   // Animación para bottom sheet
   const modalTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-  
+
   // PanResponder para swipe hacia abajo
   const panResponder = useRef(
     PanResponder.create({
@@ -164,15 +166,15 @@ const HomeScreen = ({ navigation }) => {
 
   const handleSwiped = async (cardIndex, direction) => {
     const swipedUser = users[cardIndex];
-    
+
     // Validar que el usuario exista
     if (!swipedUser || !swipedUser.id) {
       console.warn('Usuario no válido:', cardIndex);
       return;
     }
-    
+
     const type = direction === 'right' ? 'like' : 'dislike';
-    
+
     try {
       const result = await matchService.sendLike(swipedUser.id, type);
       if (result.matched) {
@@ -195,8 +197,8 @@ const HomeScreen = ({ navigation }) => {
       "🎬 ¡Ya no hay más!",
       "Ya viste a todos los usuarios disponibles en tu área. Puedes recargar para buscar nuevos.",
       [
-        { 
-          text: 'Recargar', 
+        {
+          text: 'Recargar',
           onPress: () => {
             loadUsers();
           }
@@ -212,7 +214,13 @@ const HomeScreen = ({ navigation }) => {
         style={styles.centerContainer}
       >
         <View style={styles.loadingBox}>
-          <Text style={styles.loadingEmoji}>🎬</Text>
+          <View style={styles.loadingLogoBox}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Encontrando Amigos Palomeros...</Text>
         </View>
@@ -230,8 +238,8 @@ const HomeScreen = ({ navigation }) => {
           <FontAwesomeIcon icon={faMasksTheater} size={64} color={colors.primary} />
           <Text style={styles.emptyText}>No hay más Amigos Palomeros cerca</Text>
           <Text style={styles.emptySubtext}>Vuelve a revisar más tarde para encontrar más amantes del cine!</Text>
-          <TouchableOpacity 
-            style={styles.reloadButton} 
+          <TouchableOpacity
+            style={styles.reloadButton}
             onPress={() => loadUsers({ reset: true })}
             activeOpacity={0.8}
             disabled={loading}
@@ -243,12 +251,23 @@ const HomeScreen = ({ navigation }) => {
     );
   }
 
+  const isPremium = user?.subscription?.is_premium || user?.is_premium;
+
   return (
     <LinearGradient
       colors={[colors.secondary, colors.secondaryLight]}
       style={styles.container}
     >
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
+        {isPremium && (
+          <TouchableOpacity
+            style={styles.premiumBadge}
+            onPress={() => navigation.navigate('Suscripción')}
+          >
+            <FontAwesomeIcon icon={faStar} size={14} color="#ffd700" />
+            <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.logoBox}>
           <Image
             source={require('../../assets/logo.png')}
@@ -256,7 +275,6 @@ const HomeScreen = ({ navigation }) => {
             resizeMode="contain"
           />
         </View>
-        <Text style={styles.logo}>CineMatch</Text>
         <Text style={styles.subtitle}>Desliza para encontrar a tus amigos cinéfilos</Text>
       </Animated.View>
 
@@ -267,7 +285,7 @@ const HomeScreen = ({ navigation }) => {
         activeOpacity={0.8}
         disabled={loading}
       >
-        <Text style={styles.refreshButtonIcon }>↻</Text>
+        <Text style={styles.refreshButtonIcon}>↻</Text>
       </TouchableOpacity>
 
       <View style={styles.swiperContainer}>
@@ -372,13 +390,13 @@ const HomeScreen = ({ navigation }) => {
         onRequestClose={closeModal}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.modalBackdrop} 
-            activeOpacity={1} 
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
             onPress={closeModal}
           />
-          
-          <Animated.View 
+
+          <Animated.View
             style={[
               styles.bottomSheetContainer,
               {
@@ -400,7 +418,7 @@ const HomeScreen = ({ navigation }) => {
               </Text>
             </View>
 
-            <ScrollView 
+            <ScrollView
               contentContainerStyle={styles.moviesScrollContent}
               showsVerticalScrollIndicator={false}
             >
@@ -438,12 +456,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingBox: {
-    
+
     alignItems: 'center',
     gap: 16,
   },
-  loadingEmoji: {
-    fontSize: 65,
+  loadingLogoBox: {
+    width: 200,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   loadingText: {
     fontSize: 16,
@@ -496,21 +518,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
     gap: 4,
+    position: 'relative',
+  },
+  premiumBadge: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 45 : 45,
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ffd700',
+    zIndex: 10,
+  },
+  premiumBadgeText: {
+    color: '#ffd700',
+    fontSize: 12,
+    fontWeight: '800',
+    marginLeft: 4,
+    letterSpacing: 0.5,
   },
   logoBox: {
-    width: 55,
-    height: 55,
-    backgroundColor: colors.primary,
-    borderRadius: 18,
+    height: 120,
+    width: 200,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 3,
-    borderColor: 'rgba(245, 197, 24, 0.3)',
+    marginTop: 4,
+    marginBottom: 2,
   },
   logoEmoji: {
     fontSize: 32,
@@ -616,11 +653,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     letterSpacing: 0.5,
     fontWeight: '500',
+
   },
   swiperContainer: {
     flex: 1,
     justifyContent: 'flex-start',
-    marginTop: -20,
+    marginTop: -50,
     marginBottom: 20,
     paddingHorizontal: 10,
   },

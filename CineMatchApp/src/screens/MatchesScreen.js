@@ -9,6 +9,7 @@ import {
   Animated,
   Platform,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -40,12 +41,12 @@ const MatchesScreen = ({ navigation }) => {
       } else {
         setLoading(true);
       }
-      
+
       const data = await matchService.getMatches();
       // Filtrar matches válidos y extraer información del usuario
       const validMatches = (data || []).filter(m => m && m.user && m.user.id);
       setMatches(validMatches);
-      
+
       // Animar cuando se cargan los datos (solo en carga inicial)
       if (!isRefreshing) {
         Animated.parallel([
@@ -87,7 +88,13 @@ const MatchesScreen = ({ navigation }) => {
         style={styles.centerContainer}
       >
         <View style={styles.loadingBox}>
-          <Text style={styles.loadingEmoji}>🎬</Text>
+          <View style={styles.loadingLogoBox}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+          </View>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Cargando tus amigos de butaca...</Text>
         </View>
@@ -100,7 +107,7 @@ const MatchesScreen = ({ navigation }) => {
       colors={[colors.secondary, colors.secondaryLight]}
       style={styles.container}
     >
-      <Animated.View 
+      <Animated.View
         style={[
           styles.header,
           {
@@ -116,7 +123,7 @@ const MatchesScreen = ({ navigation }) => {
           <Text style={styles.title}>Amigos de Butaca</Text>
         </View>
         <Text style={styles.subtitle}>
-          {matches.length === 0 
+          {matches.length === 0
             ? 'Aún no tienes Amigos de Butaca'
             : `${matches.length} ${matches.length === 1 ? 'amigo de butaca' : 'amigos de butaca'} que comparten tu gusto`
           }
@@ -124,7 +131,7 @@ const MatchesScreen = ({ navigation }) => {
       </Animated.View>
 
       {matches.length === 0 ? (
-        <Animated.View 
+        <Animated.View
           style={[
             styles.emptyContainer,
             {
@@ -176,8 +183,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  loadingEmoji: {
-    fontSize: 64,
+  loadingLogoBox: {
+    width: 200,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   loadingText: {
     fontSize: 16,

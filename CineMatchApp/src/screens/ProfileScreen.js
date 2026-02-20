@@ -205,11 +205,6 @@ const ProfileScreen = ({ navigation }) => {
                 <Text style={styles.ageText}>{String(user.age)}</Text>
               </View>
             ) : null}
-            {user?.subscription?.is_premium || user?.is_premium ? (
-              <View style={styles.premiumBadgeSmall}>
-                <Text style={styles.premiumBadgeText}>⭐ PREMIUM</Text>
-              </View>
-            ) : null}
           </View>
           <Text style={styles.email}>{user?.email || 'No email'}</Text>
 
@@ -344,7 +339,7 @@ const styles = StyleSheet.create({
   nameBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
     marginBottom: 6,
   },
   name: {
@@ -394,8 +389,9 @@ const styles = StyleSheet.create({
   locationInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
+    gap: 7,
+    marginTop: 5,
+    marginBottom: 1,
     paddingHorizontal: 18,
     paddingVertical: 10,
     backgroundColor: 'rgba(245, 197, 24, 0.15)',
@@ -418,7 +414,7 @@ const styles = StyleSheet.create({
   },
   menuSection: {
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 8,
   },
   menuLeft: {
     flexDirection: 'row',
@@ -496,7 +492,7 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     backgroundColor: colors.accent,
-    padding: 20,
+    padding: 14,
     borderRadius: 18,
     alignItems: 'center',
     marginBottom: 20,

@@ -30,50 +30,50 @@ import tmdbMovieService from '../services/tmdbMovieService';
 import preferenceService from '../services/preferenceService';
 import { subscriptionService } from '../services/subscriptionService';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faClapperboard } from '@fortawesome/free-solid-svg-icons'; 
+import { faClapperboard } from '@fortawesome/free-solid-svg-icons';
 import { faMasksTheater } from '@fortawesome/free-solid-svg-icons';
 import { faEarthAmericas } from '@fortawesome/free-solid-svg-icons';
 import { faTicket } from '@fortawesome/free-solid-svg-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-  import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const PreferencesScreen = ({ navigation, route }) => {
   const isInitialSetup = route?.params?.isInitialSetup || false;
-  
+
   const [activeTab, setActiveTab] = useState('genres');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   // Géneros
   const [allGenres, setAllGenres] = useState([]);
   const [selectedGenres, setSelectedGenres] = useState([]);
-  
+
   // Directores
   const [directorSearch, setDirectorSearch] = useState('');
   const [directorResults, setDirectorResults] = useState([]);
   const [selectedDirectors, setSelectedDirectors] = useState([]);
   const [searchingDirectors, setSearchingDirectors] = useState(false);
-  
+
   // Películas
   const [movieSearch, setMovieSearch] = useState('');
   const [movieResults, setMovieResults] = useState([]);
   const [watchedMovies, setWatchedMovies] = useState([]);
   const [searchingMovies, setSearchingMovies] = useState(false);
-  
+
   // Radio de búsqueda y ubicación
   const [searchRadius, setSearchRadius] = useState(7);
   const [isPremium, setIsPremium] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [updatingLocation, setUpdatingLocation] = useState(false);
   const mapRef = useRef(null);
-  
+
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     loadPreferences();
-    
+
     // Animar entrada
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -95,14 +95,14 @@ const PreferencesScreen = ({ navigation, route }) => {
       try {
         // Calcular delta con límites seguros (mínimo 0.01, máximo 10)
         const delta = Math.max(0.01, Math.min(10, searchRadius / 111));
-        
+
         const region = {
           latitude: userLocation.latitude,
           longitude: userLocation.longitude,
           latitudeDelta: delta,
           longitudeDelta: delta,
         };
-        
+
         mapRef.current.animateToRegion(region, 500);
       } catch (error) {
         console.error('Error animando el mapa de la región:', error);
@@ -113,18 +113,20 @@ const PreferencesScreen = ({ navigation, route }) => {
   const loadPreferences = async () => {
     try {
       setLoading(true);
-      
+
       // Cargar géneros de TMDB
       const genres = await tmdbMovieService.getGenres();
       setAllGenres(genres);
+      let currentUserIsPremium = false;
       // Detectar si el usuario es premium para ajustar límites
       try {
         const planResp = await subscriptionService.getCurrentPlan();
-        setIsPremium(Boolean(planResp?.subscription?.is_premium));
+        currentUserIsPremium = Boolean(planResp?.subscription?.is_premium);
+        setIsPremium(currentUserIsPremium);
       } catch (err) {
         console.warn('No se pudo determinar plan del usuario:', err);
       }
-      
+
       // Si no es setup inicial, cargar preferencias guardadas
       if (!isInitialSetup) {
         const [favGenres, favDirectors, watched, location] = await Promise.all([
@@ -133,22 +135,22 @@ const PreferencesScreen = ({ navigation, route }) => {
           preferenceService.getWatchedMovies(),
           preferenceService.getLocation(),
         ]);
-        
-        setSelectedGenres(favGenres.map(g => g.id));
+
+        setSelectedGenres(favGenres.map(g => g.tmdb_id || g.id));
         setSelectedDirectors(favDirectors);
         setWatchedMovies(watched);
         // Soportar tanto 'radius' como 'search_radius' del backend
         // Validar que esté entre 1 y el máximo permitido (7 para gratis, 100 para premium)
-          const radiusFromBackend = location?.radius || location?.search_radius || 7;
-          const maxAllowed = isPremium ? 20000 : 7;
-          const validatedRadius = Math.min(Math.max(radiusFromBackend, 1), maxAllowed);
+        const radiusFromBackend = location?.radius || location?.search_radius || 7;
+        const maxAllowed = currentUserIsPremium ? 20000 : 7;
+        const validatedRadius = Math.min(Math.max(radiusFromBackend, 1), maxAllowed);
         setSearchRadius(validatedRadius);
-        
+
         // Guardar ubicación para el mapa
         if (location?.latitude && location?.longitude) {
           const lat = parseFloat(location.latitude);
           const lng = parseFloat(location.longitude);
-          
+
           // Validar que sean coordenadas válidas
           if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
             setUserLocation({
@@ -174,10 +176,10 @@ const PreferencesScreen = ({ navigation, route }) => {
   const updateLocationFromGPS = async () => {
     try {
       setUpdatingLocation(true);
-      
+
       // Solicitar permisos de ubicación
       const { status } = await Location.requestForegroundPermissionsAsync();
-      
+
       if (status !== 'granted') {
         Alert.alert(
           'Permisos denegados',
@@ -218,7 +220,7 @@ const PreferencesScreen = ({ navigation, route }) => {
           city,
           country,
         });
-        
+
         Alert.alert('✓ Ubicación actualizada', `${city}, ${country}`);
       } catch (error) {
         console.error('Error guardando ubicación:', error);
@@ -238,7 +240,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       setDirectorResults([]);
       return;
     }
-    
+
     try {
       setSearchingDirectors(true);
       const results = await tmdbMovieService.searchDirectors(query);
@@ -256,7 +258,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       setMovieResults([]);
       return;
     }
-    
+
     try {
       setSearchingMovies(true);
       const results = await tmdbMovieService.searchMovies(query);
@@ -271,8 +273,8 @@ const PreferencesScreen = ({ navigation, route }) => {
 
   // Toggle género
   const toggleGenre = (genreId) => {
-    setSelectedGenres(prev => 
-      prev.includes(genreId) 
+    setSelectedGenres(prev =>
+      prev.includes(genreId)
         ? prev.filter(id => id !== genreId)
         : [...prev, genreId]
     );
@@ -284,7 +286,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       Alert.alert('Info', 'Este director ya está en tu lista');
       return;
     }
-    
+
     setSelectedDirectors(prev => [...prev, {
       id: director.id,
       name: director.name,
@@ -305,7 +307,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       Alert.alert('Info', 'Esta película ya está en tu lista');
       return;
     }
-    
+
     setWatchedMovies(prev => [...prev, {
       id: movie.id,
       title: movie.title,
@@ -328,7 +330,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       Alert.alert('Error', 'Selecciona al menos 1 género');
       return;
     }
-    
+
     if (selectedDirectors.length === 0) {
       Alert.alert('Error', 'Agrega al menos 1 director favorito');
       return;
@@ -336,7 +338,7 @@ const PreferencesScreen = ({ navigation, route }) => {
 
     try {
       setSaving(true);
-      
+
       // Preparar datos para enviar al backend (solo id y title válidos)
       const moviesToSync = watchedMovies
         .filter(m => m.id && m.title) // Filtrar películas sin id o title
@@ -346,19 +348,19 @@ const PreferencesScreen = ({ navigation, route }) => {
           poster_path: m.poster_path || null,
           rating: m.rating ? parseInt(m.rating) : null,
         }));
-      
+
       const directorsToSync = selectedDirectors.map(d => ({
         id: d.id,
         name: d.name,
         profile_path: d.profile_path || null,
       }));
-      
+
       // Guardar todo usando sync (más eficiente)
       await Promise.all([
         preferenceService.syncFavoriteGenres(selectedGenres),
         preferenceService.syncFavoriteDirectors(directorsToSync),
         preferenceService.syncWatchedMovies(moviesToSync),
-        preferenceService.updateLocation({ 
+        preferenceService.updateLocation({
           searchRadius,
           latitude: userLocation?.latitude,
           longitude: userLocation?.longitude,
@@ -366,12 +368,12 @@ const PreferencesScreen = ({ navigation, route }) => {
           country: userLocation?.country,
         }),
       ]);
-      
+
       Alert.alert(
         '✅ Guardado',
         'Tus preferencias se guardaron correctamente',
-        [{ 
-          text: 'OK', 
+        [{
+          text: 'OK',
           onPress: () => {
             if (isInitialSetup) {
               navigation.replace('MainTabs');
@@ -384,15 +386,15 @@ const PreferencesScreen = ({ navigation, route }) => {
     } catch (error) {
       console.error('Error guardando tus preferencias:', error);
       console.error('Error en respuesta:', error.response?.data);
-      
+
       let errorMessage = 'No se pudieron guardar las preferencias';
-      
+
       if (error.response?.status === 422) {
-        errorMessage = 'Error de validación: ' + 
+        errorMessage = 'Error de validación: ' +
           (error.response.data?.message || 'Verifica que todos los campos sean correctos');
         console.error('Validation errors:', error.response.data?.errors);
       }
-      
+
       Alert.alert('Error', errorMessage);
     } finally {
       setSaving(false);
@@ -411,7 +413,7 @@ const PreferencesScreen = ({ navigation, route }) => {
           Géneros
         </Text>
       </TouchableOpacity>
-      
+
       <TouchableOpacity
         style={[styles.tab, activeTab === 'directors' && styles.activeTab]}
         onPress={() => setActiveTab('directors')}
@@ -421,7 +423,7 @@ const PreferencesScreen = ({ navigation, route }) => {
           Directores
         </Text>
       </TouchableOpacity>
-      
+
       <TouchableOpacity
         style={[styles.tab, activeTab === 'movies' && styles.activeTab]}
         onPress={() => setActiveTab('movies')}
@@ -431,7 +433,7 @@ const PreferencesScreen = ({ navigation, route }) => {
           Películas
         </Text>
       </TouchableOpacity>
-      
+
       <TouchableOpacity
         style={[styles.tab, activeTab === 'radius' && styles.activeTab]}
         onPress={() => setActiveTab('radius')}
@@ -451,7 +453,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       <Text style={styles.sectionSubtitle}>
         Mínimo 1 género • {selectedGenres.length} seleccionados
       </Text>
-      
+
       <View style={styles.genreGrid}>
         {allGenres.map(genre => (
           <TouchableOpacity
@@ -481,7 +483,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       <Text style={styles.sectionSubtitle}>
         Busca y agrega directores que te gustan
       </Text>
-      
+
       {/* Búsqueda */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -496,7 +498,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         />
         {searchingDirectors && <ActivityIndicator style={styles.searchLoader} />}
       </View>
-      
+
       {/* Resultados de búsqueda */}
       {directorResults.length > 0 && (
         <View style={styles.resultsContainer}>
@@ -526,7 +528,7 @@ const PreferencesScreen = ({ navigation, route }) => {
           ))}
         </View>
       )}
-      
+
       {/* Directores seleccionados */}
       <Text style={styles.listTitle}>
         Seleccionados ({selectedDirectors.length})
@@ -537,13 +539,13 @@ const PreferencesScreen = ({ navigation, route }) => {
         <View style={styles.selectedGrid}>
           {selectedDirectors.map(director => (
             <View key={director.id} style={styles.selectedDirectorCard}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.removeButtonCard}
                 onPress={() => removeDirector(director.id)}
               >
                 <Text style={styles.removeButtonCardText}>✕</Text>
               </TouchableOpacity>
-              
+
               {director.profile_path ? (
                 <Image
                   source={{ uri: `https://image.tmdb.org/t/p/w185${director.profile_path}` }}
@@ -556,7 +558,7 @@ const PreferencesScreen = ({ navigation, route }) => {
                   </Text>
                 </View>
               )}
-              
+
               <Text style={styles.selectedDirectorName} numberOfLines={2}>
                 {director.name}
               </Text>
@@ -574,7 +576,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       <Text style={styles.sectionSubtitle}>
         Agrega películas que hayas visto y te gustaron
       </Text>
-      
+
       {/* Búsqueda */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -589,7 +591,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         />
         {searchingMovies && <ActivityIndicator style={styles.searchLoader} />}
       </View>
-      
+
       {/* Resultados de búsqueda */}
       {movieResults.length > 0 && (
         <View style={styles.resultsContainer}>
@@ -622,7 +624,7 @@ const PreferencesScreen = ({ navigation, route }) => {
           ))}
         </View>
       )}
-      
+
       {/* Películas seleccionadas */}
       <Text style={styles.listTitle}>
         Tus películas ({watchedMovies.length})
@@ -633,13 +635,13 @@ const PreferencesScreen = ({ navigation, route }) => {
         <View style={styles.selectedGrid}>
           {watchedMovies.map(movie => (
             <View key={movie.id} style={styles.selectedMovieCard}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.removeButtonCard}
                 onPress={() => removeMovie(movie.id)}
               >
                 <Text style={styles.removeButtonCardText}>✕</Text>
               </TouchableOpacity>
-              
+
               {movie.poster_path ? (
                 <Image
                   source={{ uri: `https://image.tmdb.org/t/p/w342${movie.poster_path}` }}
@@ -650,7 +652,7 @@ const PreferencesScreen = ({ navigation, route }) => {
                   <Text style={styles.moviePosterIcon}>🎬</Text>
                 </View>
               )}
-              
+
               <Text style={styles.selectedMovieTitle} numberOfLines={2}>
                 {movie.title}
               </Text>
@@ -674,16 +676,16 @@ const PreferencesScreen = ({ navigation, route }) => {
       if (searchRadius <= 10000) return { emoji: <FontAwesome5 name="globe" size={24} color="black" />, text: 'Intercontinental', desc: 'Amplia cobertura regional' };
       return { emoji: <FontAwesome5 name="globe-americas" size={24} color="black" />, text: 'Global', desc: 'Cobertura mundial (hasta 20000 km)' };
     };
-  
+
     const category = getRadiusCategory();
-    
+
     return (
       <View style={styles.tabContent}>
         <Text style={styles.sectionTitle}>Distancia de búsqueda</Text>
         <Text style={styles.sectionSubtitle}>
           El área amarilla muestra hasta dónde buscarás movie buddies
         </Text>
-        
+
         {userLocation ? (
           <View style={styles.mapContainer}>
             {Platform.OS === 'web' ? (
@@ -730,7 +732,7 @@ const PreferencesScreen = ({ navigation, route }) => {
                     <MaterialIcons name="gps-fixed" size={24} color="black" />
                   </View>
                 </Marker>
-                
+
                 {/* Círculo del radio de búsqueda */}
                 <Circle
                   center={{
@@ -744,14 +746,14 @@ const PreferencesScreen = ({ navigation, route }) => {
                 />
               </MapView>
             )}
-            
+
             {/* Indicador de distancia sobre el mapa */}
             <View style={styles.mapOverlay}>
               <View style={styles.mapBadge}>
                 <Text style={styles.mapBadgeEmoji}>{category.emoji}</Text>
                 <Text style={styles.mapBadgeText}>{searchRadius} km</Text>
               </View>
-              
+
               {/* Botón para actualizar ubicación GPS */}
               <TouchableOpacity
                 style={styles.gpsButton}
@@ -773,7 +775,7 @@ const PreferencesScreen = ({ navigation, route }) => {
             <Text style={styles.noLocationSubtext}>
               Asegúrate de haber dado permisos de ubicación al registrarte
             </Text>
-            
+
             {/* Botón para obtener ubicación */}
             <TouchableOpacity
               style={styles.updateLocationButton}
@@ -791,10 +793,10 @@ const PreferencesScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
         )}
-        
+
         <View style={styles.radiusControlBox}>
           <Text style={styles.radiusControlLabel}>Ajusta tu radio de búsqueda</Text>
-          
+
           <Slider
             style={styles.slider}
             minimumValue={1}
@@ -820,7 +822,7 @@ const PreferencesScreen = ({ navigation, route }) => {
               );
             })()}
           </View>
-          
+
           <View style={styles.radiusCategoryBanner}>
             <Text style={styles.radiusCategoryEmoji}>{category.emoji}</Text>
             <View>
@@ -829,8 +831,8 @@ const PreferencesScreen = ({ navigation, route }) => {
             </View>
           </View>
         </View>
-        
-        
+
+
       </View>
     );
   };
@@ -841,7 +843,13 @@ const PreferencesScreen = ({ navigation, route }) => {
         colors={[colors.secondary, colors.secondaryLight]}
         style={styles.loadingContainer}
       >
-        <Text style={styles.loadingEmoji}>🎬</Text>
+        <View style={styles.loadingLogoBox}>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={{ width: '100%', height: '100%' }}
+            resizeMode="contain"
+          />
+        </View>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Cargando preferencias...</Text>
       </LinearGradient>
@@ -854,7 +862,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         colors={[colors.secondary, colors.secondaryLight]}
         style={styles.headerGradient}
       >
-        <Animated.View 
+        <Animated.View
           style={[
             styles.header,
             {
@@ -863,20 +871,20 @@ const PreferencesScreen = ({ navigation, route }) => {
             }
           ]}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
             <Text style={styles.backButtonText}>← Volver</Text>
           </TouchableOpacity>
-          
+
 
           <Text style={styles.headerTitle}>
             {isInitialSetup ? 'Configura tus preferencias' : 'Mis Preferencias'}
           </Text>
           <Text style={styles.headerSubtitle}>
-            {isInitialSetup 
-              ? 'Para encontrar mejores movie buddies' 
+            {isInitialSetup
+              ? 'Para encontrar mejores movie buddies'
               : 'Edita tus gustos de películas'}
           </Text>
         </Animated.View>
@@ -893,7 +901,7 @@ const PreferencesScreen = ({ navigation, route }) => {
           colors={[colors.secondary, colors.secondaryLight]}
           style={styles.scrollViewGradient}
         >
-          <ScrollView 
+          <ScrollView
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
@@ -942,9 +950,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingEmoji: {
-    fontSize: 80,
-    marginBottom: 20,
+  loadingLogoBox: {
+    width: 200,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   loadingText: {
     marginTop: 15,

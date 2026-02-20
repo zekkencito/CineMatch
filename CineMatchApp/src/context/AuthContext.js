@@ -17,9 +17,19 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = await storage.getToken();
       if (token) {
+        // Cargar user localmente primero para no bloquear la interfaz
         const userData = await storage.getUser();
-        setUser(userData);
-        setIsAuthenticated(true);
+        if (userData) {
+          setUser(userData);
+          setIsAuthenticated(true);
+        }
+
+        // Pero pedirle al backend el usuario más actualizado para reflejar Premium silenciosamente
+        try {
+          await refetchUser();
+        } catch (e) {
+          console.log('Fallo al refetch user silencioso', e);
+        }
       }
     } catch (error) {
       console.error('Error loading user:', error);
@@ -51,6 +61,13 @@ export const AuthProvider = ({ children }) => {
       const data = await authService.login(email, password);
       setUser(data.user);
       setIsAuthenticated(true);
+
+      // Actualizar información (como premium flag) que a lo mejor no envía el endpoint login
+      try {
+        await refetchUser();
+      } catch (e) {
+        console.log('Error silente al refetch después de login', e);
+      }
       return data;
     } catch (error) {
       throw error;

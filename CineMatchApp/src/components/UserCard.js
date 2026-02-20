@@ -5,7 +5,7 @@ import colors from '../constants/colors';
 const { width, height } = Dimensions.get('window');
 
 const UserCard = ({ user }) => {
-  
+
   // Validar que user existe y tiene las propiedades necesarias
   if (!user || !user.id) {
     return null;
@@ -35,12 +35,12 @@ const UserCard = ({ user }) => {
 
   return (
     <View style={styles.card}>
-      <Image 
+      <Image
         source={{ uri: user.profile_photo || getPlaceholderImage() }}
         style={styles.image}
         resizeMode="cover"
       />
-      
+
       {/* Badge de Match % */}
       {(user.match_percentage && user.match_percentage > 0) ? (
         <View style={styles.matchBadge}>
@@ -51,86 +51,86 @@ const UserCard = ({ user }) => {
 
       {/* Vista con toda la info */}
       <View style={styles.infoContainer}>
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.infoContent}
           showsVerticalScrollIndicator={false}
           bounces={false}
           scrollEnabled={true}
         >
-            <View style={styles.nameRow}>
-              <Text style={styles.name}>
-                {user.age ? (user.name || 'Usuario') + ', ' + String(user.age) : (user.name || 'Usuario')}
-              </Text>
-              {(user.distance && user.distance > 0) ? (
-                <View style={styles.distanceBadge}>
-                  <Text style={styles.distanceText}>📍 {String(user.distance)}km</Text>
-                </View>
-              ) : null}
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>
+              {user.age ? (user.name || 'Usuario') + ', ' + String(user.age) : (user.name || 'Usuario')}
+            </Text>
+            {(user.distance && user.distance > 0) ? (
+              <View style={styles.distanceBadge}>
+                <Text style={styles.distanceText}>📍 {String(user.distance)}km</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {(user.bio && typeof user.bio === 'string' && user.bio.length > 0) ? (
+            <Text style={styles.bio}>{user.bio}</Text>
+          ) : null}
+
+          {/* Compatibilidad */}
+          {((user.common_genres_count && user.common_genres_count > 0) ||
+            (user.common_directors_count && user.common_directors_count > 0) ||
+            (user.common_movies_count && user.common_movies_count > 0)) ? (
+            <View style={styles.compatibilityContainer}>
+              <Text style={styles.compatibilityTitle}>🎬 En común:</Text>
+              <View style={styles.compatibilityRow}>
+                {(user.common_genres_count && user.common_genres_count > 0) ? (
+                  <Text style={styles.compatibilityText}>
+                    {String(user.common_genres_count)} género{user.common_genres_count > 1 ? 's' : ''}
+                  </Text>
+                ) : null}
+                {(user.common_directors_count && user.common_directors_count > 0) ? (
+                  <Text style={styles.compatibilityText}>
+                    {String(user.common_directors_count)} director{user.common_directors_count > 1 ? 'es' : ''}
+                  </Text>
+                ) : null}
+                {(user.common_movies_count && user.common_movies_count > 0) ? (
+                  <Text style={styles.compatibilityText}>
+                    {String(user.common_movies_count)} película{user.common_movies_count > 1 ? 's' : ''}
+                  </Text>
+                ) : null}
+              </View>
             </View>
-            
-            {(user.bio && typeof user.bio === 'string' && user.bio.length > 0) ? (
-              <Text style={styles.bio}>{user.bio}</Text>
-            ) : null}
-            
-            {/* Compatibilidad */}
-            {((user.common_genres_count && user.common_genres_count > 0) || 
-              (user.common_directors_count && user.common_directors_count > 0) || 
-              (user.common_movies_count && user.common_movies_count > 0)) ? (
-              <View style={styles.compatibilityContainer}>
-                <Text style={styles.compatibilityTitle}>🎬 En común:</Text>
-                <View style={styles.compatibilityRow}>
-                  {(user.common_genres_count && user.common_genres_count > 0) ? (
-                    <Text style={styles.compatibilityText}>
-                      {String(user.common_genres_count)} género{user.common_genres_count > 1 ? 's' : ''}
-                    </Text>
-                  ) : null}
-                  {(user.common_directors_count && user.common_directors_count > 0) ? (
-                    <Text style={styles.compatibilityText}>
-                      {String(user.common_directors_count)} director{user.common_directors_count > 1 ? 'es' : ''}
-                    </Text>
-                  ) : null}
-                  {(user.common_movies_count && user.common_movies_count > 0) ? (
-                    <Text style={styles.compatibilityText}>
-                      {String(user.common_movies_count)} película{user.common_movies_count > 1 ? 's' : ''}
-                    </Text>
-                  ) : null}
-                </View>
+          ) : null}
+
+          {/* Géneros favoritos */}
+          {(user.favorite_genres && user.favorite_genres.length > 0) ? (
+            <View style={styles.genresSection}>
+              <Text style={styles.genresSectionTitle}>🎭 Géneros favoritos:</Text>
+              <View style={styles.genresContainer}>
+                {user.favorite_genres
+                  .filter(genre => genre != null)
+                  .slice(0, 5)
+                  .map((genre, index) => {
+                    const genreName = typeof genre === 'object' && genre.name
+                      ? genre.name
+                      : (typeof genre === 'string' ? genre : 'Género');
+                    return (
+                      <View key={'genre-' + index} style={styles.genreTag}>
+                        <Text style={styles.genreText}>{genreName}</Text>
+                      </View>
+                    );
+                  })
+                }
               </View>
-            ) : null}
-            
-            {/* Géneros favoritos */}
-            {(user.favorite_genres && user.favorite_genres.length > 0) ? (
-              <View style={styles.genresSection}>
-                <Text style={styles.genresSectionTitle}>🎭 Géneros favoritos:</Text>
-                <View style={styles.genresContainer}>
-                  {user.favorite_genres
-                    .filter(genre => genre != null)
-                    .slice(0, 5)
-                    .map((genre, index) => {
-                      const genreName = typeof genre === 'object' && genre.name
-                        ? genre.name
-                        : (typeof genre === 'string' ? genre : 'Género');
-                      return (
-                        <View key={'genre-' + index} style={styles.genreTag}>
-                          <Text style={styles.genreText}>{genreName}</Text>
-                        </View>
-                      );
-                    })
-                  }
-                </View>
-              </View>
-            ) : null}
-            
-            {/* Indicador para ver películas */}
-            {(user.watched_movies_list && user.watched_movies_list.length > 0) ? (
-              <View style={styles.tapHintContainer}>
-                <Text style={styles.tapHintText}>
-                  🎬 Toca la tarjeta para ver {user.watched_movies_list.length} película{user.watched_movies_list.length > 1 ? 's' : ''}
-                </Text>
-              </View>
-            ) : null}
-          </ScrollView>
-        </View>
+            </View>
+          ) : null}
+
+          {/* Indicador para ver películas */}
+          {(user.watched_movies_list && user.watched_movies_list.length > 0) ? (
+            <View style={styles.tapHintContainer}>
+              <Text style={styles.tapHintText}>
+                🎬 Toca la tarjeta para ver {user.watched_movies_list.length} película{user.watched_movies_list.length > 1 ? 's' : ''}
+              </Text>
+            </View>
+          ) : null}
+        </ScrollView>
+      </View>
     </View>
   );
 };
@@ -138,7 +138,7 @@ const UserCard = ({ user }) => {
 const styles = StyleSheet.create({
   card: {
     width: width - 40,
-    height: height * 0.7,
+    height: height * 0.67,
     borderRadius: 24,
     backgroundColor: '#ffffff',
     overflow: 'hidden',
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   gridMoviePoster: {
     width: '100%',
-    aspectRatio: 2/3,
+    aspectRatio: 2 / 3,
     borderRadius: 8,
     backgroundColor: '#E8E8E8',
     borderWidth: 2,
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   },
   gridMoviePosterPlaceholder: {
     width: '100%',
-    aspectRatio: 2/3,
+    aspectRatio: 2 / 3,
     borderRadius: 8,
     backgroundColor: '#F5F5F5',
     borderWidth: 2,

@@ -79,7 +79,9 @@ export const preferenceService = {
       await saveToLocal(STORAGE_KEYS.genres, genreIds);
       return response.data;
     } catch (error) {
-      // Fallback a local storage
+      console.error('Error sincronizando géneros:', error.response?.data || error);
+      if (error.response) throw error; // Lanzar si es error de backend
+      // Fallback a local storage solo si es error de red
       await saveToLocal(STORAGE_KEYS.genres, genreIds);
       return { success: true, saved_locally: true };
     }
@@ -136,6 +138,8 @@ export const preferenceService = {
       await saveToLocal(STORAGE_KEYS.directors, directors);
       return response.data;
     } catch (error) {
+      console.error('Error sincronizando directores:', error.response?.data || error);
+      if (error.response) throw error;
       // Fallback a local storage
       await saveToLocal(STORAGE_KEYS.directors, directors);
       return { success: true, saved_locally: true };
@@ -194,13 +198,13 @@ export const preferenceService = {
       return response.data;
     } catch (error) {
       console.error('❌ Error sincronizando películas:', error.response?.data || error.message);
-      
+
       // Si es error de red (no hay backend), guardar localmente
       if (!error.response || error.response.status >= 500) {
         await saveToLocal(STORAGE_KEYS.movies, movies);
         return { success: true, saved_locally: true };
       }
-      
+
       // Para otros errores (como 422), lanzar el error
       throw error;
     }
@@ -218,6 +222,8 @@ export const preferenceService = {
       });
       return response.data;
     } catch (error) {
+      console.error('Error actualizando ubicación:', error.response?.data || error);
+      if (error.response) throw error;
       // Fallback a local storage solo para el radio
       await saveToLocal(STORAGE_KEYS.radius, searchRadius);
       return { success: true, saved_locally: true };
