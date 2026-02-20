@@ -48,37 +48,44 @@ const SubscriptionScreen = ({ navigation }) => {
     const handleDeepLink = (event) => {
       const url = event.url;
       console.log('Deep link received:', url);
-      
+
       // cinematch://payment/return?orderId=XXX&status=success
       if (url && url.includes('payment/return')) {
         const urlObj = new URL(url);
         const orderId = urlObj.searchParams.get('orderId');
         const status = urlObj.searchParams.get('status');
-        
+
         console.log('Payment return - OrderID:', orderId, 'Status:', status);
-        
+
         if (status === 'success' && orderId) {
           // El pago se completó exitosamente, recargar datos del usuario
           console.log('Payment successful, reloading user data...');
-          
+
           // Recargar datos del usuario desde el servidor
           refetchUser()
             .then(() => {
               console.log('User data reloaded successfully');
-              // Recargar datos de suscripción
-              loadSubscriptionData();
               // Mostrar mensaje de éxito
               Alert.alert(
                 '🎉 ¡Premium activado!',
                 '¡Felicidades! Ahora eres usuario Premium y tienes acceso a todas las funciones exclusivas.',
-                [{ text: 'OK' }]
+                [{
+                  text: 'OK', onPress: () => {
+                    loadSubscriptionData();
+                    // Vuelve a la pantalla principal para que toda la app se refresque y sepa que es premium
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'MainTabs' }],
+                    });
+                  }
+                }]
               );
             })
             .catch((error) => {
               console.error('Error reloading user data:', error);
               Alert.alert(
                 'Atención',
-                'El pago se completó correctamente, pero hubo un problema al actualizar tus datos. Por favor, cierra y vuelve a abrir la app.',
+                'El pago se completó correctamente, pero hubo un problema al actualizar tus datos de inmediato. Por favor, cierra y vuelve a abrir la app.',
                 [{ text: 'OK' }]
               );
             });
@@ -109,7 +116,7 @@ const SubscriptionScreen = ({ navigation }) => {
     } else {
       setLoading(true);
     }
-    
+
     try {
       const [planResponse, plansResponse] = await Promise.all([
         subscriptionService.getCurrentPlan(),
@@ -122,6 +129,14 @@ const SubscriptionScreen = ({ navigation }) => {
 
       if (plansResponse.success) {
         setPlans(plansResponse.plans);
+      }
+
+      // Asegurar que forzamos la recarga del usuario completo para que toda la app sepa
+      // Si el swipe o carga detectó que es premium, el Context Auth se actualizará
+      try {
+        await refetchUser();
+      } catch (err) {
+        console.log('Error silenciado al refrescar contexto de usuario', err);
       }
     } catch (error) {
       console.error('Error loading subscription:', error);
@@ -201,7 +216,16 @@ const SubscriptionScreen = ({ navigation }) => {
         } catch (e) {
           console.warn('Could not refetch user after upgrade:', e);
         }
-        Alert.alert('🎉 ¡Premium activado!', response.message, [{ text: 'OK', onPress: () => { setPendingOrder(null); loadSubscriptionData(); } }]);
+        Alert.alert('🎉 ¡Premium activado!', response.message, [{
+          text: 'OK', onPress: () => {
+            setPendingOrder(null);
+            loadSubscriptionData();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainTabs' }],
+            });
+          }
+        }]);
       } else {
         Alert.alert('No verificado', response.message || 'El pago no fue verificado.');
       }
@@ -307,8 +331,8 @@ const SubscriptionScreen = ({ navigation }) => {
       </LinearGradient>
 
       <LinearGradient colors={[colors.secondary, colors.secondaryLight]} style={styles.contentGradient}>
-        <ScrollView 
-          style={styles.scrollView} 
+        <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl
@@ -321,162 +345,192 @@ const SubscriptionScreen = ({ navigation }) => {
             />
           }
         >
-        {/* Plan Actual */}
-        <View style={styles.currentPlanCard}>
-          <View style={styles.planHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <FontAwesomeIcon icon={isPremium ? faStar : faFilm} size={20} color={isPremium ? '#ffd700' : colors.primary} style={{ marginRight: 8 }} />
-              <Text style={styles.planTitle}>{isPremium ? 'Premium' : 'Plan Gratis'}</Text>
-            </View>
-            {isPremium && currentPlan?.status === 'active' && (
-              <View style={styles.activeBadge}>
-                <Text style={styles.activeBadgeText}>ACTIVO</Text>
-              </View>
-            )}
-          </View>
-
-          {isPremium && currentPlan?.expires_at && (
-            <View style={styles.expiryContainer}>
-              <View style={styles.daysRemainingBox}>
-                <Text style={styles.daysRemainingNumber}>{calculateDaysRemaining(currentPlan.expires_at)}</Text>
-                <Text style={styles.daysRemainingLabel}>días restantes</Text>
-              </View>
-              <Text style={styles.expiryText}>
-                Expira el {formatDate(currentPlan.expires_at)}
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.benefitsContainer}>
-            <Text style={styles.benefitsTitle}>Tus beneficios actuales:</Text>
-            <View style={styles.benefitItem}>
-              <FontAwesomeIcon icon={faGlobeAmericas} size={20} color={colors.primary} style={styles.benefitIcon} />
-              <Text style={styles.benefitText}>
-                Radio de búsqueda: hasta 50 km
-              </Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <FontAwesomeIcon icon={faHeart} size={20} color={colors.primary} style={styles.benefitIcon} />
-              <Text style={styles.benefitText}>
-                Palomitas diarias: {benefits.daily_likes_limit === 'unlimited' ? 'Ilimitadas' : benefits.daily_likes_limit}
-              </Text>
-            </View>
-            {benefits.can_see_likes && (
-              <View style={styles.benefitItem}>
-                <FontAwesomeIcon icon={faEye} size={20} color={colors.primary} style={styles.benefitIcon} />
-                <Text style={styles.benefitText}>Ver quién quiere palomitas contigo</Text>
-              </View>
-            )}
-            {benefits.can_undo_swipes && (
-              <View style={styles.benefitItem}>
-                <FontAwesomeIcon icon={faUndo} size={20} color={colors.primary} style={styles.benefitIcon} />
-                <Text style={styles.benefitText}>Deshacer Amigos Palomeros rechazados</Text>
-              </View>
-            )}
-            {benefits.has_advanced_filters && (
-              <View style={styles.benefitItem}>
-                <FontAwesomeIcon icon={faFilter} size={20} color={colors.primary} style={styles.benefitIcon} />
-                <Text style={styles.benefitText}>Filtros avanzados</Text>
-              </View>
-            )}
-            {benefits.is_featured && (
-              <View style={styles.benefitItem}>
-                <FontAwesomeIcon icon={faStar} size={20} color={colors.primary} style={styles.benefitIcon} />
-                <Text style={styles.benefitText}>Perfil destacado</Text>
-              </View>
-            )}
-          </View>
-
-          {isPremium && currentPlan?.status === 'active' && (
-            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-              <Text style={styles.cancelButtonText}>Cancelar Suscripción</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Plan Premium (si no es premium) */}
-        {!isPremium && plans?.premium && (
-          <View style={styles.premiumCard}>
-            <View style={styles.premiumHeader}>
+          {/* Plan Actual */}
+          <View style={styles.currentPlanCard}>
+            <View style={styles.planHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <FontAwesomeIcon icon={faStar} size={20} color={'#ffd700'} style={{ marginRight: 8 }} />
-                <Text style={styles.premiumTitle}>Actualiza a Premium</Text>
+                <FontAwesomeIcon icon={isPremium ? faStar : faFilm} size={20} color={isPremium ? '#ffd700' : colors.primary} style={{ marginRight: 8 }} />
+                <Text style={styles.planTitle}>{isPremium ? 'Premium' : 'Plan Gratis'}</Text>
               </View>
-              
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-              <FontAwesomeIcon icon={faFilm} size={16} color={colors.primary} style={{ marginRight: 8 }} />
-              <Text style={styles.premiumPrice}>$9.99/mes</Text>
-            </View>
-            <Text style={styles.premiumSubtitle}>Desbloquea todas las funciones:</Text>
-
-            <View style={styles.featuresList}>
-              {plans.premium.features.map((feature, index) => {
-                const t = String(feature || '');
-                const lower = t.toLowerCase();
-
-                // Decide icon for descriptive purpose (replace emoji)
-                const getDescriptorIcon = () => {
-                  if (lower.includes('radio') || lower.includes('distancia') || lower.includes('km')) return faGlobeAmericas;
-                  if (lower.includes('ilimit') || (lower.includes('likes') && lower.includes('ilimit'))) return faHeart;
-                  if (lower.includes('ver qui') || lower.includes('ver quién') || lower.includes('ver likes')) return faEye;
-                  if (lower.includes('deshacer') || lower.includes('undo')) return faUndo;
-                  if (lower.includes('filtro') || lower.includes('filtros')) return faFilter;
-                  if (lower.includes('destac') || lower.includes('perfil destacado')) return faStar;
-                  return null;
-                };
-
-                // Remove leading emoji/symbols from the feature text
-                let cleaned = t;
-                while (cleaned.length > 0 && !/[0-9A-Za-zÁÉÍÓÚáéíóúÑñÜü]/.test(cleaned.charAt(0))) {
-                  cleaned = cleaned.substring(1);
-                }
-                cleaned = cleaned.trim();
-
-                const descriptorIcon = getDescriptorIcon();
-
-                return (
-                  <View key={index} style={styles.featureItem}>
-                    <FontAwesomeIcon icon={faCheck} size={18} color={'#4caf50'} style={{ marginRight: 10 }} />
-                    {descriptorIcon && (
-                      <FontAwesomeIcon icon={descriptorIcon} size={16} color={colors.primary} style={{ marginRight: 8 }} />
-                    )}
-                    <Text style={styles.featureText}>{cleaned}</Text>
-                  </View>
-                );
-              })}
-            </View>
-
-            <TouchableOpacity 
-              style={[styles.upgradeButton, upgrading && styles.disabledButton]}
-              onPress={handleUpgrade}
-              disabled={upgrading}
-            >
-              {upgrading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                  <FontAwesomeIcon icon={faRocket} size={30} color={'#fff'} style={{ marginRight: 8 }} />
-                  <Text style={styles.upgradeButtonText}>Actualizar Ahora</Text>
+              {isPremium && currentPlan?.status === 'active' && (
+                <View style={styles.activeBadge}>
+                  <Text style={styles.activeBadgeText}>ACTIVO</Text>
                 </View>
               )}
-            </TouchableOpacity>
-          </View>
-        )}
+            </View>
 
-        {/* Info adicional */}
-        <View style={styles.infoCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <FontAwesomeIcon icon={faInfoCircle} size={18} color={colors.primary} style={{ marginRight: 8 }} />
-            <Text style={styles.infoTitle}>Información</Text>
+            {isPremium && currentPlan?.expires_at && (
+              <View style={styles.expiryContainer}>
+                <View style={styles.daysRemainingBox}>
+                  <Text style={styles.daysRemainingNumber}>{calculateDaysRemaining(currentPlan.expires_at)}</Text>
+                  <Text style={styles.daysRemainingLabel}>días restantes</Text>
+                </View>
+                <Text style={styles.expiryText}>
+                  Expira el {formatDate(currentPlan.expires_at)}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.benefitsContainer}>
+              <Text style={styles.benefitsTitle}>Tus beneficios actuales:</Text>
+              <View style={styles.benefitItem}>
+                <FontAwesomeIcon icon={faGlobeAmericas} size={20} color={colors.primary} style={styles.benefitIcon} />
+                <Text style={styles.benefitText}>
+                  Radio de búsqueda: hasta 50 km
+                </Text>
+              </View>
+              <View style={styles.benefitItem}>
+                <FontAwesomeIcon icon={faHeart} size={20} color={colors.primary} style={styles.benefitIcon} />
+                <Text style={styles.benefitText}>
+                  Palomitas diarias: {benefits.daily_likes_limit === 'unlimited' ? 'Ilimitadas' : benefits.daily_likes_limit}
+                </Text>
+              </View>
+              {benefits.can_see_likes && (
+                <View style={styles.benefitItem}>
+                  <FontAwesomeIcon icon={faEye} size={20} color={colors.primary} style={styles.benefitIcon} />
+                  <Text style={styles.benefitText}>Ver quién quiere palomitas contigo</Text>
+                </View>
+              )}
+              {benefits.can_undo_swipes && (
+                <View style={styles.benefitItem}>
+                  <FontAwesomeIcon icon={faUndo} size={20} color={colors.primary} style={styles.benefitIcon} />
+                  <Text style={styles.benefitText}>Deshacer Amigos Palomeros rechazados</Text>
+                </View>
+              )}
+              {benefits.has_advanced_filters && (
+                <View style={styles.benefitItem}>
+                  <FontAwesomeIcon icon={faFilter} size={20} color={colors.primary} style={styles.benefitIcon} />
+                  <Text style={styles.benefitText}>Filtros avanzados</Text>
+                </View>
+              )}
+              {benefits.is_featured && (
+                <View style={styles.benefitItem}>
+                  <FontAwesomeIcon icon={faStar} size={20} color={colors.primary} style={styles.benefitIcon} />
+                  <Text style={styles.benefitText}>Perfil destacado</Text>
+                </View>
+              )}
+            </View>
+
+            {isPremium && currentPlan?.status === 'active' && (
+              <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+                <Text style={styles.cancelButtonText}>Cancelar Suscripción</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <Text style={styles.infoText}>
-            • Cancela en cualquier momento{'\n'}
-            • Sin cargos ocultos{'\n'}
-            • Activación inmediata{'\n'}
-            • Soporte 24/7
-          </Text>
-        </View>
+
+          {/* Plan Premium (si no es premium) */}
+          {!isPremium && plans?.premium && (
+            <View style={styles.premiumCard}>
+              <View style={styles.premiumHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <FontAwesomeIcon icon={faStar} size={20} color={'#ffd700'} style={{ marginRight: 8 }} />
+                  <Text style={styles.premiumTitle}>Actualiza a Premium</Text>
+                </View>
+
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                <FontAwesomeIcon icon={faFilm} size={16} color={colors.primary} style={{ marginRight: 8 }} />
+                <Text style={styles.premiumPrice}>$9.99/mes</Text>
+              </View>
+              <Text style={styles.premiumSubtitle}>Desbloquea todas las funciones:</Text>
+
+              <View style={styles.featuresList}>
+                {plans.premium.features.map((feature, index) => {
+                  const t = String(feature || '');
+                  const lower = t.toLowerCase();
+
+                  // Decide icon for descriptive purpose (replace emoji)
+                  const getDescriptorIcon = () => {
+                    if (lower.includes('radio') || lower.includes('distancia') || lower.includes('km')) return faGlobeAmericas;
+                    if (lower.includes('ilimit') || (lower.includes('likes') && lower.includes('ilimit'))) return faHeart;
+                    if (lower.includes('ver qui') || lower.includes('ver quién') || lower.includes('ver likes')) return faEye;
+                    if (lower.includes('deshacer') || lower.includes('undo')) return faUndo;
+                    if (lower.includes('filtro') || lower.includes('filtros')) return faFilter;
+                    if (lower.includes('destac') || lower.includes('perfil destacado')) return faStar;
+                    return null;
+                  };
+
+                  // Remove leading emoji/symbols from the feature text
+                  let cleaned = t;
+                  while (cleaned.length > 0 && !/[0-9A-Za-zÁÉÍÓÚáéíóúÑñÜü]/.test(cleaned.charAt(0))) {
+                    cleaned = cleaned.substring(1);
+                  }
+                  cleaned = cleaned.trim();
+
+                  const descriptorIcon = getDescriptorIcon();
+
+                  return (
+                    <View key={index} style={styles.featureItem}>
+                      <FontAwesomeIcon icon={faCheck} size={18} color={'#4caf50'} style={{ marginRight: 10 }} />
+                      {descriptorIcon && (
+                        <FontAwesomeIcon icon={descriptorIcon} size={16} color={colors.primary} style={{ marginRight: 8 }} />
+                      )}
+                      <Text style={styles.featureText}>{cleaned}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {pendingOrder ? (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={{ textAlign: 'center', color: colors.textSecondary, marginBottom: 15, fontSize: 13 }}>
+                    Si ya completaste el pago en PayPal, presiona el botón de abajo para activarlo.
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.upgradeButton, { backgroundColor: '#4caf50', marginBottom: 12 }, upgrading && styles.disabledButton]}
+                    onPress={handleVerifyPayment}
+                    disabled={upgrading}
+                  >
+                    {upgrading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                        <FontAwesomeIcon icon={faCheck} size={24} color={'#fff'} style={{ marginRight: 8 }} />
+                        <Text style={styles.upgradeButtonText}>Verificar Pago Realizado</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.cancelButton, { marginTop: 0 }]}
+                    onPress={() => setPendingOrder(null)}
+                    disabled={upgrading}
+                  >
+                    <Text style={styles.cancelButtonText}>Cambiar método / Cancelar</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.upgradeButton, upgrading && styles.disabledButton]}
+                  onPress={handleUpgrade}
+                  disabled={upgrading}
+                >
+                  {upgrading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                      <FontAwesomeIcon icon={faRocket} size={30} color={'#fff'} style={{ marginRight: 8 }} />
+                      <Text style={styles.upgradeButtonText}>Actualizar Ahora</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Info adicional */}
+          <View style={styles.infoCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <FontAwesomeIcon icon={faInfoCircle} size={18} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.infoTitle}>Información</Text>
+            </View>
+            <Text style={styles.infoText}>
+              • Cancela en cualquier momento{'\n'}
+              • Sin cargos ocultos{'\n'}
+              • Activación inmediata{'\n'}
+              • Soporte 24/7
+            </Text>
+          </View>
         </ScrollView>
       </LinearGradient>
     </View>

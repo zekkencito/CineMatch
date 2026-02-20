@@ -20,7 +20,7 @@ export const authService = {
   async login(email, password) {
     try {
       const response = await api.post('/login', { email, password });
-      
+
       if (response.data.token) {
         await storage.saveToken(response.data.token);
         await storage.saveUser(response.data.user);
@@ -46,7 +46,9 @@ export const authService = {
   async getCurrentUser() {
     try {
       const response = await api.get('/me');
-      await storage.saveUser(response.data);
+      if (response.data.user) {
+        await storage.saveUser(response.data.user);
+      }
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -57,7 +59,9 @@ export const authService = {
   async updateProfile(userData) {
     try {
       const response = await api.put('/profile', userData);
-      await storage.saveUser(response.data);
+      if (response.data.user) {
+        await storage.saveUser(response.data.user);
+      }
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         return { user: mockUser, token: 'mock-token-123' };
       }
-      
+
       // Login real con API
       const data = await authService.login(email, password);
       setUser(data.user);
@@ -94,9 +94,14 @@ export const AuthProvider = ({ children }) => {
 
   const refetchUser = async () => {
     try {
-      const userData = await authService.getCurrentUser();
-      setUser(userData);
-      return userData;
+      const responseData = await authService.getCurrentUser();
+      // Extraemos el objeto user de la respuesta { success: true, user: {...} }
+      const newUserData = responseData.user ? responseData.user : responseData;
+
+      const merged = { ...(user || {}), ...(newUserData || {}) };
+      setUser(merged);
+      await storage.saveUser(merged);
+      return merged;
     } catch (error) {
       console.error('Error refetching user:', error);
       throw error;

@@ -22,7 +22,7 @@ const ProfileScreen = ({ navigation }) => {
   const { user, logout, updateUser } = useAuth();
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [localPhoto, setLocalPhoto] = useState(null);
-  
+
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -45,7 +45,7 @@ const ProfileScreen = ({ navigation }) => {
   const pickImage = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+
       if (permissionResult.granted === false) {
         Alert.alert('Permisos requeridos', 'Por favor, permite el acceso a tus fotos');
         return;
@@ -61,22 +61,22 @@ const ProfileScreen = ({ navigation }) => {
       if (!result.canceled && result.assets[0]) {
         setUploadingPhoto(true);
         const photoUri = result.assets[0].uri;
-        
+
         // Mostrar la imagen localmente inmediatamente
         setLocalPhoto(photoUri);
-        
+
         try {
           // Convertir imagen a base64 usando expo-file-system
           const base64 = await FileSystem.readAsStringAsync(photoUri, {
             encoding: 'base64',
           });
-          
+
           // Agregar el prefijo data:image para el base64
           const base64data = `data:image/jpeg;base64,${base64}`;
-          
+
           // Actualizar el perfil con la imagen en base64
           await updateUser({ profile_photo: base64data });
-          
+
           Alert.alert('Éxito', 'Foto de perfil actualizada!');
         } catch (error) {
           console.error('Error subiendo la foto:', error);
@@ -142,12 +142,12 @@ const ProfileScreen = ({ navigation }) => {
       colors={[colors.secondary, colors.secondaryLight]}
       style={styles.container}
     >
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View 
+        <Animated.View
           style={[
             styles.header,
             {
@@ -157,24 +157,47 @@ const ProfileScreen = ({ navigation }) => {
           ]}
         >
           <TouchableOpacity onPress={pickImage} style={styles.avatarContainer}>
-            <View style={styles.avatarWrapper}>
-              <Image
-                source={{
-                  uri: localPhoto || user?.profile_photo || 'https://via.placeholder.com/140',
-                }}
-                style={styles.avatar}
-              />
-              {uploadingPhoto && (
-                <View style={styles.uploadingOverlay}>
-                  <ActivityIndicator color={colors.primary} size="large" />
+            {user?.subscription?.is_premium || user?.is_premium ? (
+              <LinearGradient
+                colors={['#ffd700', '#ffa500', '#ffd700']}
+                style={styles.premiumAvatarBorder}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={[styles.avatarWrapper, { borderWidth: 0, padding: 4, backgroundColor: colors.secondary }]}>
+                  <Image
+                    source={{
+                      uri: localPhoto || user?.profile_photo || 'https://via.placeholder.com/140',
+                    }}
+                    style={styles.avatar}
+                  />
+                  {uploadingPhoto && (
+                    <View style={styles.uploadingOverlay}>
+                      <ActivityIndicator color={colors.primary} size="large" />
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
+              </LinearGradient>
+            ) : (
+              <View style={styles.avatarWrapper}>
+                <Image
+                  source={{
+                    uri: localPhoto || user?.profile_photo || 'https://via.placeholder.com/140',
+                  }}
+                  style={styles.avatar}
+                />
+                {uploadingPhoto && (
+                  <View style={styles.uploadingOverlay}>
+                    <ActivityIndicator color={colors.primary} size="large" />
+                  </View>
+                )}
+              </View>
+            )}
             <View style={styles.editIconContainer}>
               <FontAwesome name="camera" size={24} color="black" />
             </View>
           </TouchableOpacity>
-          
+
           <View style={styles.nameBox}>
             <Text style={styles.name}>{user?.name || 'Usuario'}</Text>
             {user?.age ? (
@@ -189,7 +212,7 @@ const ProfileScreen = ({ navigation }) => {
             ) : null}
           </View>
           <Text style={styles.email}>{user?.email || 'No email'}</Text>
-          
+
           {/* Información adicional del usuario */}
           {(user?.location?.city || user?.location?.country) ? (
             <View style={styles.locationInfo}>
@@ -256,6 +279,18 @@ const styles = StyleSheet.create({
   avatarContainer: {
     position: 'relative',
     marginBottom: 20,
+  },
+  premiumAvatarBorder: {
+    width: 156,
+    height: 156,
+    borderRadius: 78,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#ffd700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
   },
   avatarWrapper: {
     width: 150,
