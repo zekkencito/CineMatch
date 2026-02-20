@@ -18,7 +18,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Slider from '@react-native-community/slider';
 // Importación condicional de react-native-maps (solo iOS/Android)
 let MapView, Circle, Marker;
-if (Platform.OS !== 'web') {
+// Forzado a false para evitar crashes en APK por falta de Google Maps API Key
+if (false && Platform.OS !== 'web') {
   const maps = require('react-native-maps');
   MapView = maps.default;
   Circle = maps.Circle;
@@ -688,7 +689,7 @@ const PreferencesScreen = ({ navigation, route }) => {
 
         {userLocation ? (
           <View style={styles.mapContainer}>
-            {Platform.OS === 'web' ? (
+            {true || Platform.OS === 'web' ? (
               // Fallback para web - mostrar vista estática
               <View style={styles.webMapPlaceholder}>
                 <View style={styles.webMapContent}>

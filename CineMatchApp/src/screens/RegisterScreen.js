@@ -18,7 +18,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 // Importación condicional de react-native-maps (solo iOS/Android)
 let MapView, Circle, Marker;
-if (Platform.OS !== 'web') {
+// Forzado a false para evitar crashes en APK por falta de Google Maps API Key
+if (false && Platform.OS !== 'web') {
   const maps = require('react-native-maps');
   MapView = maps.default;
   Circle = maps.Circle;
@@ -355,8 +356,8 @@ const RegisterScreen = ({ navigation }) => {
                   <Text style={styles.mapSubtitle}>Hasta dónde buscaremos personas con tus gustos</Text>
 
                   <View style={styles.mapContainer}>
-                    {Platform.OS === 'web' ? (
-                      // Fallback para web
+                    {true || Platform.OS === 'web' ? (
+                      // Fallback para web (y app por ahora para evitar crash)
                       <View style={styles.webMapPlaceholder}>
                         <Text style={styles.webMapEmoji}>🗺️</Text>
                         <Text style={styles.webMapTitle}>Mapa interactivo</Text>
