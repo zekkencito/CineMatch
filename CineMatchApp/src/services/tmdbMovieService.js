@@ -34,14 +34,14 @@ export const tmdbService = {
           page,
         },
       });
-      
+
       // Agregar URLs de imágenes completas
       const movies = response.data.results.map(movie => ({
         ...movie,
         poster_url: getImageUrl(movie.poster_path, IMAGE_SIZES.poster.medium),
         backdrop_url: getImageUrl(movie.backdrop_path, IMAGE_SIZES.backdrop.medium),
       }));
-      
+
       return {
         movies,
         total_pages: response.data.total_pages,
@@ -53,7 +53,7 @@ export const tmdbService = {
     }
   },
 
- 
+
   async getPopularMovies(page = 1) {
     try {
       const response = await axios.get(`${TMDB_BASE_URL}/movie/popular`, {
@@ -62,13 +62,13 @@ export const tmdbService = {
           page,
         },
       });
-      
+
       const movies = response.data.results.map(movie => ({
         ...movie,
         poster_url: getImageUrl(movie.poster_path, IMAGE_SIZES.poster.medium),
         backdrop_url: getImageUrl(movie.backdrop_path, IMAGE_SIZES.backdrop.medium),
       }));
-      
+
       return {
         movies,
         total_pages: response.data.total_pages,
@@ -88,17 +88,17 @@ export const tmdbService = {
           query,
         },
       });
-      
+
       const people = response.data.results.map(person => ({
         ...person,
         profile_url: getImageUrl(person.profile_path, IMAGE_SIZES.profile.medium),
         // Filtrar para obtener solo directores conocidos
         known_for_department: person.known_for_department,
       }));
-      
+
       // Priorizar directores
-      return people.filter(p => 
-        p.known_for_department === 'Directing' || 
+      return people.filter(p =>
+        p.known_for_department === 'Directing' ||
         p.known_for?.some(movie => movie.media_type === 'movie')
       );
     } catch (error) {
@@ -116,9 +116,9 @@ export const tmdbService = {
           append_to_response: 'credits', // Incluir directores/actores
         },
       });
-      
+
       const movie = response.data;
-      
+
       // Extraer directores del crew
       const directors = movie.credits?.crew
         .filter(person => person.job === 'Director')
@@ -127,7 +127,7 @@ export const tmdbService = {
           name: director.name,
           profile_url: getImageUrl(director.profile_path, IMAGE_SIZES.profile.small),
         }));
-      
+
       return {
         ...movie,
         poster_url: getImageUrl(movie.poster_path, IMAGE_SIZES.poster.large),
@@ -146,11 +146,11 @@ export const movieService = {
 
   async getGenres() {
     try {
-      const response = await api.get('/genres');
-      return response.data.genres || response.data;
-    } catch (error) {
-      // Si falla Laravel, usar TMDB directamente
+      // Fuerza consultar a TMDB directamente para asegurar los nombres en español según TMDB_LANGUAGE
       return await tmdbService.getGenres();
+    } catch (error) {
+      console.error('Error fetching genres from TMDB:', error);
+      throw error;
     }
   },
 
