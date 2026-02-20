@@ -1,27 +1,40 @@
 {
   "expo": {
+    "name": "CineMatch",
+    "slug": "cinematch",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "light",
     "scheme": "cinematch",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
     "plugins": [
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "CineMatch necesita tu ubicación"
+          "locationAlwaysAndWhenInUsePermission": "CineMatch necesita tu ubicación para encontrar amigos cinéfilos cerca de ti"
         }
       ]
     ],
     "android": {
+      "package": "com.cinematch.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#1a1a2e"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "package": "com.anonymous.CineMatchApp",
       "intentFilters": [
         {
           "action": "VIEW",
@@ -36,21 +49,9 @@
         }
       ]
     },
-    "name": "CineMatchApp",
-    "slug": "CineMatchApp",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/logo.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1a1a2e"
-    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.CineMatchApp"
+      "bundleIdentifier": "com.cinematch.app"
     },
     "web": {
       "favicon": "./assets/logo.png"

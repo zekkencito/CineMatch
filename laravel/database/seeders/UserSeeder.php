@@ -376,7 +376,7 @@ class UserSeeder extends Seeder
                 'longitude' => $userData['longitude'],
                 'city' => $userData['city'],
                 'country' => $userData['country'],
-                'search_radius' => 7000,
+                'search_radius' => 7,
             ]);
 
             // Crear suscripción Basic activa

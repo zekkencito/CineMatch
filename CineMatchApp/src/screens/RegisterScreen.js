@@ -40,7 +40,7 @@ const RegisterScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [locationData, setLocationData] = useState(null);
   const [profilePhoto, setProfilePhoto] = useState(null);
-  const [searchRadius, setSearchRadius] = useState(15);
+  const [searchRadius, setSearchRadius] = useState(7);
   const { register } = useAuth();
   
   // Referencias para navegación entre inputs
@@ -397,9 +397,9 @@ const RegisterScreen = ({ navigation }) => {
                     <Text style={styles.radiusLabel}>Ajusta el radio:</Text>
                     <Slider
                       style={styles.slider}
-                      minimumValue={5}
-                      maximumValue={50}
-                      step={5}
+                      minimumValue={1}
+                      maximumValue={7}
+                      step={1}
                       value={searchRadius}
                       onValueChange={setSearchRadius}
                       minimumTrackTintColor={colors.primary}
@@ -407,9 +407,9 @@ const RegisterScreen = ({ navigation }) => {
                       thumbTintColor={colors.primary}
                     />
                     <View style={styles.radiusLabels}>
-                      <Text style={styles.radiusLabelText}>5 km</Text>
-                      <Text style={styles.radiusLabelText}>25 km</Text>
-                      <Text style={styles.radiusLabelText}>50 km</Text>
+                      <Text style={styles.radiusLabelText}>1 km</Text>
+                      <Text style={styles.radiusLabelText}>4 km</Text>
+                      <Text style={styles.radiusLabelText}>7 km</Text>
                     </View>
                   </View>
                 </View>
