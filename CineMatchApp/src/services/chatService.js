@@ -24,14 +24,23 @@ const chatService = {
    */
   sendMessage: async (matchId, receiverId, message) => {
     try {
-      const response = await api.post('/messages', {
+      console.log('🔄 chatService.sendMessage:', { matchId, receiverId, messageLength: message.length });
+      const payload = {
         match_id: matchId,
         receiver_id: receiverId,
         message: message.trim(),
-      });
+      };
+      console.log('📨 Payload:', payload);
+      
+      const response = await api.post('/messages', payload);
+      console.log('📨 Response status:', response.status);
+      console.log('📨 Response data:', response.data);
+      
       return response.data.data;
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('💥 Error in sendMessage:', error.message);
+      console.error('💥 Error response:', error.response?.data);
+      console.error('💥 Error status:', error.response?.status);
       throw error;
     }
   },

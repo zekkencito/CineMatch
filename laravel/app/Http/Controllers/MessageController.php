@@ -50,6 +50,11 @@ class MessageController extends Controller
                 'messages' => $messages
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error getMessages: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener mensajes: ' . $e->getMessage()
@@ -114,18 +119,23 @@ class MessageController extends Controller
             $message->load(['sender:id,name,profile_photo', 'receiver:id,name,profile_photo']);
 
             // Enviar notificación Push al receptor
-            $receiverUser = App\Models\User::find($receiverId);
-            if ($receiverUser && $receiverUser->expo_push_token) {
-                \App\Services\ExpoPushService::send(
-                    $receiverUser->expo_push_token,
-                    $message->sender->name, // Título: nombre de quien envía
-                    $message->message,      // Cuerpo: contenido del mensaje
-                    [
-                        'type' => 'message', 
-                        'match_id' => $matchId,
-                        'message_id' => $message->id
-                    ]
-                );
+            try {
+                $receiverUser = \App\Models\User::find($receiverId);
+                if ($receiverUser && $receiverUser->expo_push_token) {
+                    \App\Services\ExpoPushService::send(
+                        $receiverUser->expo_push_token,
+                        $message->sender->name, // Título: nombre de quien envía
+                        $message->message,      // Cuerpo: contenido del mensaje
+                        [
+                            'type' => 'message', 
+                            'match_id' => $matchId,
+                            'message_id' => $message->id
+                        ]
+                    );
+                }
+            } catch (\Exception $pushError) {
+                // Log del error pero no detiene el envío del mensaje
+                \Log::warning('Error sending push notification: ' . $pushError->getMessage());
             }
 
             return response()->json([
@@ -134,6 +144,11 @@ class MessageController extends Controller
                 'data' => $message
             ], 201);
         } catch (\Exception $e) {
+            \Log::error('Error sendMessage: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al enviar mensaje: ' . $e->getMessage()
@@ -158,6 +173,11 @@ class MessageController extends Controller
                 'unread_count' => $unreadCount
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error getUnreadCount: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener contador: ' . $e->getMessage()

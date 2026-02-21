@@ -109,12 +109,21 @@ const ChatScreen = ({ route, navigation }) => {
 
     try {
       setSending(true);
-      await chatService.sendMessage(matchId, receiverId, messageText);
+      console.log('📤 Enviando mensaje:', { matchId, receiverId, messageText });
+      
+      const response = await chatService.sendMessage(matchId, receiverId, messageText);
+      console.log('✅ Mensaje enviado exitosamente:', response);
 
       // Recargar mensajes inmediatamente después de enviar
       await loadMessages(false);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack,
+      });
       Alert.alert('Error', 'No se pudo enviar el mensaje. Intenta de nuevo.');
       setNewMessage(messageText); // Restaurar el mensaje si falla
     } finally {
