@@ -64,7 +64,7 @@ const ChatScreen = ({ route, navigation }) => {
     });
 
     return () => {
-      Notifications.removeNotificationSubscription(notificationListener);
+      notificationListener.remove();
     };
   }, []);
 
@@ -110,7 +110,7 @@ const ChatScreen = ({ route, navigation }) => {
     try {
       setSending(true);
       console.log('📤 Enviando mensaje:', { matchId, receiverId, messageText });
-      
+
       const response = await chatService.sendMessage(matchId, receiverId, messageText);
       console.log('✅ Mensaje enviado exitosamente:', response);
 

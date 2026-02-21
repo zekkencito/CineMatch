@@ -39,8 +39,10 @@ export const notificationService = {
                 return null;
             }
 
-            // Asegúrate de que tu app tiene un projectId configurado en app.json (automático en Expo)
-            token = (await Notifications.getExpoPushTokenAsync()).data;
+            // Se requiere projectId explícito en versiones recientes de expo-notifications
+            token = (await Notifications.getExpoPushTokenAsync({
+                projectId: '613cc5e8-d11c-4aec-9a58-c6124aeb4048',
+            })).data;
 
             // Enviar el token a tu backend
             try {
