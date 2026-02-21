@@ -22,7 +22,7 @@ import UserCard from '../components/UserCard';
 import colors from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faMasksTheater, faStar } from '@fortawesome/free-solid-svg-icons';
+import { faMasksTheater, faStar, faUndo } from '@fortawesome/free-solid-svg-icons';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -117,6 +117,43 @@ const HomeScreen = ({ navigation }) => {
       setModalVisible(false);
       setTimeout(() => setSelectedUser(null), 100);
     });
+  };
+
+  const [isUndoing, setIsUndoing] = useState(false);
+  const isPremium = user?.subscription?.is_premium || user?.is_premium;
+
+  const handleUndoSwipe = async () => {
+    if (!isPremium) {
+      Alert.alert(
+        'Función Premium 🌟',
+        'Deshacer un swipe (Rewind) es una función exclusiva de CineMatch Premium. ¡Actualiza para recuperar a ese perfil!',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Ver Planes', onPress: () => navigation.navigate('Suscripción') },
+        ]
+      );
+      return;
+    }
+
+    if (currentCardIndexRef.current === 0) {
+      Alert.alert('Atención', 'No hay perfiles pasados en esta ronda para deshacer.');
+      return;
+    }
+
+    try {
+      setIsUndoing(true);
+      const res = await matchService.undoSwipe();
+      if (res && res.success) {
+        if (swiperRef.current) {
+          swiperRef.current.swipeBack();
+          currentCardIndexRef.current -= 1;
+        }
+      }
+    } catch (error) {
+      Alert.alert('Aviso', error.message || 'No hay acciones recientes para deshacer.');
+    } finally {
+      setIsUndoing(false);
+    }
   };
 
   const loadUsers = async ({ reset = false } = {}) => {
@@ -251,8 +288,6 @@ const HomeScreen = ({ navigation }) => {
     );
   }
 
-  const isPremium = user?.subscription?.is_premium || user?.is_premium;
-
   return (
     <LinearGradient
       colors={[colors.secondary, colors.secondaryLight]}
@@ -286,6 +321,20 @@ const HomeScreen = ({ navigation }) => {
         disabled={loading}
       >
         <Text style={styles.refreshButtonIcon}>↻</Text>
+      </TouchableOpacity>
+
+      {/* Botón flotante de Rewind (Undo) */}
+      <TouchableOpacity
+        style={styles.undoButton}
+        onPress={handleUndoSwipe}
+        activeOpacity={0.8}
+        disabled={isUndoing || loading}
+      >
+        {isUndoing ? (
+          <ActivityIndicator size="small" color={colors.textDark} />
+        ) : (
+          <FontAwesomeIcon icon={faUndo} size={22} color={colors.textDark} />
+        )}
       </TouchableOpacity>
 
       <View style={styles.swiperContainer}>
@@ -685,6 +734,25 @@ const styles = StyleSheet.create({
     fontSize: 26,
     color: colors.textDark,
     fontWeight: '900',
+  },
+  undoButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 95 : 95,
+    right: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#ffd700', // Gold color for premium feature
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 10,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
 });
 

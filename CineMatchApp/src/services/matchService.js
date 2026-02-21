@@ -15,6 +15,17 @@ export const matchService = {
     }
   },
 
+  // Deshacer el último swipe (Rewind Premium)
+  async undoSwipe() {
+    try {
+      const response = await api.post('/matches/undo');
+      return response.data;
+    } catch (error) {
+      console.error('Error undoing swipe:', error);
+      throw error.response?.data || error;
+    }
+  },
+
   // Obtener matches
   async getMatches() {
     try {
