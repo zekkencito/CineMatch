@@ -10,18 +10,24 @@ import {
   Platform,
   RefreshControl,
   Image,
+  TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { matchService } from '../services/matchService';
 import MatchItem from '../components/MatchItem';
+import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
 import { faMasksTheater } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faTicket } from '@fortawesome/free-solid-svg-icons';
+import { faTicket, faStar, faHeart } from '@fortawesome/free-solid-svg-icons';
 
 const MatchesScreen = ({ navigation }) => {
+  const { user } = useAuth();
+  const isPremium = user?.is_premium || user?.subscription?.is_premium;
   const [matches, setMatches] = useState([]);
+  const [likesReceived, setLikesReceived] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -31,6 +37,7 @@ const MatchesScreen = ({ navigation }) => {
   useFocusEffect(
     React.useCallback(() => {
       loadMatches();
+      loadLikesReceived();
     }, [])
   );
 
@@ -74,6 +81,15 @@ const MatchesScreen = ({ navigation }) => {
       } else {
         setLoading(false);
       }
+    }
+  };
+
+  const loadLikesReceived = async () => {
+    try {
+      const data = await matchService.getWhoLikedMe();
+      setLikesReceived(data?.likes || []);
+    } catch (e) {
+      console.warn('No se pudieron cargar los likes recibidos:', e);
     }
   };
 
@@ -129,6 +145,48 @@ const MatchesScreen = ({ navigation }) => {
           }
         </Text>
       </Animated.View>
+
+      {/* Sección: Quién te dio Like */}
+      {likesReceived.length > 0 && (
+        <View style={styles.likesSection}>
+          <View style={styles.likesSectionHeader}>
+            <FontAwesomeIcon icon={faHeart} size={16} color={colors.primary} />
+            <Text style={styles.likesSectionTitle}>
+              {isPremium ? `${likesReceived.length} personas te dieron Like` : 'Alguien te dio Like 👀'}
+            </Text>
+            {!isPremium && (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Suscripción')}
+                style={styles.premiumBtn}
+              >
+                <FontAwesomeIcon icon={faStar} size={12} color="#fff" />
+                <Text style={styles.premiumBtnText}>Premium</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.likesRow}>
+            {likesReceived.map((like, index) => (
+              <View key={like.id} style={styles.likeAvatarWrap}>
+                {isPremium ? (
+                  <Image
+                    source={{ uri: like.from_user?.profile_photo }}
+                    style={styles.likeAvatar}
+                  />
+                ) : (
+                  <View style={styles.likeAvatarBlurred}>
+                    <Text style={styles.likeAvatarBlurText}>?</Text>
+                  </View>
+                )}
+                {isPremium && (
+                  <Text style={styles.likeAvatarName} numberOfLines={1}>
+                    {like.from_user?.name?.split(' ')[0]}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {matches.length === 0 ? (
         <Animated.View
@@ -249,6 +307,78 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  likesSection: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  likesSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  likesSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    flex: 1,
+  },
+  premiumBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    gap: 4,
+  },
+  premiumBtnText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  likesRow: {
+    flexDirection: 'row',
+  },
+  likeAvatarWrap: {
+    alignItems: 'center',
+    marginRight: 12,
+    width: 60,
+  },
+  likeAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  likeAvatarBlurred: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  likeAvatarBlurText: {
+    fontSize: 24,
+    color: colors.textSecondary,
+    fontWeight: '900',
+  },
+  likeAvatarName: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
+    width: 60,
   },
 });
 

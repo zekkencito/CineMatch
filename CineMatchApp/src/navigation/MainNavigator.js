@@ -1,12 +1,13 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, StyleSheet, Platform, Animated, TouchableOpacity } from 'react-native';
+import { Text, View, StyleSheet, Platform, Animated } from 'react-native';
 import HomeScreen from '../screens/HomeScreen';
 import MatchesScreen from '../screens/MatchesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import colors from '../constants/colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Fontisto from '@expo/vector-icons/Fontisto';
+import api from '../config/api';
 
 const Tab = createBottomTabNavigator();
 
@@ -62,6 +63,24 @@ const AnimatedTabIcon = ({ focused, iconName, iconLib = 'material' }) => {
 };
 
 const MainNavigator = () => {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnread = useCallback(async () => {
+    try {
+      const res = await api.get('/messages/unread-count');
+      setUnreadCount(res.data.unread_count || 0);
+    } catch (e) {
+      // silencioso
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUnread();
+    // Refrescar cada 30 segundos mientras la app está abierta
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnread]);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -110,7 +129,7 @@ const MainNavigator = () => {
           tabBarLabel: ({ focused }) => (
             <Text style={[
               styles.tabLabel,
-              { 
+              {
                 color: focused ? colors.primary : '#000000',
                 fontWeight: focused ? '800' : '600',
               }
@@ -123,14 +142,24 @@ const MainNavigator = () => {
       <Tab.Screen
         name="Amigos de Butaca"
         component={MatchesScreen}
+        listeners={{ tabPress: () => { fetchUnread(); } }}
         options={{
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon focused={focused} iconName="chat" />
+            <View>
+              <AnimatedTabIcon focused={focused} iconName="chat" />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           ),
           tabBarLabel: ({ focused }) => (
             <Text style={[
               styles.tabLabel,
-              { 
+              {
                 color: focused ? colors.primary : '#000000',
                 fontWeight: focused ? '800' : '600',
               }
@@ -150,7 +179,7 @@ const MainNavigator = () => {
           tabBarLabel: ({ focused }) => (
             <Text style={[
               styles.tabLabel,
-              { 
+              {
                 color: focused ? colors.primary : '#000000',
                 fontWeight: focused ? '800' : '600',
               }
@@ -180,6 +209,25 @@ const styles = StyleSheet.create({
     textShadowColor: colors.primary,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
+  },
+  badge: {
+    position: 'absolute',
+    top: 2,
+    right: -6,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.card,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
   },
   activeIndicator: {
     position: 'absolute',

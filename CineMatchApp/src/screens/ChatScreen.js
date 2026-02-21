@@ -16,11 +16,12 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
 import { db } from '../config/firebase';
-import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import chatService from '../services/chatService';
 import colors from '../constants/colors';
@@ -33,7 +34,10 @@ const ChatScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
+  const [otherIsTyping, setOtherIsTyping] = useState(false);
   const flatListRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const typingDotsAnim = useRef(new Animated.Value(0)).current;
 
   // Usuario con el que estamos chateando
   const otherUser = match.user || match;
@@ -44,29 +48,39 @@ const ChatScreen = ({ route, navigation }) => {
     // Configurar título del header
     navigation.setOptions({
       title: otherUser.name,
-      headerStyle: {
-        backgroundColor: colors.secondary,
-      },
+      headerStyle: { backgroundColor: colors.secondary },
       headerTintColor: colors.primary,
-      headerTitleStyle: {
-        fontWeight: 'bold',
-      },
+      headerTitleStyle: { fontWeight: 'bold' },
     });
 
-    // Cargar mensajes iniciales
     loadMessages();
 
-    // 🔥 Listener de Firestore para mensajes en tiempo real
-    // Solo guardamos una señal (timestamp) — los mensajes reales vienen de Laravel
     const chatDocRef = doc(db, 'chats', String(matchId));
+    const typingDocRef = doc(db, 'typing', String(matchId));
+
+    // Escuchar mensajes nuevos (señal en chats/)
     const unsubscribeFirestore = onSnapshot(chatDocRef, (snapshot) => {
       if (snapshot.exists()) {
-        // Cuando cambia el documento, recargamos mensajes de Laravel
         loadMessages(false);
       }
-    }, (error) => {
-      console.warn('Firestore listener error:', error.message);
-    });
+    }, (error) => { console.warn('Firestore listener error:', error.message); });
+
+    // Escuchar estado de 'escribiendo' del otro usuario
+    const unsubscribeTyping = onSnapshot(typingDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const isTyping = data?.[`user_${otherUser.id}`] === true;
+        setOtherIsTyping(isTyping);
+        if (isTyping) {
+          Animated.loop(
+            Animated.sequence([
+              Animated.timing(typingDotsAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+              Animated.timing(typingDotsAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+            ])
+          ).start();
+        }
+      }
+    }, (error) => { console.warn('Typing listener error:', error.message); });
 
     // Listener de notificaciones locales
     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
@@ -78,7 +92,12 @@ const ChatScreen = ({ route, navigation }) => {
 
     return () => {
       unsubscribeFirestore();
+      unsubscribeTyping();
       notificationListener.remove();
+      // Limpiar estado de escribiendo al salir
+      const typingDocRef = doc(db, 'typing', String(matchId));
+      updateDoc(typingDocRef, { [`user_${currentUser.id}`]: false }).catch(() => { });
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, []);
 
@@ -113,6 +132,20 @@ const ChatScreen = ({ route, navigation }) => {
         setLoading(false);
       }
     }
+  };
+
+  const handleTyping = (text) => {
+    setNewMessage(text);
+
+    // Notificar a Firestore que estoy escribiendo
+    const typingDocRef = doc(db, 'typing', String(matchId));
+    setDoc(typingDocRef, { [`user_${currentUser.id}`]: true }, { merge: true }).catch(() => { });
+
+    // Auto-limpiar tras 3 segundos de inactividad
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      updateDoc(typingDocRef, { [`user_${currentUser.id}`]: false }).catch(() => { });
+    }, 3000);
   };
 
   const handleSend = async () => {
@@ -236,6 +269,18 @@ const ChatScreen = ({ route, navigation }) => {
           }
         />
 
+        {/* Indicador de 'escribiendo...' */}
+        {otherIsTyping && (
+          <View style={styles.typingContainer}>
+            <View style={styles.typingBubble}>
+              <Animated.Text style={[styles.typingDots, { opacity: typingDotsAnim }]}>
+                ···
+              </Animated.Text>
+              <Text style={styles.typingText}>{otherUser.name} está escribiendo</Text>
+            </View>
+          </View>
+        )}
+
         {/* Input de nuevo mensaje */}
         <View style={styles.inputContainer}>
           <TextInput
@@ -243,7 +288,7 @@ const ChatScreen = ({ route, navigation }) => {
             placeholder="Escribe un mensaje..."
             placeholderTextColor={colors.textSecondary}
             value={newMessage}
-            onChangeText={setNewMessage}
+            onChangeText={handleTyping}
             multiline
             maxLength={1000}
           />
@@ -376,6 +421,33 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.textDark,
     fontWeight: 'bold',
+  },
+  typingContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+  },
+  typingBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  typingDots: {
+    fontSize: 20,
+    color: colors.primary,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  typingText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
   },
 });
 
