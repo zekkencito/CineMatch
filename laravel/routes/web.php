@@ -34,6 +34,15 @@ Route::get('/sembrar-datos', function () {
     }
 });
 
+Route::get('/run-migrations', function () {
+    try {
+        Artisan::call('migrate', ['--force' => true]);
+        return "✅ Migraciones ejecutadas con éxito!<br><br>" . nl2br(Artisan::output());
+    } catch (\Exception $e) {
+        return "❌ Error: " . $e->getMessage();
+    }
+});
+
 Route::get('/check-tables', function () {
     $tables = ['users', 'personal_access_tokens', 'subscriptions', 'user_favorite_genres', 'watched_movies', 'locations'];
     $result = [];
