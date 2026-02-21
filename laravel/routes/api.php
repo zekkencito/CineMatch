@@ -84,5 +84,39 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/subscription/create-order', [SubscriptionController::class, 'createPayPalOrder']);
     Route::post('/subscription/cancel', [SubscriptionController::class, 'cancelSubscription']);
     Route::get('/subscription/likes-count', [SubscriptionController::class, 'getDailyLikesCount']);
-    
-});
+
+    // DEBUG: Verificar pipeline de notificaciones
+    Route::get('/debug/push-status', function (\Illuminate\Http\Request $request) {
+        $user = $request->user();
+        $token = $user->expo_push_token;
+
+        // Intentar enviar notificación de prueba si hay token
+        $pushResult = null;
+        if ($token) {
+            try {
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ])->post('https://exp.host/--/api/v2/push/send', [
+                    'to' => $token,
+                    'sound' => 'default',
+                    'title' => '🔔 Test CineMatch',
+                    'body' => 'Pipeline de notificaciones funcionando correctamente',
+                    'data' => ['type' => 'test'],
+                ]);
+                $pushResult = $response->json();
+            } catch (\Exception $e) {
+                $pushResult = ['error' => $e->getMessage()];
+            }
+        }
+
+        return response()->json([
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'has_token' => !empty($token),
+            'token_preview' => $token ? substr($token, 0, 30) . '...' : null,
+            'expo_api_response' => $pushResult,
+        ]);
+    });
+
+}); 
