@@ -65,6 +65,17 @@ class MatchController extends Controller
                 ]);
 
                 $matched = true;
+
+                // Enviar notificación al otro usuario
+                $toUser = User::find($toUserId);
+                if ($toUser && $toUser->expo_push_token) {
+                    \App\Services\ExpoPushService::send(
+                        $toUser->expo_push_token,
+                        '¡Nuevo Match! 🍿',
+                        $request->user()->name . ' también quiere ver películas contigo.',
+                        ['type' => 'match', 'match_id' => $match->id]
+                    );
+                }
             }
         }
 

@@ -113,6 +113,21 @@ class MessageController extends Controller
             // Cargar relaciones para retornar datos completos
             $message->load(['sender:id,name,profile_photo', 'receiver:id,name,profile_photo']);
 
+            // Enviar notificación Push al receptor
+            $receiverUser = App\Models\User::find($receiverId);
+            if ($receiverUser && $receiverUser->expo_push_token) {
+                \App\Services\ExpoPushService::send(
+                    $receiverUser->expo_push_token,
+                    $message->sender->name, // Título: nombre de quien envía
+                    $message->message,      // Cuerpo: contenido del mensaje
+                    [
+                        'type' => 'message', 
+                        'match_id' => $matchId,
+                        'message_id' => $message->id
+                    ]
+                );
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Mensaje enviado',

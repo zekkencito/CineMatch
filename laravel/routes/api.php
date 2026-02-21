@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users', [UserController::class, 'getUsers']);
     Route::get('/users/{id}', [UserController::class, 'getUser']);
     Route::put('/location', [UserController::class, 'updateLocation']);
+    Route::post('/push-token', [UserController::class, 'updatePushToken']);
     
     // Preferencias - Géneros
     Route::get('/preferences/genres', [PreferencesController::class, 'getGenres']);
