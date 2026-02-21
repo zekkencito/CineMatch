@@ -19,6 +19,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
+import { db } from '../config/firebase';
+import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import chatService from '../services/chatService';
 import colors from '../constants/colors';
@@ -54,16 +56,28 @@ const ChatScreen = ({ route, navigation }) => {
     // Cargar mensajes iniciales
     loadMessages();
 
-    // Listener para recibir notificaciones en primer plano y refrescar mensajes automáticamente
+    // 🔥 Listener de Firestore para mensajes en tiempo real
+    // Solo guardamos una señal (timestamp) — los mensajes reales vienen de Laravel
+    const chatDocRef = doc(db, 'chats', String(matchId));
+    const unsubscribeFirestore = onSnapshot(chatDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        // Cuando cambia el documento, recargamos mensajes de Laravel
+        loadMessages(false);
+      }
+    }, (error) => {
+      console.warn('Firestore listener error:', error.message);
+    });
+
+    // Listener de notificaciones locales
     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
       const { data } = notification.request.content;
-      // Si la notificación es de un mensaje y pertenece a este match, recargar
       if (data && data.type === 'message' && data.match_id === matchId) {
         loadMessages(false);
       }
     });
 
     return () => {
+      unsubscribeFirestore();
       notificationListener.remove();
     };
   }, []);
@@ -113,6 +127,18 @@ const ChatScreen = ({ route, navigation }) => {
 
       const response = await chatService.sendMessage(matchId, receiverId, messageText);
       console.log('✅ Mensaje enviado exitosamente:', response);
+
+      // 🔥 Escribir señal en Firestore para notificar al otro usuario en tiempo real
+      try {
+        const chatDocRef = doc(db, 'chats', String(matchId));
+        await setDoc(chatDocRef, {
+          lastMessageAt: serverTimestamp(),
+          matchId: matchId,
+        }, { merge: true });
+      } catch (firestoreError) {
+        // No bloqueamos si Firestore falla — los mensajes siguen funcionando
+        console.warn('Firestore signal error (non-critical):', firestoreError.message);
+      }
 
       // Recargar mensajes inmediatamente después de enviar
       await loadMessages(false);
