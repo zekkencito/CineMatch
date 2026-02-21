@@ -1,0 +1,5 @@
+CineMatchApp/
+.expo/
+node_modules/
+*.apk
+*.ipa
