@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Matches
     Route::post('/matches/like', [MatchController::class, 'sendLike']);
+    Route::post('/matches/undo', [MatchController::class, 'undoSwipe']);
     Route::get('/matches', [MatchController::class, 'getMatches']);
     Route::get('/matches/check/{userId}', [MatchController::class, 'checkMatch']);
     Route::get('/likes', [MatchController::class, 'getLikes']);

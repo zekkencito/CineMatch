@@ -144,4 +144,49 @@ class MatchController extends Controller
             'likes' => $likes
         ]);
     }
+
+    /**
+     * Deshacer el último swipe (solo para premium)
+     */
+    public function undoSwipe(Request $request)
+    {
+        $userId = $request->user()->id;
+
+        // Verificar si es premium
+        if (!$request->user()->is_premium && !$request->user()->subscription?->is_premium) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Rewind es una función exclusiva para usuarios Premium.'
+            ], 403);
+        }
+
+        // Buscar el último like/dislike que hizo este usuario
+        $lastAction = Like::where('from_user_id', $userId)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$lastAction) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay acciones recientes para deshacer.'
+            ], 404);
+        }
+
+        // Si la última acción formó un match, debemos eliminar el match también
+        if ($lastAction->type === 'like') {
+            UserMatch::where(function ($query) use ($userId, $lastAction) {
+                $query->where('user_one_id', min($userId, $lastAction->to_user_id))
+                      ->where('user_two_id', max($userId, $lastAction->to_user_id));
+            })->delete();
+        }
+
+        // Eliminar el último swipe
+        $lastAction->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Último swipe deshecho.',
+            'restored_user_id' => $lastAction->to_user_id
+        ]);
+    }
 }
