@@ -14,7 +14,10 @@ return new class extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('expo_push_token')->nullable()->after('remember_token');
+            if (!Schema::hasColumn('users', 'expo_push_token')) {
+                // Agregar al final (o sin `after`) para dar menos fallas si remember_token no existe
+                $table->string('expo_push_token')->nullable();
+            }
         });
     }
 
