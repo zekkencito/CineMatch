@@ -18,6 +18,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Notifications from 'expo-notifications';
 import { useAuth } from '../context/AuthContext';
 import chatService from '../services/chatService';
 import colors from '../constants/colors';
@@ -52,6 +53,19 @@ const ChatScreen = ({ route, navigation }) => {
 
     // Cargar mensajes iniciales
     loadMessages();
+
+    // Listener para recibir notificaciones en primer plano y refrescar mensajes automáticamente
+    const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+      const { data } = notification.request.content;
+      // Si la notificación es de un mensaje y pertenece a este match, recargar
+      if (data && data.type === 'message' && data.match_id === matchId) {
+        loadMessages(false);
+      }
+    });
+
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener);
+    };
   }, []);
 
   const loadMessages = async (isRefreshing = false) => {
@@ -61,7 +75,7 @@ const ChatScreen = ({ route, navigation }) => {
       } else {
         setLoading(true);
       }
-      
+
       const data = await chatService.getMessages(matchId, false);
       setMessages(data);
 
@@ -96,7 +110,7 @@ const ChatScreen = ({ route, navigation }) => {
     try {
       setSending(true);
       await chatService.sendMessage(matchId, receiverId, messageText);
-      
+
       // Recargar mensajes inmediatamente después de enviar
       await loadMessages(false);
     } catch (error) {

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authService } from '../services/authService';
 import { storage } from '../utils/storage';
+import { notificationService } from '../services/notificationService';
 
 const AuthContext = createContext({});
 
@@ -30,6 +31,9 @@ export const AuthProvider = ({ children }) => {
         } catch (e) {
           console.log('Fallo al refetch user silencioso', e);
         }
+
+        // Registrar para notificaciones push
+        notificationService.registerForPushNotificationsAsync();
       }
     } catch (error) {
       console.error('Error loading user:', error);
@@ -68,6 +72,10 @@ export const AuthProvider = ({ children }) => {
       } catch (e) {
         console.log('Error silente al refetch después de login', e);
       }
+
+      // Registrar para notificaciones push
+      notificationService.registerForPushNotificationsAsync();
+
       return data;
     } catch (error) {
       throw error;
@@ -79,6 +87,10 @@ export const AuthProvider = ({ children }) => {
       const data = await authService.register(userData);
       setUser(data.user);
       setIsAuthenticated(true);
+
+      // Registrar para notificaciones push
+      notificationService.registerForPushNotificationsAsync();
+
       return data;
     } catch (error) {
       throw error;
