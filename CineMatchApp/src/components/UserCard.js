@@ -6,6 +6,9 @@ import colors from '../constants/colors';
 const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 90 : 72;
 const STATUS_BAR_HEIGHT = Platform.OS === 'android' ? 24 : 44;
 
+// Dimensiones estáticas para StyleSheet.create() (se ejecuta a nivel módulo)
+const { width: STATIC_WIDTH } = Dimensions.get('window');
+
 const UserCard = ({ user }) => {
   // useWindowDimensions es reactivo: se actualiza al rotar pantalla
   const { width, height } = useWindowDimensions();
@@ -239,7 +242,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   gridMovieContainer: {
-    width: (width - 80) / 3,
+    width: (STATIC_WIDTH - 80) / 3,
     marginBottom: 4,
   },
   gridMoviePoster: {
