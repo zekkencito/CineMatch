@@ -163,8 +163,11 @@ class MatchController extends Controller
     {
         $userId = $request->user()->id;
 
-        // Verificar si es premium
-        if (!$request->user()->is_premium && !$request->user()->subscription?->is_premium) {
+        // Cargar suscripción y verificar si puede usar rewind
+        $user = $request->user()->load('subscription');
+        $canUndo = $user->subscription && $user->subscription->can_undo_swipes && $user->subscription->isPremium();
+
+        if (!$canUndo) {
             return response()->json([
                 'success' => false,
                 'message' => 'Rewind es una función exclusiva para usuarios Premium.'

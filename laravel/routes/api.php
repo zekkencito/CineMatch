@@ -75,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/matches/{matchId}/messages', [MessageController::class, 'getMessages']);
     Route::post('/messages', [MessageController::class, 'sendMessage']);
     Route::get('/messages/unread-count', [MessageController::class, 'getUnreadCount']);
+    Route::get('/messages/unread-per-match', [MessageController::class, 'getUnreadPerMatch']);
     
     // Suscripciones
     Route::get('/subscription/current', [SubscriptionController::class, 'getCurrentPlan']);

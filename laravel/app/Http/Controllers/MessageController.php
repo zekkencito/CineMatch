@@ -186,4 +186,32 @@ class MessageController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtener el conteo de mensajes no leídos por match
+     */
+    public function getUnreadPerMatch(Request $request)
+    {
+        try {
+            $userId = Auth::id();
+
+            $unreadPerMatch = Message::where('receiver_id', $userId)
+                ->where('is_read', false)
+                ->select('match_id', \DB::raw('COUNT(*) as count'))
+                ->groupBy('match_id')
+                ->get()
+                ->pluck('count', 'match_id');
+
+            return response()->json([
+                'success' => true,
+                'unread_per_match' => $unreadPerMatch
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error getUnreadPerMatch: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener contadores: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
