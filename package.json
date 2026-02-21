@@ -1,0 +1,12 @@
+{
+  "name": "cinematch-backend",
+  "version": "1.0.0",
+  "description": "CineMatch Laravel Backend (Docker deployment only)",
+  "private": true,
+  "scripts": {
+    "start": "echo 'This project uses Docker. Run: docker build -t cinematch . && docker run -p 8080:8080 cinematch'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
