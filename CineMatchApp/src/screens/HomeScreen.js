@@ -22,7 +22,7 @@ import UserCard from '../components/UserCard';
 import colors from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faMasksTheater, faStar, faUndo } from '@fortawesome/free-solid-svg-icons';
+import { faMasksTheater, faStar, faReply } from '@fortawesome/free-solid-svg-icons';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -323,7 +323,7 @@ const HomeScreen = ({ navigation }) => {
         <Text style={styles.refreshButtonIcon}>↻</Text>
       </TouchableOpacity>
 
-      {/* Botón flotante de Rewind (Undo) */}
+      {/* Botón de Rewind (Undo) - debajo del UserCard */}
       <TouchableOpacity
         style={styles.undoButton}
         onPress={handleUndoSwipe}
@@ -333,7 +333,7 @@ const HomeScreen = ({ navigation }) => {
         {isUndoing ? (
           <ActivityIndicator size="small" color={colors.textDark} />
         ) : (
-          <FontAwesomeIcon icon={faUndo} size={22} color={colors.textDark} />
+          <FontAwesomeIcon icon={faReply} size={20} color={colors.textDark} />
         )}
       </TouchableOpacity>
 
@@ -737,8 +737,9 @@ const styles = StyleSheet.create({
   },
   undoButton: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 95 : 95,
-    right: 24,
+    bottom: 90, // Below the swiper area
+    left: '50%',
+    marginLeft: -25, // Center horizontally
     width: 50,
     height: 50,
     borderRadius: 25,
