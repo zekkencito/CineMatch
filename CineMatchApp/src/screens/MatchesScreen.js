@@ -23,9 +23,10 @@ import { faMasksTheater } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faTicket, faStar, faHeart } from '@fortawesome/free-solid-svg-icons';
 
-const MatchesScreen = ({ navigation }) => {
+const MatchesScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const isPremium = user?.is_premium || user?.subscription?.is_premium;
+  const unreadPerMatch = route.params?.unreadPerMatch || {};
   const [matches, setMatches] = useState([]);
   const [likesReceived, setLikesReceived] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -209,7 +210,11 @@ const MatchesScreen = ({ navigation }) => {
           data={matches}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <MatchItem match={item} onPress={handleMatchPress} />
+            <MatchItem
+              match={item}
+              onPress={handleMatchPress}
+              unreadCount={unreadPerMatch[item.id] || 0}
+            />
           )}
           contentContainerStyle={styles.listContainer}
           refreshControl={

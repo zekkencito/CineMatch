@@ -8,6 +8,9 @@ import colors from '../constants/colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Fontisto from '@expo/vector-icons/Fontisto';
 import api from '../config/api';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../config/firebase';
+import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const Tab = createBottomTabNavigator();
 
@@ -63,23 +66,43 @@ const AnimatedTabIcon = ({ focused, iconName, iconLib = 'material' }) => {
 };
 
 const MainNavigator = () => {
+  const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadPerMatch, setUnreadPerMatch] = useState({});
 
   const fetchUnread = useCallback(async () => {
     try {
-      const res = await api.get('/messages/unread-count');
-      setUnreadCount(res.data.unread_count || 0);
+      const [totalRes, perMatchRes] = await Promise.all([
+        api.get('/messages/unread-count'),
+        api.get('/messages/unread-per-match'),
+      ]);
+      setUnreadCount(totalRes.data.unread_count || 0);
+      setUnreadPerMatch(perMatchRes.data.unread_per_match || {});
     } catch (e) {
       // silencioso
     }
   }, []);
 
   useEffect(() => {
+    if (!user?.id) return;
     fetchUnread();
-    // Refrescar cada 30 segundos mientras la app está abierta
-    const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
-  }, [fetchUnread]);
+
+    // 🔥 Listener Firestore en tiempo real para badge inmediato
+    const unreadDocRef = doc(db, 'unread', String(user.id));
+    const unsubscribe = onSnapshot(unreadDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        // Cuando llega una señal nueva, re-fetch el conteo real del backend
+        fetchUnread();
+      }
+    }, () => { });
+
+    // También refrescar cada 15 segundos como respaldo
+    const interval = setInterval(fetchUnread, 15000);
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, [user?.id, fetchUnread]);
 
   return (
     <Tab.Navigator
@@ -142,6 +165,7 @@ const MainNavigator = () => {
       <Tab.Screen
         name="Amigos de Butaca"
         component={MatchesScreen}
+        initialParams={{ unreadPerMatch }}
         listeners={{ tabPress: () => { fetchUnread(); } }}
         options={{
           tabBarIcon: ({ focused }) => (

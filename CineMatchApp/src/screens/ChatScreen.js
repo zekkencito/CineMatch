@@ -164,12 +164,12 @@ const ChatScreen = ({ route, navigation }) => {
       // 🔥 Escribir señal en Firestore para notificar al otro usuario en tiempo real
       try {
         const chatDocRef = doc(db, 'chats', String(matchId));
-        await setDoc(chatDocRef, {
-          lastMessageAt: serverTimestamp(),
-          matchId: matchId,
-        }, { merge: true });
+        const unreadDocRef = doc(db, 'unread', String(receiverId)); // Badge del receptor
+        await Promise.all([
+          setDoc(chatDocRef, { lastMessageAt: serverTimestamp(), matchId }, { merge: true }),
+          setDoc(unreadDocRef, { updatedAt: serverTimestamp(), matchId }, { merge: true }),
+        ]);
       } catch (firestoreError) {
-        // No bloqueamos si Firestore falla — los mensajes siguen funcionando
         console.warn('Firestore signal error (non-critical):', firestoreError.message);
       }
 
