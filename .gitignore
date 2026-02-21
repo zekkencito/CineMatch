@@ -1,4 +1,4 @@
 /vendor
 /node_modules
 .env
-laravel/vendor/
+laravel/vendor/CineMatchApp/package.json
