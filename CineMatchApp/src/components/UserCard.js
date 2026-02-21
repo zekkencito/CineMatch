@@ -1,10 +1,19 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import colors from '../constants/colors';
 
-const { width, height } = Dimensions.get('window');
+// Tab bar height en cada plataforma (aproximado)
+const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 90 : 72;
+const STATUS_BAR_HEIGHT = Platform.OS === 'android' ? 24 : 44;
 
 const UserCard = ({ user }) => {
+  // useWindowDimensions es reactivo: se actualiza al rotar pantalla
+  const { width, height } = useWindowDimensions();
+  // Espacio disponible = pantalla total - tabs - status bar - header (~60px)
+  const availableHeight = height - TAB_BAR_HEIGHT - STATUS_BAR_HEIGHT - 60;
+  // La tarjeta ocupa el 90% del espacio disponible (con mínimo y máximo)
+  const CARD_HEIGHT = Math.min(Math.max(availableHeight * 0.90, 420), 750);
+  const CARD_WIDTH = width - 32;
 
   // Validar que user existe y tiene las propiedades necesarias
   if (!user || !user.id) {
@@ -34,7 +43,7 @@ const UserCard = ({ user }) => {
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { width: CARD_WIDTH, height: CARD_HEIGHT }]}>
       <Image
         source={{ uri: user.profile_photo || getPlaceholderImage() }}
         style={styles.image}
@@ -137,8 +146,6 @@ const UserCard = ({ user }) => {
 
 const styles = StyleSheet.create({
   card: {
-    width: width - 40,
-    height: height * 0.67,
     borderRadius: 24,
     backgroundColor: '#ffffff',
     overflow: 'hidden',
@@ -153,7 +160,7 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: '42%',
+    height: '50%',
   },
   matchBadge: {
     position: 'absolute',
