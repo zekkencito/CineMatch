@@ -35,23 +35,24 @@ const MatchItem = ({ match, onPress, unreadCount = 0 }) => {
         )}
       </View>
       <View style={styles.infoContainer}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name}>{user.name}</Text>
-          {unreadCount > 0 && (
-            <Text style={styles.newMsgLabel}>• Nuevo</Text>
-          )}
-        </View>
+        <Text style={styles.name}>{user.name}</Text>
         <Text style={styles.commonInterests}>
           🎬 {genres}
         </Text>
-        <Text style={styles.bio} numberOfLines={1}>
-          {unreadCount > 0
-            ? `${unreadCount} mensaje${unreadCount > 1 ? 's' : ''} sin leer`
-            : (user.bio || 'Entusiasta de las películas')}
-        </Text>
+        {unreadCount > 0 ? (
+          <View style={styles.unreadPill}>
+            <Text style={styles.unreadPillText}>
+              💬 {unreadCount} mensaje{unreadCount > 1 ? 's' : ''} nuevo{unreadCount > 1 ? 's' : ''} de {user.name.split(' ')[0]}
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.bio} numberOfLines={1}>
+            {user.bio || 'Entusiasta de las películas'}
+          </Text>
+        )}
       </View>
       <View style={[styles.badge, unreadCount > 0 && styles.badgeUnread]}>
-        <Text style={styles.badgeText}>{unreadCount > 0 ? '💬' : '💬'}</Text>
+        <Text style={styles.badgeText}>💬</Text>
       </View>
     </TouchableOpacity>
   );
@@ -117,22 +118,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 8,
   },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 5,
-  },
   name: {
     fontSize: 20,
     fontWeight: '900',
     color: colors.text,
     letterSpacing: 0.3,
-  },
-  newMsgLabel: {
-    fontSize: 12,
-    color: colors.primary,
-    fontWeight: '800',
+    marginBottom: 5,
   },
   commonInterests: {
     fontSize: 13,
@@ -145,6 +136,19 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontStyle: 'italic',
     fontWeight: '500',
+  },
+  unreadPill: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  unreadPillText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
   },
   badge: {
     width: 46,

@@ -1,23 +1,15 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, ScrollView, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, ScrollView, Platform } from 'react-native';
 import colors from '../constants/colors';
 
-// Tab bar height en cada plataforma (aproximado)
-const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 90 : 72;
-const STATUS_BAR_HEIGHT = Platform.OS === 'android' ? 24 : 44;
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-// Dimensiones estáticas para StyleSheet.create() (se ejecuta a nivel módulo)
-const { width: STATIC_WIDTH } = Dimensions.get('window');
+// Altura adaptable: pantalla total menos espacio ocupado por status bar + header + tabs + márgenes
+// Clampada entre 400 (teléfonos muy pequeños) y 620 (teléfonos grandes) para no solaparse con tabs
+const CARD_HEIGHT = Math.min(Math.max(SCREEN_H - 260, 400), 620);
+const CARD_WIDTH = SCREEN_W - 40; // original, seguro para el swiper
 
 const UserCard = ({ user }) => {
-  // useWindowDimensions es reactivo: se actualiza al rotar pantalla
-  const { width, height } = useWindowDimensions();
-  // Espacio disponible = pantalla total - tabs - status bar - header (~60px)
-  const availableHeight = height - TAB_BAR_HEIGHT - STATUS_BAR_HEIGHT - 60;
-  // La tarjeta ocupa el 90% del espacio disponible (con mínimo y máximo)
-  const CARD_HEIGHT = Math.min(Math.max(availableHeight * 0.90, 420), 750);
-  const CARD_WIDTH = width - 32;
-
   // Validar que user existe y tiene las propiedades necesarias
   if (!user || !user.id) {
     return null;
@@ -46,7 +38,7 @@ const UserCard = ({ user }) => {
   };
 
   return (
-    <View style={[styles.card, { width: CARD_WIDTH, height: CARD_HEIGHT }]}>
+    <View style={styles.card}>
       <Image
         source={{ uri: user.profile_photo || getPlaceholderImage() }}
         style={styles.image}
@@ -149,6 +141,8 @@ const UserCard = ({ user }) => {
 
 const styles = StyleSheet.create({
   card: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
     borderRadius: 24,
     backgroundColor: '#ffffff',
     overflow: 'hidden',
@@ -242,7 +236,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   gridMovieContainer: {
-    width: (STATIC_WIDTH - 80) / 3,
+    width: (SCREEN_W - 80) / 3,
     marginBottom: 4,
   },
   gridMoviePoster: {

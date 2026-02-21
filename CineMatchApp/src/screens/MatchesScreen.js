@@ -22,12 +22,13 @@ import colors from '../constants/colors';
 import { faMasksTheater } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faTicket, faStar, faHeart } from '@fortawesome/free-solid-svg-icons';
+import api from '../config/api';
 
-const MatchesScreen = ({ navigation, route }) => {
+const MatchesScreen = ({ navigation }) => {
   const { user } = useAuth();
   const isPremium = user?.is_premium || user?.subscription?.is_premium;
-  const unreadPerMatch = route.params?.unreadPerMatch || {};
   const [matches, setMatches] = useState([]);
+  const [unreadPerMatch, setUnreadPerMatch] = useState({});
   const [likesReceived, setLikesReceived] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,6 +40,7 @@ const MatchesScreen = ({ navigation, route }) => {
     React.useCallback(() => {
       loadMatches();
       loadLikesReceived();
+      loadUnreadPerMatch();
     }, [])
   );
 
@@ -91,6 +93,15 @@ const MatchesScreen = ({ navigation, route }) => {
       setLikesReceived(data?.likes || []);
     } catch (e) {
       console.warn('No se pudieron cargar los likes recibidos:', e);
+    }
+  };
+
+  const loadUnreadPerMatch = async () => {
+    try {
+      const res = await api.get('/messages/unread-per-match');
+      setUnreadPerMatch(res.data.unread_per_match || {});
+    } catch (e) {
+      // silencioso
     }
   };
 
