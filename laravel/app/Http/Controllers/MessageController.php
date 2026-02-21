@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Message;
 use App\Models\Matches;
+use App\Models\User;
+use App\Services\ExpoPushService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -120,9 +122,9 @@ class MessageController extends Controller
 
             // Enviar notificación Push al receptor
             try {
-                $receiverUser = \App\Models\User::find($receiverId);
+                $receiverUser = User::find($receiverId);
                 if ($receiverUser && $receiverUser->expo_push_token) {
-                    \App\Services\ExpoPushService::send(
+                    ExpoPushService::send(
                         $receiverUser->expo_push_token,
                         $message->sender->name, // Título: nombre de quien envía
                         $message->message,      // Cuerpo: contenido del mensaje
