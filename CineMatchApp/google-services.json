@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "815909950118-hkbm32hdf92081ih19eh0fulbb3fcm5c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cinematch.app",
+            "certificate_hash": "03285e9ad69111a8f3ba82a4d44ef88cc84e9efb"
+          }
+        },
+        {
           "client_id": "815909950118-ub202cfiv226mgf25t803lhgquclpcjv.apps.googleusercontent.com",
           "client_type": 3
         }
