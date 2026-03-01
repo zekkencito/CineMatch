@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authService } from '../services/authService';
 import { storage } from '../utils/storage';
 import { notificationService } from '../services/notificationService';
+import { tutorialService } from '../services/tutorialService';
 
 const AuthContext = createContext({});
 
@@ -87,6 +88,9 @@ export const AuthProvider = ({ children }) => {
       const data = await authService.register(userData);
       setUser(data.user);
       setIsAuthenticated(true);
+
+      // Resetear el tutorial para que se muestre al nuevo usuario
+      await tutorialService.reset();
 
       // Registrar para notificaciones push
       notificationService.registerForPushNotificationsAsync();

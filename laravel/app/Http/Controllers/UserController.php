@@ -211,11 +211,25 @@ class UserController extends Controller
 
     /**
      * Obtener perfil de usuario por ID
+     * Lee directores y peliculas directamente de las tablas pivot
+     * que almacenan profile_path/poster_path de TMDB
      */
     public function getUser($id)
     {
-        $user = User::with(['favoriteGenres', 'favoriteDirectors', 'watchedMovies'])
+        $user = User::with(['favoriteGenres'])
             ->findOrFail($id);
+
+        // Directores desde tabla pivot (contiene name y profile_path)
+        $user->favorite_directors = DB::table('user_favorite_directors')
+            ->where('user_id', $id)
+            ->select('tmdb_director_id as id', 'name', 'profile_path')
+            ->get();
+
+        // Peliculas desde tabla pivot (contiene title y poster_path)
+        $user->watched_movies_list = DB::table('watched_movies')
+            ->where('user_id', $id)
+            ->select('tmdb_movie_id as id', 'title', 'poster_path', 'rating')
+            ->get();
 
         return response()->json([
             'success' => true,

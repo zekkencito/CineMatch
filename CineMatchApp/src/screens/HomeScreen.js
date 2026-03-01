@@ -19,10 +19,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { userService } from '../services/userService';
 import { matchService } from '../services/matchService';
 import UserCard from '../components/UserCard';
+import OnboardingTutorial from '../components/OnboardingTutorial';
 import colors from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faMasksTheater, faStar, faReply } from '@fortawesome/free-solid-svg-icons';
+import { faMasksTheater, faStar, faReply, faXmark, faFaceSmile } from '@fortawesome/free-solid-svg-icons';
+import { tutorialService } from '../services/tutorialService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -40,6 +42,8 @@ const HomeScreen = ({ navigation }) => {
   const [swiperKey, setSwiperKey] = useState(0);
   const [swiperStartIndex, setSwiperStartIndex] = useState(0);
   const currentCardIndexRef = useRef(0);
+  // Estado del tutorial onboarding
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Animación para fade in
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -89,7 +93,17 @@ const HomeScreen = ({ navigation }) => {
       duration: 600,
       useNativeDriver: true,
     }).start();
+    // Verificar si el tutorial debe mostrarse
+    checkTutorial();
   }, []);
+
+  // Consulta si el onboarding ya fue completado
+  const checkTutorial = async () => {
+    const completed = await tutorialService.isCompleted();
+    if (!completed) {
+      setShowTutorial(true);
+    }
+  };
 
   useEffect(() => {
     if (modalVisible) {
@@ -323,20 +337,6 @@ const HomeScreen = ({ navigation }) => {
         <Text style={styles.refreshButtonIcon}>↻</Text>
       </TouchableOpacity>
 
-      {/* Botón de Rewind (Undo) - debajo del UserCard */}
-      <TouchableOpacity
-        style={styles.undoButton}
-        onPress={handleUndoSwipe}
-        activeOpacity={0.8}
-        disabled={isUndoing || loading}
-      >
-        {isUndoing ? (
-          <ActivityIndicator size="small" color={colors.textDark} />
-        ) : (
-          <FontAwesomeIcon icon={faReply} size={20} color={colors.textDark} />
-        )}
-      </TouchableOpacity>
-
       <View style={styles.swiperContainer}>
         <Swiper
           key={swiperKey}
@@ -360,7 +360,6 @@ const HomeScreen = ({ navigation }) => {
           onSwipedRight={(cardIndex) => handleSwiped(cardIndex, 'right')}
           onSwipedAll={() => {
             if (!finished) {
-              // try load more instead of showing empty state
               loadUsers({ reset: false });
             } else {
               handleSwipedAll();
@@ -374,11 +373,22 @@ const HomeScreen = ({ navigation }) => {
           verticalSwipe={false}
           disableBottomSwipe
           disableTopSwipe
-          onTapCard={(cardIndex) => {
+          onTapCard={async (cardIndex) => {
             const u = users && users[cardIndex];
             if (u) {
+              // Mostrar datos basicos inmediatamente
               setSelectedUser(u);
               setModalVisible(true);
+              // Cargar datos completos (incluye directores con foto)
+              try {
+                const fullProfile = await userService.getUserProfile(u.id);
+                const profileData = fullProfile?.user || fullProfile;
+                if (profileData) {
+                  setSelectedUser(prev => ({ ...prev, ...profileData }));
+                }
+              } catch (e) {
+                // Silencioso: se muestran los datos basicos
+              }
             }
           }}
           infinite={false}
@@ -431,6 +441,39 @@ const HomeScreen = ({ navigation }) => {
         />
       </View>
 
+      {/* Botones de accion: rechazar (X), rewind y aceptar (carita) */}
+      <View style={styles.actionButtonsRow}>
+        <TouchableOpacity
+          style={styles.rejectButton}
+          onPress={() => swiperRef.current && swiperRef.current.swipeLeft()}
+          activeOpacity={0.7}
+        >
+          <FontAwesomeIcon icon={faXmark} size={28} color={colors.primary} />
+        </TouchableOpacity>
+
+        {/* Boton de Rewind (Undo) */}
+        <TouchableOpacity
+          style={styles.undoButton}
+          onPress={handleUndoSwipe}
+          activeOpacity={0.8}
+          disabled={isUndoing || loading}
+        >
+          {isUndoing ? (
+            <ActivityIndicator size="small" color={colors.textDark} />
+          ) : (
+            <FontAwesomeIcon icon={faReply} size={18} color={colors.textDark} />
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.acceptButton}
+          onPress={() => swiperRef.current && swiperRef.current.swipeRight()}
+          activeOpacity={0.7}
+        >
+          <FontAwesomeIcon icon={faFaceSmile} size={28} color={colors.textDark} />
+        </TouchableOpacity>
+      </View>
+
       {/* Bottom Sheet Modal: muestra películas cuando se toca una tarjeta */}
       <Modal
         visible={modalVisible}
@@ -471,6 +514,70 @@ const HomeScreen = ({ navigation }) => {
               contentContainerStyle={styles.moviesScrollContent}
               showsVerticalScrollIndicator={false}
             >
+              {/* Generos favoritos del usuario */}
+              {(selectedUser?.favorite_genres && selectedUser.favorite_genres.length > 0) ? (
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Generos favoritos</Text>
+                  <View style={styles.modalTagsRow}>
+                    {selectedUser.favorite_genres
+                      .filter(g => g != null)
+                      .map((genre, index) => {
+                        const name = typeof genre === 'object' && genre.name
+                          ? genre.name
+                          : (typeof genre === 'string' ? genre : 'Genero');
+                        return (
+                          <View key={'mg-' + index} style={styles.modalTag}>
+                            <Text style={styles.modalTagText}>{name}</Text>
+                          </View>
+                        );
+                      })}
+                  </View>
+                </View>
+              ) : null}
+
+              {/* Directores favoritos del usuario */}
+              {(() => {
+                // Buscar directores en ambos formatos posibles de la API
+                const dirs = selectedUser?.favorite_directors || selectedUser?.favoriteDirectors || [];
+                const dirList = Array.isArray(dirs) ? dirs.filter(d => d != null) : [];
+                if (dirList.length === 0) return null;
+                return (
+                  <View style={styles.modalSection}>
+                    <Text style={styles.modalSectionTitle}>Directores favoritos</Text>
+                    <View style={styles.directorsGrid}>
+                      {dirList.map((director, index) => {
+                        const name = typeof director === 'object' && director.name
+                          ? director.name
+                          : (typeof director === 'string' ? director : 'Director');
+                        const profilePath = typeof director === 'object' ? director.profile_path : null;
+                        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                        return (
+                          <View key={'md-' + index} style={styles.directorCard}>
+                            {profilePath ? (
+                              <Image
+                                source={{ uri: `https://image.tmdb.org/t/p/w185${profilePath}` }}
+                                style={styles.directorPhoto}
+                              />
+                            ) : (
+                              <View style={styles.directorPhotoPlaceholder}>
+                                <Text style={styles.directorInitials}>{initials}</Text>
+                              </View>
+                            )}
+                            <Text style={styles.directorName} numberOfLines={2}>{name}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })()}
+
+              {/* Peliculas vistas */}
+              {(selectedUser?.watched_movies_list && selectedUser.watched_movies_list.length > 0) ? (
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Peliculas vistas</Text>
+                </View>
+              ) : null}
               {(selectedUser?.watched_movies_list || []).map((m) => (
                 <View key={m.tmdb_id || m.id} style={styles.movieItemContainer}>
                   {m.poster_path ? (
@@ -491,6 +598,13 @@ const HomeScreen = ({ navigation }) => {
           </Animated.View>
         </View>
       </Modal>
+
+      {/* Tutorial onboarding (se muestra una sola vez al registrarse) */}
+      <OnboardingTutorial
+        visible={showTutorial}
+        onFinish={() => setShowTutorial(false)}
+        navigation={navigation}
+      />
     </LinearGradient>
   );
 };
@@ -708,8 +822,67 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-start',
     marginTop: -50,
-    marginBottom: 20,
+    marginBottom: 0,
     paddingHorizontal: 10,
+  },
+  // Fila de botones de accion debajo de las tarjetas
+  actionButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 20,
+    paddingBottom: Platform.OS === 'ios' ? 100 : 96,
+    paddingTop: 4,
+    zIndex: 20,
+    elevation: 20,
+  },
+  // Boton rojo de rechazar (X)
+  rejectButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.textDark,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  // Boton verde de aceptar (carita feliz)
+  acceptButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  // Boton de deshacer swipe (rewind)
+  undoButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#ffd700',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   refreshButton: {
     position: 'absolute',
@@ -735,25 +908,74 @@ const styles = StyleSheet.create({
     color: colors.textDark,
     fontWeight: '900',
   },
-  undoButton: {
-    position: 'absolute',
-    bottom: 90, // Below the swiper area
-    left: '50%',
-    marginLeft: -25, // Center horizontally
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#ffd700', // Gold color for premium feature
+  // Secciones dentro del bottom sheet modal (generos, directores)
+  modalSection: {
+    marginBottom: 16,
+  },
+  modalSectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.primary,
+    marginBottom: 10,
+    letterSpacing: 0.3,
+  },
+  modalTagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  modalTag: {
+    backgroundColor: '#000',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  modalTagText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  // Grilla de directores con fotos en el modal
+  directorsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  directorCard: {
+    width: 80,
+    alignItems: 'center',
+  },
+  directorPhoto: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    marginBottom: 6,
+  },
+  directorPhotoPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-    zIndex: 10,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    marginBottom: 6,
+  },
+  directorInitials: {
+    color: colors.textDark,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  directorName: {
+    fontSize: 11,
+    color: colors.text,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 14,
   },
 });
 

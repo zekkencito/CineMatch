@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 120,
     gap: 12,
   },
   emptyContainer: {

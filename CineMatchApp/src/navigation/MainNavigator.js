@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet, Platform, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import MatchesScreen from '../screens/MatchesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -69,6 +70,8 @@ const MainNavigator = () => {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadPerMatch, setUnreadPerMatch] = useState({});
+  // Insets de areas seguras para evitar que la barra de navegacion del sistema tape el tab bar
+  const insets = useSafeAreaInsets();
 
   const fetchUnread = useCallback(async () => {
     try {
@@ -114,8 +117,8 @@ const MainNavigator = () => {
           borderTopRightRadius: 24,
           borderTopColor: 'transparent',
           borderTopWidth: 0,
-          height: Platform.OS === 'ios' ? 90 : 72,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+          height: Platform.OS === 'ios' ? 90 : (72 + Math.max(insets.bottom, 0)),
+          paddingBottom: Platform.OS === 'ios' ? 24 : Math.max(insets.bottom, 12),
           paddingTop: 8,
           paddingHorizontal: 16,
           shadowColor: colors.textDark,

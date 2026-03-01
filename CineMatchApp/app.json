@@ -31,6 +31,7 @@
     ],
     "android": {
       "package": "com.cinematch.app",
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
@@ -69,6 +70,9 @@
     },
     "web": {
       "favicon": "./assets/logo.png"
+    },
+    "updates": {
+      "enabled": false
     },
     "extra": {
       "eas": {

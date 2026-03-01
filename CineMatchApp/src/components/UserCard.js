@@ -4,10 +4,10 @@ import colors from '../constants/colors';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-// Altura adaptable: pantalla total menos espacio ocupado por status bar + header + tabs + márgenes
-// Clampada entre 400 (teléfonos muy pequeños) y 620 (teléfonos grandes) para no solaparse con tabs
-const CARD_HEIGHT = Math.min(Math.max(SCREEN_H - 260, 400), 620);
-const CARD_WIDTH = SCREEN_W - 40; // original, seguro para el swiper
+// Altura adaptable: pantalla total menos header, botones de accion y tab bar.
+// Se resta 320px para dejar espacio suficiente sin cortar el contenido.
+const CARD_HEIGHT = Math.min(Math.max(SCREEN_H - 320, 360), 560);
+const CARD_WIDTH = SCREEN_W - 40;
 
 const UserCard = ({ user }) => {
   // Validar que user existe y tiene las propiedades necesarias
@@ -102,37 +102,12 @@ const UserCard = ({ user }) => {
             </View>
           ) : null}
 
-          {/* Géneros favoritos */}
-          {(user.favorite_genres && user.favorite_genres.length > 0) ? (
-            <View style={styles.genresSection}>
-              <Text style={styles.genresSectionTitle}>🎭 Géneros favoritos:</Text>
-              <View style={styles.genresContainer}>
-                {user.favorite_genres
-                  .filter(genre => genre != null)
-                  .slice(0, 5)
-                  .map((genre, index) => {
-                    const genreName = typeof genre === 'object' && genre.name
-                      ? genre.name
-                      : (typeof genre === 'string' ? genre : 'Género');
-                    return (
-                      <View key={'genre-' + index} style={styles.genreTag}>
-                        <Text style={styles.genreText}>{genreName}</Text>
-                      </View>
-                    );
-                  })
-                }
-              </View>
-            </View>
-          ) : null}
-
-          {/* Indicador para ver películas */}
-          {(user.watched_movies_list && user.watched_movies_list.length > 0) ? (
-            <View style={styles.tapHintContainer}>
-              <Text style={styles.tapHintText}>
-                🎬 Toca la tarjeta para ver {user.watched_movies_list.length} película{user.watched_movies_list.length > 1 ? 's' : ''}
-              </Text>
-            </View>
-          ) : null}
+          {/* Indicador para ver mas detalles (generos, directores y peliculas) */}
+          <View style={styles.tapHintContainer}>
+            <Text style={styles.tapHintText}>
+              Toca la tarjeta para ver mas detalles
+            </Text>
+          </View>
         </ScrollView>
       </View>
     </View>
