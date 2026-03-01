@@ -40,9 +40,8 @@ const LoginScreen = ({ navigation }) => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
-    // Configurar Google Sign-In
     GoogleSignin.configure({
-      webClientId: '815909950118-ub202cfiv226mgf25t803lhgquclpcjv.apps.googleusercontent.com', // TODO: Reemplazar con tu Web Client ID real
+      webClientId: '815909950118-ub202cfiv226mgf25t803lhgquclpcjv.apps.googleusercontent.com',
       offlineAccess: true,
     });
   }, []);
@@ -108,9 +107,9 @@ const LoginScreen = ({ navigation }) => {
       });
     } catch (error) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // Usuario canceló, no mostrar error
+        // Usuario canceló
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        // Operación ya en progreso
+        // Ya en progreso
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         Alert.alert('Error', 'Google Play Services no está disponible en este dispositivo.');
       } else {
@@ -460,10 +459,6 @@ const styles = StyleSheet.create({
   socialButtonFacebook: {
     backgroundColor: '#1877F2',
     borderColor: '#1877F2',
-  },
-  socialIcon: {
-    width: 22,
-    height: 22,
   },
   socialButtonTextGoogle: {
     fontSize: 20,
