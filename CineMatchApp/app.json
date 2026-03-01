@@ -28,7 +28,19 @@
           "sounds": []
         }
       ],
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "2336131640224661",
+          "clientToken": "495a7734c3c5f2963ffa277472a7ec8a",
+          "displayName": "CineMatch",
+          "scheme": "fb2336131640224661",
+          "advertiserIDCollectionEnabled": false,
+          "autoLogAppEventsEnabled": false,
+          "isAutoInitEnabled": true
+        }
+      ]
     ],
     "android": {
       "package": "com.cinematch.app",

@@ -21,6 +21,7 @@ class User extends Authenticatable
         'profile_photo',
         'expo_push_token',
         'google_id',
+        'facebook_id',
     ];
 
     /**

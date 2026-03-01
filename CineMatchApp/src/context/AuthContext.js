@@ -135,6 +135,34 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithFacebook = async ({ accessToken }) => {
+    try {
+      const data = await authService.socialLogin({
+        idToken: accessToken,
+        provider: 'facebook',
+      });
+
+      setUser(data.user);
+      setIsAuthenticated(true);
+
+      if (data.is_new_user) {
+        await tutorialService.reset();
+      }
+
+      try {
+        await refetchUser();
+      } catch (e) {
+        console.log('Error silente al refetch después de Facebook login', e);
+      }
+
+      notificationService.registerForPushNotificationsAsync();
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await authService.logout();
@@ -183,6 +211,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         login,
         loginWithGoogle,
+        loginWithFacebook,
         register,
         logout,
         updateUser,

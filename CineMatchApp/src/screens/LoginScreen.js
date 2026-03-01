@@ -16,6 +16,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
 import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
 
@@ -27,7 +28,8 @@ const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const { login, loginWithGoogle } = useAuth();
+  const [facebookLoading, setFacebookLoading] = useState(false);
+  const { login, loginWithGoogle, loginWithFacebook } = useAuth();
 
   // Referencias para navegación entre inputs
   const passwordInputRef = useRef(null);
@@ -119,6 +121,35 @@ const LoginScreen = ({ navigation }) => {
       }
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const handleFacebookSignIn = async () => {
+    try {
+      setFacebookLoading(true);
+      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+
+      if (result.isCancelled) {
+        return;
+      }
+
+      const data = await AccessToken.getCurrentAccessToken();
+      if (!data) {
+        throw new Error('No se obtuvo el token de Facebook');
+      }
+
+      await loginWithFacebook({
+        accessToken: data.accessToken,
+      });
+    } catch (error) {
+      if (!error?.message?.includes('cancel')) {
+        Alert.alert(
+          'Error al iniciar con Facebook',
+          error?.message || 'Ocurrió un error. Inténtalo de nuevo.'
+        );
+      }
+    } finally {
+      setFacebookLoading(false);
     }
   };
 
@@ -238,11 +269,18 @@ const LoginScreen = ({ navigation }) => {
 
             <TouchableOpacity
               style={[styles.socialButton, styles.socialButtonFacebook]}
-              onPress={() => Alert.alert('Próximamente', 'El inicio de sesión con Facebook estará disponible pronto.')}
+              onPress={handleFacebookSignIn}
               activeOpacity={0.8}
+              disabled={facebookLoading}
             >
-              <Text style={styles.socialButtonTextFb}>f</Text>
-              <Text style={[styles.socialButtonLabel, { color: '#fff' }]}>Continuar con Facebook</Text>
+              {facebookLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.socialButtonTextFb}>f</Text>
+              )}
+              <Text style={[styles.socialButtonLabel, { color: '#fff' }]}>
+                {facebookLoading ? 'Conectando...' : 'Continuar con Facebook'}
+              </Text>
             </TouchableOpacity>
 
             <View style={styles.dividerSmall} />

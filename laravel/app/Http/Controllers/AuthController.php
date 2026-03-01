@@ -184,14 +184,14 @@ class AuthController extends Controller
     }
 
     /**
-     * Social login (Google)
-     * Recibe idToken de Google, lo verifica y crea/autentica usuario
+     * Social login (Google / Facebook)
+     * Recibe token del proveedor, lo verifica y crea/autentica usuario
      */
     public function socialLogin(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'id_token' => 'required|string',
-            'provider' => 'required|string|in:google',
+            'provider' => 'required|string|in:google,facebook',
             'name' => 'nullable|string',
             'email' => 'nullable|email',
             'photo' => 'nullable|string',
@@ -207,83 +207,123 @@ class AuthController extends Controller
         $idToken = $request->id_token;
         $provider = $request->provider;
 
-        // Verificar el token con Google
         try {
-            $response = Http::get('https://oauth2.googleapis.com/tokeninfo', [
-                'id_token' => $idToken,
-            ]);
-
-            if ($response->failed()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Token de Google inválido'
-                ], 401);
+            if ($provider === 'google') {
+                return $this->handleGoogleLogin($idToken, $request);
+            } elseif ($provider === 'facebook') {
+                return $this->handleFacebookLogin($idToken, $request);
             }
-
-            $googleUser = $response->json();
-            $googleId = $googleUser['sub'] ?? null;
-            $email = $googleUser['email'] ?? $request->email;
-            $name = $googleUser['name'] ?? $request->name ?? 'Usuario';
-            $photo = $googleUser['picture'] ?? $request->photo;
-
-            if (!$googleId || !$email) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se pudo obtener información del usuario de Google'
-                ], 400);
-            }
-
-            // Buscar usuario por google_id o email
-            $user = User::where('google_id', $googleId)->first();
-
-            if (!$user) {
-                $user = User::where('email', $email)->first();
-
-                if ($user) {
-                    // Usuario existe con ese email, vincular Google ID
-                    $user->update(['google_id' => $googleId]);
-                } else {
-                    // Crear nuevo usuario
-                    $user = User::create([
-                        'name' => $name,
-                        'email' => $email,
-                        'password' => Hash::make(uniqid('google_', true)),
-                        'google_id' => $googleId,
-                        'profile_photo' => $photo,
-                    ]);
-
-                    // Crear suscripción free por defecto
-                    $user->subscription()->create([
-                        'plan' => 'free',
-                        'status' => 'active',
-                        'max_radius' => 50,
-                        'daily_likes_limit' => 10,
-                    ]);
-                }
-            } else {
-                // Actualizar foto si cambió
-                if ($photo && $user->profile_photo !== $photo) {
-                    $user->update(['profile_photo' => $photo]);
-                }
-            }
-
-            $token = $user->createToken('auth_token')->plainTextToken;
-            $user->load('location');
-
-            $isNewUser = $user->wasRecentlyCreated;
-
-            return response()->json([
-                'success' => true,
-                'user' => $user,
-                'token' => $token,
-                'is_new_user' => $isNewUser,
-            ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al verificar con Google: ' . $e->getMessage()
+                'message' => 'Error al verificar con ' . ucfirst($provider) . ': ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function handleGoogleLogin($idToken, Request $request)
+    {
+        $response = Http::get('https://oauth2.googleapis.com/tokeninfo', [
+            'id_token' => $idToken,
+        ]);
+
+        if ($response->failed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token de Google inválido'
+            ], 401);
+        }
+
+        $googleUser = $response->json();
+        $providerId = $googleUser['sub'] ?? null;
+        $email = $googleUser['email'] ?? $request->email;
+        $name = $googleUser['name'] ?? $request->name ?? 'Usuario';
+        $photo = $googleUser['picture'] ?? $request->photo;
+
+        if (!$providerId || !$email) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo obtener información del usuario de Google'
+            ], 400);
+        }
+
+        return $this->findOrCreateSocialUser('google_id', $providerId, $email, $name, $photo);
+    }
+
+    private function handleFacebookLogin($accessToken, Request $request)
+    {
+        $response = Http::get('https://graph.facebook.com/me', [
+            'fields' => 'id,name,email,picture.type(large)',
+            'access_token' => $accessToken,
+        ]);
+
+        if ($response->failed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token de Facebook inválido'
+            ], 401);
+        }
+
+        $fbUser = $response->json();
+        $providerId = $fbUser['id'] ?? null;
+        $email = $fbUser['email'] ?? $request->email;
+        $name = $fbUser['name'] ?? $request->name ?? 'Usuario';
+        $photo = $fbUser['picture']['data']['url'] ?? $request->photo;
+
+        if (!$providerId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo obtener información del usuario de Facebook'
+            ], 400);
+        }
+
+        // Facebook no siempre da email
+        if (!$email) {
+            $email = 'fb_' . $providerId . '@cinematch.social';
+        }
+
+        return $this->findOrCreateSocialUser('facebook_id', $providerId, $email, $name, $photo);
+    }
+
+    private function findOrCreateSocialUser($providerIdField, $providerId, $email, $name, $photo)
+    {
+        $user = User::where($providerIdField, $providerId)->first();
+
+        if (!$user) {
+            $user = User::where('email', $email)->first();
+
+            if ($user) {
+                $user->update([$providerIdField => $providerId]);
+            } else {
+                $user = User::create([
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => Hash::make(uniqid('social_', true)),
+                    $providerIdField => $providerId,
+                    'profile_photo' => $photo,
+                ]);
+
+                $user->subscription()->create([
+                    'plan' => 'free',
+                    'status' => 'active',
+                    'max_radius' => 50,
+                    'daily_likes_limit' => 10,
+                ]);
+            }
+        } else {
+            if ($photo && $user->profile_photo !== $photo) {
+                $user->update(['profile_photo' => $photo]);
+            }
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+        $user->load('location');
+
+        return response()->json([
+            'success' => true,
+            'user' => $user,
+            'token' => $token,
+            'is_new_user' => $user->wasRecentlyCreated,
+        ]);
     }
 }
