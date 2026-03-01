@@ -19,12 +19,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { userService } from '../services/userService';
 import { matchService } from '../services/matchService';
 import UserCard from '../components/UserCard';
-import OnboardingTutorial from '../components/OnboardingTutorial';
 import colors from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faMasksTheater, faStar, faReply, faXmark, faFaceSmile } from '@fortawesome/free-solid-svg-icons';
-import { tutorialService } from '../services/tutorialService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -42,8 +40,6 @@ const HomeScreen = ({ navigation }) => {
   const [swiperKey, setSwiperKey] = useState(0);
   const [swiperStartIndex, setSwiperStartIndex] = useState(0);
   const currentCardIndexRef = useRef(0);
-  // Estado del tutorial onboarding
-  const [showTutorial, setShowTutorial] = useState(false);
 
   // Animación para fade in
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -93,17 +89,7 @@ const HomeScreen = ({ navigation }) => {
       duration: 600,
       useNativeDriver: true,
     }).start();
-    // Verificar si el tutorial debe mostrarse
-    checkTutorial();
   }, []);
-
-  // Consulta si el onboarding ya fue completado
-  const checkTutorial = async () => {
-    const completed = await tutorialService.isCompleted();
-    if (!completed) {
-      setShowTutorial(true);
-    }
-  };
 
   useEffect(() => {
     if (modalVisible) {
@@ -599,12 +585,6 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Tutorial onboarding (se muestra una sola vez al registrarse) */}
-      <OnboardingTutorial
-        visible={showTutorial}
-        onFinish={() => setShowTutorial(false)}
-        navigation={navigation}
-      />
     </LinearGradient>
   );
 };

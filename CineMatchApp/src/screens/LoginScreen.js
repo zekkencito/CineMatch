@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
 
@@ -25,7 +26,8 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const { login, loginWithGoogle } = useAuth();
 
   // Referencias para navegación entre inputs
   const passwordInputRef = useRef(null);
@@ -34,6 +36,14 @@ const LoginScreen = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    // Configurar Google Sign-In
+    GoogleSignin.configure({
+      webClientId: '815909950118-ub202cfiv226mgf25t803lhgquclpcjv.apps.googleusercontent.com', // TODO: Reemplazar con tu Web Client ID real
+      offlineAccess: true,
+    });
+  }, []);
 
   useEffect(() => {
     Animated.parallel([
@@ -71,6 +81,44 @@ const LoginScreen = ({ navigation }) => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setGoogleLoading(true);
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const signInResult = await GoogleSignin.signIn();
+
+      const idToken = signInResult?.data?.idToken || signInResult?.idToken;
+
+      if (!idToken) {
+        throw new Error('No se obtuvo el token de Google');
+      }
+
+      const userInfo = signInResult?.data?.user || signInResult?.user || {};
+
+      await loginWithGoogle({
+        idToken,
+        name: userInfo.name,
+        email: userInfo.email,
+        photo: userInfo.photo,
+      });
+    } catch (error) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // Usuario canceló, no mostrar error
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // Operación ya en progreso
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Error', 'Google Play Services no está disponible en este dispositivo.');
+      } else {
+        Alert.alert(
+          'Error al iniciar con Google',
+          error?.message || 'Ocurrió un error. Inténtalo de nuevo.'
+        );
+      }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -170,6 +218,34 @@ const LoginScreen = ({ navigation }) => {
               <Text style={styles.dividerText}>O</Text>
               <View style={styles.dividerLine} />
             </View>
+
+            {/* Botones de login social */}
+            <TouchableOpacity
+              style={styles.socialButton}
+              onPress={handleGoogleSignIn}
+              activeOpacity={0.8}
+              disabled={googleLoading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator size="small" color="#4285F4" />
+              ) : (
+                <Text style={styles.socialButtonTextGoogle}>G</Text>
+              )}
+              <Text style={styles.socialButtonLabel}>
+                {googleLoading ? 'Conectando...' : 'Continuar con Google'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.socialButton, styles.socialButtonFacebook]}
+              onPress={() => Alert.alert('Próximamente', 'El inicio de sesión con Facebook estará disponible pronto.')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.socialButtonTextFb}>f</Text>
+              <Text style={[styles.socialButtonLabel, { color: '#fff' }]}>Continuar con Facebook</Text>
+            </TouchableOpacity>
+
+            <View style={styles.dividerSmall} />
 
             <TouchableOpacity
               style={styles.registerButton}
@@ -331,6 +407,43 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 16,
     fontWeight: '700',
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: colors.border,
+    gap: 10,
+  },
+  socialButtonFacebook: {
+    backgroundColor: '#1877F2',
+    borderColor: '#1877F2',
+  },
+  socialIcon: {
+    width: 22,
+    height: 22,
+  },
+  socialButtonTextGoogle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#4285F4',
+  },
+  socialButtonTextFb: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  socialButtonLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  dividerSmall: {
+    height: 4,
   },
   footer: {
     marginTop: 32,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +8,8 @@ import ChatScreen from '../screens/ChatScreen';
 import PreferencesScreen from '../screens/PreferencesScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import SubscriptionScreen from '../screens/SubscriptionScreen';
+import OnboardingTutorial from '../components/OnboardingTutorial';
+import { tutorialService } from '../services/tutorialService';
 import { ActivityIndicator, View } from 'react-native';
 import colors from '../constants/colors';
 
@@ -15,6 +17,44 @@ const Stack = createStackNavigator();
 
 const AppNavigator = () => {
   const { isAuthenticated, loading } = useAuth();
+  const [showTutorial, setShowTutorial] = useState(false);
+  const navigationRef = useRef(null);
+
+  // Verificar si el tutorial debe mostrarse (solo cuentas nuevas)
+  const checkTutorial = async () => {
+    const completed = await tutorialService.isCompleted();
+    if (!completed) {
+      setShowTutorial(true);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      checkTutorial();
+    }
+  }, [isAuthenticated]);
+
+  // Callback estable para navegar entre tabs
+  const navigateToTab = useCallback((screenName) => {
+    try {
+      navigationRef.current?.navigate('MainTabs', { screen: screenName });
+    } catch (e) {
+      // Silencioso
+    }
+  }, []);
+
+  // Callback estable para navegar a pantallas del Stack (ej: Preferencias)
+  const navigateToScreen = useCallback((screenName, params = {}) => {
+    try {
+      if (screenName === 'goBack') {
+        navigationRef.current?.goBack();
+      } else {
+        navigationRef.current?.navigate(screenName, params);
+      }
+    } catch (e) {
+      // Silencioso
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -25,8 +65,9 @@ const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {isAuthenticated ? (
+        <>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="MainTabs" component={MainNavigator} />
           <Stack.Screen 
@@ -50,6 +91,15 @@ const AppNavigator = () => {
             options={{ headerShown: false }}
           />
         </Stack.Navigator>
+
+        {/* Tutorial onboarding - se renderiza sobre todo, incluyendo pantallas del Stack */}
+        <OnboardingTutorial
+          visible={showTutorial}
+          onFinish={() => setShowTutorial(false)}
+          navigateToTab={navigateToTab}
+          navigateToScreen={navigateToScreen}
+        />
+        </>
       ) : (
         <AuthNavigator />
       )}

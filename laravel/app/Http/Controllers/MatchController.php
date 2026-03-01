@@ -95,7 +95,7 @@ class MatchController extends Controller
 
         $matches = UserMatch::where('user_one_id', $userId)
             ->orWhere('user_two_id', $userId)
-            ->with(['userOne.favoriteGenres', 'userTwo.favoriteGenres'])
+            ->with(['userOne.favoriteGenres', 'userOne.favoriteDirectors', 'userOne.watchedMovies', 'userTwo.favoriteGenres', 'userTwo.favoriteDirectors', 'userTwo.watchedMovies'])
             ->orderBy('matched_at', 'desc')
             ->get();
 

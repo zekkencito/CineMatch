@@ -12,10 +12,14 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
+  Modal,
+  Dimensions,
+  PanResponder,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { matchService } from '../services/matchService';
+import { userService } from '../services/userService';
 import MatchItem from '../components/MatchItem';
 import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
@@ -23,6 +27,8 @@ import { faMasksTheater } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faTicket, faStar, faHeart } from '@fortawesome/free-solid-svg-icons';
 import api from '../config/api';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const MatchesScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -34,6 +40,59 @@ const MatchesScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+
+  // Profile modal state
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState(null);
+  const modalTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return gestureState.dy > 5 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          modalTranslateY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 150) {
+          Animated.timing(modalTranslateY, {
+            toValue: SCREEN_HEIGHT,
+            duration: 250,
+            useNativeDriver: true,
+          }).start(() => {
+            setProfileModalVisible(false);
+            setTimeout(() => setSelectedProfile(null), 100);
+          });
+        } else {
+          Animated.spring(modalTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (profileModalVisible) {
+      Animated.spring(modalTranslateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 8,
+      }).start();
+    } else {
+      Animated.timing(modalTranslateY, {
+        toValue: SCREEN_HEIGHT,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [profileModalVisible]);
 
   // Recargar matches cada vez que la pantalla sea visible
   useFocusEffect(
@@ -107,6 +166,33 @@ const MatchesScreen = ({ navigation }) => {
 
   const handleMatchPress = (match) => {
     navigation.navigate('Chat', { match });
+  };
+
+  const closeProfileModal = () => {
+    Animated.timing(modalTranslateY, {
+      toValue: SCREEN_HEIGHT,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      setProfileModalVisible(false);
+      setTimeout(() => setSelectedProfile(null), 100);
+    });
+  };
+
+  const handleAvatarPress = async (match) => {
+    const matchUser = match.user || match;
+    setSelectedProfile(matchUser);
+    setProfileModalVisible(true);
+    // Fetch full profile data (directors, movies)
+    try {
+      const fullProfile = await userService.getUserProfile(matchUser.id);
+      const profileData = fullProfile?.user || fullProfile;
+      if (profileData) {
+        setSelectedProfile(prev => ({ ...prev, ...profileData }));
+      }
+    } catch (e) {
+      // Silent: show basic data from match
+    }
   };
 
   if (loading) {
@@ -224,6 +310,7 @@ const MatchesScreen = ({ navigation }) => {
             <MatchItem
               match={item}
               onPress={handleMatchPress}
+              onAvatarPress={handleAvatarPress}
               unreadCount={unreadPerMatch[item.id] || 0}
             />
           )}
@@ -240,6 +327,175 @@ const MatchesScreen = ({ navigation }) => {
           }
         />
       )}
+
+      {/* Profile Bottom Sheet Modal */}
+      <Modal
+        visible={profileModalVisible}
+        animationType="none"
+        transparent={true}
+        onRequestClose={closeProfileModal}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={closeProfileModal}
+          />
+
+          <Animated.View
+            style={[
+              styles.bottomSheetContainer,
+              { transform: [{ translateY: modalTranslateY }] },
+            ]}
+          >
+            {/* Handle */}
+            <View {...panResponder.panHandlers} style={styles.handleContainer}>
+              <View style={styles.handle} />
+            </View>
+
+            {/* Header con foto y nombre */}
+            <View style={styles.profileHeader}>
+              <Image
+                source={{ uri: selectedProfile?.profile_photo || 'https://images.unsplash.com/photo-1535016120720-40c646be5580?w=200' }}
+                style={styles.profilePhoto}
+              />
+              <View style={styles.profileHeaderInfo}>
+                <Text style={styles.profileName}>
+                  {selectedProfile?.name || 'Usuario'}
+                  {selectedProfile?.age ? `, ${selectedProfile.age}` : ''}
+                </Text>
+                {selectedProfile?.bio ? (
+                  <Text style={styles.profileBio} numberOfLines={3}>
+                    {selectedProfile.bio}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+
+            <ScrollView
+              contentContainerStyle={styles.profileScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Porcentaje de coincidencia */}
+              {selectedProfile?.match_percentage ? (
+                <View style={styles.coincidenciaBox}>
+                  <Text style={styles.coincidenciaPercent}>{selectedProfile.match_percentage}%</Text>
+                  <Text style={styles.coincidenciaLabel}>Porcentaje de Coincidencia</Text>
+                </View>
+              ) : null}
+
+              {/* En común */}
+              {((selectedProfile?.common_genres_count && selectedProfile.common_genres_count > 0) ||
+                (selectedProfile?.common_directors_count && selectedProfile.common_directors_count > 0) ||
+                (selectedProfile?.common_movies_count && selectedProfile.common_movies_count > 0)) ? (
+                <View style={styles.profileSection}>
+                  <Text style={styles.profileSectionTitle}>🎬 En común</Text>
+                  <View style={styles.commonRow}>
+                    {selectedProfile.common_genres_count > 0 && (
+                      <View style={styles.commonItem}>
+                        <Text style={styles.commonCount}>{selectedProfile.common_genres_count}</Text>
+                        <Text style={styles.commonLabel}>género{selectedProfile.common_genres_count > 1 ? 's' : ''}</Text>
+                      </View>
+                    )}
+                    {selectedProfile.common_directors_count > 0 && (
+                      <View style={styles.commonItem}>
+                        <Text style={styles.commonCount}>{selectedProfile.common_directors_count}</Text>
+                        <Text style={styles.commonLabel}>director{selectedProfile.common_directors_count > 1 ? 'es' : ''}</Text>
+                      </View>
+                    )}
+                    {selectedProfile.common_movies_count > 0 && (
+                      <View style={styles.commonItem}>
+                        <Text style={styles.commonCount}>{selectedProfile.common_movies_count}</Text>
+                        <Text style={styles.commonLabel}>película{selectedProfile.common_movies_count > 1 ? 's' : ''}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ) : null}
+
+              {/* Géneros favoritos */}
+              {(selectedProfile?.favorite_genres && selectedProfile.favorite_genres.length > 0) ? (
+                <View style={styles.profileSection}>
+                  <Text style={styles.profileSectionTitle}>Géneros favoritos</Text>
+                  <View style={styles.tagsRow}>
+                    {selectedProfile.favorite_genres
+                      .filter(g => g != null)
+                      .map((genre, index) => {
+                        const name = typeof genre === 'object' && genre.name ? genre.name : (typeof genre === 'string' ? genre : 'Género');
+                        return (
+                          <View key={'pg-' + index} style={styles.tag}>
+                            <Text style={styles.tagText}>{name}</Text>
+                          </View>
+                        );
+                      })}
+                  </View>
+                </View>
+              ) : null}
+
+              {/* Directores favoritos */}
+              {(() => {
+                const dirs = selectedProfile?.favorite_directors || selectedProfile?.favoriteDirectors || [];
+                const dirList = Array.isArray(dirs) ? dirs.filter(d => d != null) : [];
+                if (dirList.length === 0) return null;
+                return (
+                  <View style={styles.profileSection}>
+                    <Text style={styles.profileSectionTitle}>Directores favoritos</Text>
+                    <View style={styles.directorsGrid}>
+                      {dirList.map((director, index) => {
+                        const name = typeof director === 'object' && director.name ? director.name : (typeof director === 'string' ? director : 'Director');
+                        const profilePath = typeof director === 'object' ? director.profile_path : null;
+                        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                        return (
+                          <View key={'pd-' + index} style={styles.directorCard}>
+                            {profilePath ? (
+                              <Image
+                                source={{ uri: `https://image.tmdb.org/t/p/w185${profilePath}` }}
+                                style={styles.directorPhoto}
+                              />
+                            ) : (
+                              <View style={styles.directorPhotoPlaceholder}>
+                                <Text style={styles.directorInitials}>{initials}</Text>
+                              </View>
+                            )}
+                            <Text style={styles.directorName} numberOfLines={2}>{name}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })()}
+
+              {/* Películas vistas */}
+              {(() => {
+                const movies = selectedProfile?.watched_movies_list || selectedProfile?.watched_movies || [];
+                if (movies.length === 0) return null;
+                return (
+                  <View style={styles.profileSection}>
+                    <Text style={styles.profileSectionTitle}>Películas vistas</Text>
+                    {movies.map((m) => (
+                      <View key={m.tmdb_id || m.id} style={styles.movieItemContainer}>
+                        {m.poster_path ? (
+                          <Image
+                            source={{ uri: `https://image.tmdb.org/t/p/w300${m.poster_path}` }}
+                            style={styles.moviePoster}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={styles.moviePosterPlaceholder}>
+                            <Text style={styles.moviePosterIcon}>🎬</Text>
+                          </View>
+                        )}
+                        <Text style={styles.movieTitle}>{m.title || m.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })()}
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 };
@@ -395,6 +651,219 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
     width: 60,
+  },
+  // Profile Modal styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  bottomSheetContainer: {
+    backgroundColor: colors.secondary,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: SCREEN_HEIGHT * 0.8,
+    minHeight: SCREEN_HEIGHT * 0.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  handle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.textSecondary,
+    opacity: 0.5,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    gap: 14,
+  },
+  profilePhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: colors.primary,
+  },
+  profileHeaderInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  profileBio: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    lineHeight: 20,
+  },
+  profileScrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  coincidenciaBox: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 197, 24, 0.1)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#F5C518',
+  },
+  coincidenciaPercent: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#F5C518',
+  },
+  coincidenciaLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#F5C518',
+    marginTop: 2,
+  },
+  profileSection: {
+    marginBottom: 16,
+  },
+  profileSectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.primary,
+    marginBottom: 10,
+    letterSpacing: 0.3,
+  },
+  commonRow: {
+    flexDirection: 'row',
+    gap: 16,
+    justifyContent: 'center',
+  },
+  commonItem: {
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 80,
+  },
+  commonCount: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.primary,
+  },
+  commonLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tag: {
+    backgroundColor: '#000',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  tagText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  directorsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  directorCard: {
+    width: 80,
+    alignItems: 'center',
+  },
+  directorPhoto: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    marginBottom: 6,
+  },
+  directorPhotoPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  directorInitials: {
+    color: colors.textDark,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  directorName: {
+    fontSize: 11,
+    color: colors.text,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  movieItemContainer: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  moviePoster: {
+    width: 200,
+    height: 300,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  moviePosterPlaceholder: {
+    width: 200,
+    height: 300,
+    borderRadius: 12,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moviePosterIcon: {
+    fontSize: 48,
+  },
+  movieTitle: {
+    marginTop: 10,
+    fontWeight: '700',
+    fontSize: 16,
+    color: colors.textDark,
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
 });
 

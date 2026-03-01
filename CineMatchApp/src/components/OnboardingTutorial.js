@@ -123,40 +123,44 @@ const STEPS = [
         arrowDirection: null,
     },
     {
-        screen: 'Perfil',
+        navigate: 'Preferencias',
+        preferencesTab: 'genres',
         icon: faMusic,
         title: 'Seccion: Generos favoritos',
         description:
-            'En la primera pestana de preferencias puedes seleccionar tus generos favoritos de peliculas: accion, comedia, drama, ciencia ficcion, terror, entre otros. Toca cada genero para activarlo o desactivarlo.',
+            'En esta pestana puedes seleccionar tus generos favoritos de peliculas: accion, comedia, drama, ciencia ficcion, terror, entre otros. Toca cada genero para activarlo o desactivarlo.',
         cardPosition: 'bottom',
-        arrowDirection: null,
+        arrowDirection: 'up',
     },
     {
-        screen: 'Perfil',
+        navigate: 'Preferencias',
+        preferencesTab: 'directors',
         icon: faVideo,
         title: 'Seccion: Directores favoritos',
         description:
-            'En la segunda pestana puedes buscar y agregar tus directores de cine favoritos. Busca por nombre y agrega los que mas te gusten. Aparecen con su foto de perfil.',
+            'En esta pestana puedes buscar y agregar tus directores de cine favoritos. Busca por nombre y agrega los que mas te gusten. Aparecen con su foto de perfil.',
         cardPosition: 'bottom',
-        arrowDirection: null,
+        arrowDirection: 'up',
     },
     {
-        screen: 'Perfil',
+        navigate: 'Preferencias',
+        preferencesTab: 'movies',
         icon: faFilm,
         title: 'Seccion: Peliculas vistas',
         description:
-            'En la tercera pestana puedes buscar y agregar peliculas que has visto. El sistema usa esta informacion para encontrar personas con gustos similares y calcular la compatibilidad.',
+            'En esta pestana puedes buscar y agregar peliculas que has visto. El sistema usa esta informacion para encontrar personas con gustos similares y calcular la compatibilidad.',
         cardPosition: 'bottom',
-        arrowDirection: null,
+        arrowDirection: 'up',
     },
     {
-        screen: 'Perfil',
+        navigate: 'Preferencias',
+        preferencesTab: 'radius',
         icon: faLocationDot,
         title: 'Seccion: Radio de busqueda',
         description:
-            'En la cuarta pestana configuras hasta que distancia quieres buscar otros usuarios. Puedes usar el GPS para actualizar tu ubicacion y ajustar el radio con el deslizador.',
+            'En esta pestana configuras hasta que distancia quieres buscar otros usuarios. Puedes usar el GPS para actualizar tu ubicacion y ajustar el radio con el deslizador.',
         cardPosition: 'bottom',
-        arrowDirection: null,
+        arrowDirection: 'up',
     },
     {
         screen: 'Amigos Palomeros',
@@ -170,7 +174,7 @@ const STEPS = [
     },
 ];
 
-const OnboardingTutorial = ({ visible, onFinish, navigation }) => {
+const OnboardingTutorial = ({ visible, onFinish, navigateToTab, navigateToScreen }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
@@ -197,16 +201,29 @@ const OnboardingTutorial = ({ visible, onFinish, navigation }) => {
 
     // Navegar a la pantalla correspondiente al paso actual
     useEffect(() => {
-        if (!visible || !navigation) return;
+        if (!visible) return;
         const step = STEPS[currentStep];
-        if (step && step.screen) {
-            try {
-                navigation.navigate(step.screen);
-            } catch (e) {
-                // Silencioso si la navegacion falla
-            }
+        const prevStep = currentStep > 0 ? STEPS[currentStep - 1] : null;
+
+        // Si venimos de una pantalla del Stack y volvemos a un tab, hacer goBack primero
+        const wasOnStackScreen = prevStep && prevStep.navigate;
+        const goingToTab = step.screen && !step.navigate;
+
+        if (wasOnStackScreen && goingToTab && navigateToScreen) {
+            navigateToScreen('goBack');
+            // Pequeño delay para que el goBack termine antes de navegar al tab
+            setTimeout(() => {
+                if (navigateToTab) navigateToTab(step.screen);
+            }, 100);
+        } else if (step.navigate && navigateToScreen) {
+            // Navegar a una pantalla del Stack (ej: Preferencias) con params
+            navigateToScreen(step.navigate, step.preferencesTab ? { tutorialTab: step.preferencesTab } : {});
+        } else if (step.screen && navigateToTab) {
+            // Navegar a un tab (ej: Amigos Palomeros, Perfil)
+            navigateToTab(step.screen);
         }
-    }, [currentStep, visible, navigation]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentStep, visible]);
 
     const handleNext = () => {
         if (currentStep < STEPS.length - 1) {
@@ -223,9 +240,16 @@ const OnboardingTutorial = ({ visible, onFinish, navigation }) => {
     };
 
     const handleSkip = async () => {
-        // Volver a la pantalla principal al saltar
-        if (navigation) {
-            try { navigation.navigate('Amigos Palomeros'); } catch (e) { }
+        // Si estamos en una pantalla del Stack, volver atras primero
+        const step = STEPS[currentStep];
+        if (step.navigate && navigateToScreen) {
+            try { navigateToScreen('goBack'); } catch (e) { }
+        }
+        // Luego ir al tab principal
+        if (navigateToTab) {
+            setTimeout(() => {
+                try { navigateToTab('Amigos Palomeros'); } catch (e) { }
+            }, step.navigate ? 100 : 0);
         }
         await tutorialService.markCompleted();
         setCurrentStep(0);
@@ -233,6 +257,11 @@ const OnboardingTutorial = ({ visible, onFinish, navigation }) => {
     };
 
     const handleFinish = async () => {
+        // Si estamos en una pantalla del Stack, volver atras
+        const step = STEPS[currentStep];
+        if (step.navigate && navigateToScreen) {
+            try { navigateToScreen('goBack'); } catch (e) { }
+        }
         await tutorialService.markCompleted();
         setCurrentStep(0);
         onFinish();

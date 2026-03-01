@@ -101,6 +101,40 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async ({ idToken, name, email, photo }) => {
+    try {
+      const data = await authService.socialLogin({
+        idToken,
+        provider: 'google',
+        name,
+        email,
+        photo,
+      });
+
+      setUser(data.user);
+      setIsAuthenticated(true);
+
+      // Si es usuario nuevo, resetear tutorial
+      if (data.is_new_user) {
+        await tutorialService.reset();
+      }
+
+      // Actualizar info completa
+      try {
+        await refetchUser();
+      } catch (e) {
+        console.log('Error silente al refetch después de social login', e);
+      }
+
+      // Registrar para notificaciones push
+      notificationService.registerForPushNotificationsAsync();
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await authService.logout();
@@ -148,6 +182,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         isAuthenticated,
         login,
+        loginWithGoogle,
         register,
         logout,
         updateUser,

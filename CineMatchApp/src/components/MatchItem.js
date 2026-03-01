@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import colors from '../constants/colors';
 
-const MatchItem = ({ match, onPress, unreadCount = 0 }) => {
+const MatchItem = ({ match, onPress, onAvatarPress, unreadCount = 0 }) => {
   // Extraer géneros en común
   const user = match.user || match;
   const genres = user.favorite_genres?.map(g => g.name).join(', ') || 'Fan de Películas';
@@ -21,7 +21,14 @@ const MatchItem = ({ match, onPress, unreadCount = 0 }) => {
 
   return (
     <TouchableOpacity style={[styles.container, unreadCount > 0 && styles.containerUnread]} onPress={() => onPress && onPress(match)}>
-      <View style={styles.avatarWrap}>
+      <TouchableOpacity
+        style={styles.avatarWrap}
+        activeOpacity={0.7}
+        onPress={(e) => {
+          e.stopPropagation && e.stopPropagation();
+          onAvatarPress && onAvatarPress(match);
+        }}
+      >
         <Image
           source={{ uri: user.profile_photo || getPlaceholderImage() }}
           style={styles.avatar}
@@ -33,7 +40,7 @@ const MatchItem = ({ match, onPress, unreadCount = 0 }) => {
             </Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
       <View style={styles.infoContainer}>
         <Text style={styles.name}>{user.name}</Text>
         <Text style={styles.commonInterests}>

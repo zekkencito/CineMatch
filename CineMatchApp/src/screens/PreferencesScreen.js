@@ -45,6 +45,14 @@ const PreferencesScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Reaccionar al cambio de tab enviado por el tutorial
+  useEffect(() => {
+    const tutorialTab = route?.params?.tutorialTab;
+    if (tutorialTab && ['genres', 'directors', 'movies', 'radius'].includes(tutorialTab)) {
+      setActiveTab(tutorialTab);
+    }
+  }, [route?.params?.tutorialTab]);
+
   // Géneros
   const [allGenres, setAllGenres] = useState([]);
   const [selectedGenres, setSelectedGenres] = useState([]);

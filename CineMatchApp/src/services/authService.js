@@ -67,4 +67,25 @@ export const authService = {
       throw error.response?.data || error;
     }
   },
+
+  // Social login (Google)
+  async socialLogin({ idToken, provider, name, email, photo }) {
+    try {
+      const response = await api.post('/social-login', {
+        id_token: idToken,
+        provider,
+        name,
+        email,
+        photo,
+      });
+
+      if (response.data.token) {
+        await storage.saveToken(response.data.token);
+        await storage.saveUser(response.data.user);
+      }
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
 };

@@ -49,7 +49,7 @@ const UserCard = ({ user }) => {
       {(user.match_percentage && user.match_percentage > 0) ? (
         <View style={styles.matchBadge}>
           <Text style={styles.matchPercentage}>{String(user.match_percentage)}%</Text>
-          <Text style={styles.matchLabel}>MATCH</Text>
+          <Text style={styles.matchLabel}>COINCIDENCIA</Text>
         </View>
       ) : null}
 
@@ -157,11 +157,11 @@ const styles = StyleSheet.create({
     color: '#F5C518',
   },
   matchLabel: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
     color: '#F5C518',
     marginTop: -2,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   infoContainer: {
     flex: 1,

@@ -66,7 +66,7 @@ const AnimatedTabIcon = ({ focused, iconName, iconLib = 'material' }) => {
   );
 };
 
-const MainNavigator = () => {
+const MainNavigator = ({ navigation: parentNavigation }) => {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadPerMatch, setUnreadPerMatch] = useState({});

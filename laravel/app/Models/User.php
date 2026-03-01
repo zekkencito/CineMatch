@@ -20,6 +20,7 @@ class User extends Authenticatable
         'bio',
         'profile_photo',
         'expo_push_token',
+        'google_id',
     ];
 
     /**

@@ -24,6 +24,7 @@ use App\Http\Controllers\SubscriptionController;
 // Rutas públicas (sin autenticación)
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/social-login', [AuthController::class, 'socialLogin']);
 
 // Rutas de películas y géneros (públicas)
 Route::get('/movies', [MovieController::class, 'getMovies']);
