@@ -16,8 +16,9 @@ import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
 import colors from '../constants/colors';
 
-const EditProfileScreen = ({ navigation }) => {
-  const { user, setUser } = useAuth();
+const EditProfileScreen = ({ navigation, route }) => {
+  const { user, setUser, clearPendingSocialOnboarding } = useAuth();
+  const fromSocialLogin = route?.params?.fromSocialLogin || false;
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -50,9 +51,14 @@ const EditProfileScreen = ({ navigation }) => {
 
       if (response.data.success) {
         setUser(response.data.user);
-        Alert.alert('Éxito', 'Perfil actualizado correctamente', [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+        if (fromSocialLogin) {
+          clearPendingSocialOnboarding();
+          navigation.navigate('MainTabs');
+        } else {
+          Alert.alert('\u00c9xito', 'Perfil actualizado correctamente', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
+        }
       }
     } catch (error) {
       console.error('Error updating profile:', error);

@@ -16,12 +16,14 @@ import colors from '../constants/colors';
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, pendingSocialOnboarding } = useAuth();
   const [showTutorial, setShowTutorial] = useState(false);
   const navigationRef = useRef(null);
 
   // Verificar si el tutorial debe mostrarse (solo cuentas nuevas)
   const checkTutorial = async () => {
+    // No mostrar tutorial si hay onboarding social pendiente
+    if (pendingSocialOnboarding) return;
     const completed = await tutorialService.isCompleted();
     if (!completed) {
       setShowTutorial(true);
@@ -33,6 +35,23 @@ const AppNavigator = () => {
       checkTutorial();
     }
   }, [isAuthenticated]);
+
+  // Cuando termina el onboarding social, revisar si hay tutorial pendiente
+  useEffect(() => {
+    if (isAuthenticated && !pendingSocialOnboarding) {
+      checkTutorial();
+    }
+  }, [pendingSocialOnboarding]);
+
+  // Navegar a Preferencias cuando hay onboarding social pendiente
+  useEffect(() => {
+    if (isAuthenticated && pendingSocialOnboarding) {
+      const timer = setTimeout(() => {
+        navigationRef.current?.navigate('Preferencias', { fromSocialLogin: true });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, pendingSocialOnboarding]);
 
   // Callback estable para navegar entre tabs
   const navigateToTab = useCallback((screenName) => {

@@ -40,6 +40,7 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const PreferencesScreen = ({ navigation, route }) => {
   const isInitialSetup = route?.params?.isInitialSetup || false;
+  const fromSocialLogin = route?.params?.fromSocialLogin || false;
 
   const [activeTab, setActiveTab] = useState('genres');
   const [loading, setLoading] = useState(true);
@@ -391,10 +392,16 @@ const PreferencesScreen = ({ navigation, route }) => {
         [{
           text: 'OK',
           onPress: () => {
-            if (isInitialSetup) {
+            if (fromSocialLogin) {
+              navigation.navigate('Editar Perfil', { fromSocialLogin: true });
+            } else if (isInitialSetup) {
               navigation.replace('MainTabs');
             } else {
               navigation.goBack();
+            }
+          }
+        }]
+      );
             }
           }
         }]
@@ -889,7 +896,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         >
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => fromSocialLogin ? navigation.navigate('MainTabs') : navigation.goBack()}
           >
             <Text style={styles.backButtonText}>← Volver</Text>
           </TouchableOpacity>

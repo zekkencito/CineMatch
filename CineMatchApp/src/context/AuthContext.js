@@ -10,6 +10,9 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pendingSocialOnboarding, setPendingSocialOnboarding] = useState(false);
+
+  const clearPendingSocialOnboarding = () => setPendingSocialOnboarding(false);
 
   useEffect(() => {
     loadUser();
@@ -114,9 +117,10 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
       setIsAuthenticated(true);
 
-      // Si es usuario nuevo, resetear tutorial
+      // Si es usuario nuevo, resetear tutorial y marcar onboarding pendiente
       if (data.is_new_user) {
         await tutorialService.reset();
+        setPendingSocialOnboarding(true);
       }
 
       // Actualizar info completa
@@ -147,6 +151,7 @@ export const AuthProvider = ({ children }) => {
 
       if (data.is_new_user) {
         await tutorialService.reset();
+        setPendingSocialOnboarding(true);
       }
 
       try {
@@ -207,8 +212,11 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         loading,
         isAuthenticated,
+        pendingSocialOnboarding,
+        clearPendingSocialOnboarding,
         login,
         loginWithGoogle,
         loginWithFacebook,
