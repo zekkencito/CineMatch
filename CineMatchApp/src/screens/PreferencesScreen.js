@@ -402,10 +402,6 @@ const PreferencesScreen = ({ navigation, route }) => {
           }
         }]
       );
-            }
-          }
-        }]
-      );
     } catch (error) {
       console.error('Error guardando tus preferencias:', error);
       console.error('Error en respuesta:', error.response?.data);
