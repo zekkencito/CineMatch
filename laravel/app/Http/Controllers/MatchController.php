@@ -93,29 +93,51 @@ class MatchController extends Controller
     {
         $userId = $request->user()->id;
 
-        $matches = UserMatch::where('user_one_id', $userId)
-            ->orWhere('user_two_id', $userId)
-            ->with(['userOne.favoriteGenres', 'userOne.favoriteDirectors', 'userOne.watchedMovies', 'userTwo.favoriteGenres', 'userTwo.favoriteDirectors', 'userTwo.watchedMovies'])
-            ->orderBy('matched_at', 'desc')
-            ->get();
+        try {
+            $matches = UserMatch::where(function ($query) use ($userId) {
+                    $query->where('user_one_id', $userId)
+                          ->orWhere('user_two_id', $userId);
+                })
+                ->with(['userOne', 'userTwo'])
+                ->orderBy('matched_at', 'desc')
+                ->get();
 
-        // Formatear matches para devolver el otro usuario
-        $formattedMatches = $matches->map(function ($match) use ($userId) {
-            $otherUser = $match->user_one_id == $userId 
-                ? $match->userTwo 
-                : $match->userOne;
+            // Formatear matches para devolver el otro usuario
+            $formattedMatches = $matches->map(function ($match) use ($userId) {
+                $otherUser = $match->user_one_id == $userId 
+                    ? $match->userTwo 
+                    : $match->userOne;
 
-            return [
-                'id' => $match->id,
-                'user' => $otherUser,
-                'matched_at' => $match->matched_at,
-            ];
-        });
+                if (!$otherUser) {
+                    return null;
+                }
 
-        return response()->json([
-            'success' => true,
-            'matches' => $formattedMatches
-        ]);
+                return [
+                    'id' => $match->id,
+                    'user' => [
+                        'id' => $otherUser->id,
+                        'name' => $otherUser->name,
+                        'email' => $otherUser->email,
+                        'age' => $otherUser->age,
+                        'bio' => $otherUser->bio,
+                        'profile_photo' => $otherUser->profile_photo,
+                    ],
+                    'matched_at' => $match->matched_at,
+                ];
+            })->filter()->values();
+
+            return response()->json([
+                'success' => true,
+                'matches' => $formattedMatches
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in getMatches: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar los matches',
+                'matches' => []
+            ], 500);
+        }
     }
 
     /**
