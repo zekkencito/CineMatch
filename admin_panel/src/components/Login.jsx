@@ -17,7 +17,7 @@ export default function Login() {
     try {
       const data = await api.login(email, password)
       if (data.token) {
-        window.location.href = '/'
+        window.location.href = '/admin/'
       }
     } catch (err) {
       setError('Credenciales inválidas o servidor no disponible')
