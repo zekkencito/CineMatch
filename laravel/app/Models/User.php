@@ -22,6 +22,7 @@ class User extends Authenticatable
         'expo_push_token',
         'google_id',
         'facebook_id',
+        'is_admin',
     ];
 
     /**
