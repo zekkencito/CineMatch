@@ -32,7 +32,7 @@ export default function Login() {
       <div className="login-card">
         {/* Logo */}
         <div className="login-logo">
-          <img src="/logo.png" alt="CineMatch" className="login-logo-img" />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CineMatch" className="login-logo-img" />
         </div>
 
         {/* Título */}
