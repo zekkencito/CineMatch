@@ -1,7 +1,7 @@
-// Configuración de la API - Laravel local conectado a Railway DB
-const API_BASE_URL = 'http://localhost:8000/api';
+// Configuración de la API - Usa variable de entorno o detecta automáticamente
+const API_BASE_URL = import.meta.env.VITE_API_URL || (window.location.origin + '/api');
 
-console.log('🚀 API conectando a Laravel local (Railway DB):', API_BASE_URL);
+console.log('🚀 API conectando a:', API_BASE_URL);
 
 // Clase para manejar todas las llamadas a la API
 class ApiService {
@@ -43,7 +43,7 @@ class ApiService {
         if (response.status === 401) {
           // Token expirado o no autorizado
           localStorage.removeItem('admin_token');
-          window.location.href = '/login';
+          window.location.href = '/admin/login';
         }
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }

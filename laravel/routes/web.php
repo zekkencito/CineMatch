@@ -83,3 +83,12 @@ Route::get('/fix-tokens', function () {
         return "❌ Error: " . $e->getMessage();
     }
 });
+
+// Admin Panel SPA - Catch-all route para servir el index.html del panel de admin
+Route::get('/admin/{any?}', function () {
+    $path = public_path('admin/index.html');
+    if (file_exists($path)) {
+        return response()->file($path, ['Content-Type' => 'text/html']);
+    }
+    return response('Admin panel not built. Run: cd admin_panel && npm run build', 404);
+})->where('any', '.*');
