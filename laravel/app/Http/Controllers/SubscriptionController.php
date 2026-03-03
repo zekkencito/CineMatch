@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Subscription;
+use App\Models\SubscriptionPlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -208,31 +209,63 @@ class SubscriptionController extends Controller
      */
     public function getPlans()
     {
-        return response()->json([
-            'success' => true,
-            'plans' => [
-                'free' => [
-                    'name' => 'Gratis',
+        $dbPlans = SubscriptionPlan::all();
+
+        // Construir respuesta con planes de la BD
+        $plans = [];
+        foreach ($dbPlans as $plan) {
+            $key = strtolower($plan->name);
+
+            // Generar features dinámicamente basado en los campos del plan
+            $features = [];
+            if ($plan->daily_likes > 0 && $plan->daily_likes < 999) {
+                $features[] = "Hasta {$plan->daily_likes} likes por día";
+            } elseif ($plan->daily_likes >= 999) {
+                $features[] = '❤️ Likes ilimitados';
+            }
+            if ($plan->see_who_liked) {
+                $features[] = '💫 Ver quién te dio like';
+            }
+            if ($plan->advanced_filters) {
+                $features[] = '🎬 Filtros avanzados';
+            }
+            if ($plan->price <= 0) {
+                $features[] = 'Funcionalidades básicas';
+            } else {
+                $features[] = '🌍 Radio extendido';
+                $features[] = '⏮️ Deshacer swipes';
+                $features[] = '🌟 Perfil destacado';
+            }
+
+            $plans[$key] = [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'price' => (float) $plan->price,
+                'daily_likes' => $plan->daily_likes,
+                'duration_days' => $plan->duration_days,
+                'see_who_liked' => $plan->see_who_liked,
+                'advanced_filters' => $plan->advanced_filters,
+                'features' => $features,
+            ];
+        }
+
+        // Si no hay planes en la BD, devolver defaults
+        if (empty($plans)) {
+            $plans = [
+                'basic' => [
+                    'name' => 'Basic',
                     'price' => 0,
                     'features' => [
-                        'Radio de búsqueda: hasta 50 km',
                         'Hasta 10 likes por día',
                         'Funcionalidades básicas',
                     ]
                 ],
-                'premium' => [
-                    'name' => 'Premium',
-                    'price' => 9.99, // USD por mes
-                    'features' => [
-                        '🌍 Radio extendido hasta 100 km',
-                        '❤️ Likes ilimitados',
-                        '💫 Ver quién te dio like',
-                        '⏮️ Deshacer swipes',
-                        '🎬 Filtros avanzados',
-                        '🌟 Perfil destacado',
-                    ]
-                ]
-            ]
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'plans' => $plans
         ]);
     }
 
@@ -281,8 +314,9 @@ class SubscriptionController extends Controller
 
         $duration = $request->input('duration', 30);
 
-        // Precio base por mes (USD)
-        $pricePerMonth = 9.99;
+        // Obtener precio del plan premium desde la BD
+        $premiumPlan = SubscriptionPlan::where('price', '>', 0)->orderBy('price', 'asc')->first();
+        $pricePerMonth = $premiumPlan ? (float) $premiumPlan->price : 9.99;
         $amount = round($pricePerMonth * ($duration / 30), 2);
         if ($amount <= 0) $amount = 0.5;
 

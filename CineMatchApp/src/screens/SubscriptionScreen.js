@@ -128,6 +128,7 @@ const SubscriptionScreen = ({ navigation }) => {
       }
 
       if (plansResponse.success) {
+        console.log('📋 Planes recibidos de API:', JSON.stringify(plansResponse.plans));
         setPlans(plansResponse.plans);
       }
 
@@ -155,9 +156,10 @@ const SubscriptionScreen = ({ navigation }) => {
   const [pendingOrder, setPendingOrder] = useState(null);
 
   const handleUpgrade = async () => {
+    const premiumPrice = plans?.premium?.price ?? '9.99';
     Alert.alert(
       '💳 Actualizar a Premium',
-      '¿Deseas actualizar a Premium por $9.99/mes?',
+      `¿Deseas actualizar a Premium por $${premiumPrice}/mes?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -430,7 +432,7 @@ const SubscriptionScreen = ({ navigation }) => {
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
                 <FontAwesomeIcon icon={faFilm} size={16} color={colors.primary} style={{ marginRight: 8 }} />
-                <Text style={styles.premiumPrice}>$9.99/mes</Text>
+                <Text style={styles.premiumPrice}>${plans.premium.price}/mes</Text>
               </View>
               <Text style={styles.premiumSubtitle}>Desbloquea todas las funciones:</Text>
 
