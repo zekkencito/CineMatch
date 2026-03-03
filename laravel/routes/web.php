@@ -85,7 +85,33 @@ Route::get('/fix-tokens', function () {
 });
 
 // Admin Panel SPA - Catch-all route para servir el index.html del panel de admin
-Route::get('/admin/{any?}', function () {
+// Solo intercepta rutas que NO son archivos estáticos (js, css, png, etc.)
+Route::get('/admin/{any?}', function ($any = null) {
+    // Si es un archivo estático, dejar que el servidor lo sirva directamente
+    if ($any && preg_match('/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/', $any)) {
+        $filePath = public_path('admin/' . $any);
+        if (file_exists($filePath)) {
+            $mimeTypes = [
+                'js' => 'application/javascript',
+                'css' => 'text/css',
+                'png' => 'image/png',
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'gif' => 'image/gif',
+                'svg' => 'image/svg+xml',
+                'ico' => 'image/x-icon',
+                'woff' => 'font/woff',
+                'woff2' => 'font/woff2',
+                'ttf' => 'font/ttf',
+                'map' => 'application/json',
+            ];
+            $ext = pathinfo($any, PATHINFO_EXTENSION);
+            $mime = $mimeTypes[$ext] ?? 'application/octet-stream';
+            return response()->file($filePath, ['Content-Type' => $mime]);
+        }
+    }
+    
+    // Para cualquier otra ruta, servir index.html (SPA routing)
     $path = public_path('admin/index.html');
     if (file_exists($path)) {
         return response()->file($path, ['Content-Type' => 'text/html']);
