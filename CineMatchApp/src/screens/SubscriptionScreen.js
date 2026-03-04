@@ -129,7 +129,21 @@ const SubscriptionScreen = ({ navigation }) => {
 
       if (plansResponse.success) {
         console.log('📋 Planes recibidos de API:', JSON.stringify(plansResponse.plans));
-        setPlans(plansResponse.plans);
+        console.log('📋 Claves de planes:', Object.keys(plansResponse.plans || {}));
+        
+        // Normalizar: si no existe clave 'premium', buscar el primer plan con price > 0
+        const receivedPlans = plansResponse.plans || {};
+        if (!receivedPlans.premium) {
+          const premiumKey = Object.keys(receivedPlans).find(
+            key => receivedPlans[key].price > 0
+          );
+          if (premiumKey) {
+            console.log(`📋 Plan premium encontrado con clave '${premiumKey}', normalizando a 'premium'`);
+            receivedPlans.premium = receivedPlans[premiumKey];
+          }
+        }
+        console.log('📋 Plan premium final:', JSON.stringify(receivedPlans.premium));
+        setPlans(receivedPlans);
       }
 
       // Asegurar que forzamos la recarga del usuario completo para que toda la app sepa
@@ -156,7 +170,9 @@ const SubscriptionScreen = ({ navigation }) => {
   const [pendingOrder, setPendingOrder] = useState(null);
 
   const handleUpgrade = async () => {
-    const premiumPrice = plans?.premium?.price ?? '9.99';
+    const premiumPrice = plans?.premium?.price;
+    console.log('💳 handleUpgrade - plans:', JSON.stringify(plans));
+    console.log('💳 handleUpgrade - premiumPrice:', premiumPrice);
     Alert.alert(
       '💳 Actualizar a Premium',
       `¿Deseas actualizar a Premium por $${premiumPrice}/mes?`,

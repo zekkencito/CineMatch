@@ -316,7 +316,10 @@ class SubscriptionController extends Controller
 
         // Obtener precio del plan premium desde la BD
         $premiumPlan = SubscriptionPlan::where('price', '>', 0)->orderBy('price', 'asc')->first();
-        $pricePerMonth = $premiumPlan ? (float) $premiumPlan->price : 9.99;
+        if (!$premiumPlan) {
+            return response()->json(['success' => false, 'message' => 'No se encontró un plan premium en la base de datos'], 404);
+        }
+        $pricePerMonth = (float) $premiumPlan->price;
         $amount = round($pricePerMonth * ($duration / 30), 2);
         if ($amount <= 0) $amount = 0.5;
 
