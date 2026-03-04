@@ -125,6 +125,8 @@ const SubscriptionScreen = ({ navigation }) => {
 
       if (planResponse.success) {
         setCurrentPlan(planResponse.subscription);
+      } else {
+        console.error('❌ Error planResponse:', JSON.stringify(planResponse));
       }
 
       if (plansResponse.success) {
@@ -144,6 +146,8 @@ const SubscriptionScreen = ({ navigation }) => {
         }
         console.log('📋 Plan premium final:', JSON.stringify(receivedPlans.premium));
         setPlans(receivedPlans);
+      } else {
+        console.error('❌ Error plansResponse:', JSON.stringify(plansResponse));
       }
 
       // Asegurar que forzamos la recarga del usuario completo para que toda la app sepa
@@ -154,9 +158,12 @@ const SubscriptionScreen = ({ navigation }) => {
         console.log('Error silenciado al refrescar contexto de usuario', err);
       }
     } catch (error) {
-      console.error('Error loading subscription:', error);
+      console.error('❌ Error loading subscription - Full error:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error response:', error.response);
+      console.error('❌ Error data:', error?.response?.data);
       if (!isRefreshing) {
-        Alert.alert('Error', 'No se pudo cargar la información de suscripciones');
+        Alert.alert('Error', 'No se pudo cargar la información de suscripciones: ' + (error.message || 'Error desconocido'));
       }
     } finally {
       if (isRefreshing) {
