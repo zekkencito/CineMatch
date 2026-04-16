@@ -21,6 +21,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Ruta de login del admin
+Route::get('/login', function () {
+    return redirect('/admin/login');
+});
+
 // Rutas de retorno de PayPal
 Route::get('/paypal/return', [SubscriptionController::class, 'handlePayPalReturn'])->name('paypal.return');
 Route::get('/paypal/cancel', [SubscriptionController::class, 'handlePayPalCancel'])->name('paypal.cancel');
