@@ -40,6 +40,21 @@ class UserSeeder extends Seeder
 
         // Array de usuarios de prueba
         $testUsers = [
+            // Usuario Admin
+            [
+                'name' => 'Administrator',
+                'email' => 'admin@gmail.com',
+                'age' => 30,
+                'bio' => 'Panel de administración de Cinematch',
+                'latitude' => $baseLatitude,
+                'longitude' => $baseLongitude,
+                'city' => 'Nuevo Casas Grandes',
+                'country' => 'México',
+                'genres' => [$sciFiGenreId, $actionGenreId],
+                'directors' => [],
+                'movies' => []
+            ],
+
             // Usuario 1: María García
             [
                 'name' => 'María García',
@@ -492,10 +507,11 @@ class UserSeeder extends Seeder
         $count = 0;
         foreach ($testUsers as $userData) {
             // Crear usuario
+            $password = $userData['email'] === 'admin@gmail.com' ? 'admin123' : '123456';
             $user = User::create([
                 'name' => $userData['name'],
                 'email' => $userData['email'],
-                'password' => Hash::make('123456'),
+                'password' => Hash::make($password),
                 'age' => $userData['age'],
                 'bio' => $userData['bio'],
             ]);
@@ -554,7 +570,8 @@ class UserSeeder extends Seeder
         }
 
         echo "\n🎉 {$count} usuarios creados exitosamente!\n";
-        echo "📧 Todos los usuarios tienen la contraseña: 123456\n";
+        echo "📧 Admin: admin@gmail.com | Contraseña: admin123\n";
+        echo "📧 Otros usuarios: contraseña 123456\n";
         echo "🌍 Ubicación base: Nuevo Casas Grandes, Chihuahua\n";
         echo "📱 Radio de búsqueda: 7 km\n";
     }

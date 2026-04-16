@@ -8,7 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
   return (
-    <Router basename="/admin">
+    <Router basename="/">
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route 

@@ -94,7 +94,7 @@ class AdminController extends Controller
 
             // Usuarios más activos (por likes enviados)
             $topUsers = User::selectRaw('users.name, COUNT(likes.id) as matches')
-                ->leftJoin('likes', 'users.id', '=', 'likes.from_user_id')
+                ->leftJoin('likes', 'users.id', '=', 'likes.liker_id')
                 ->groupBy('users.id', 'users.name')
                 ->orderByDesc('matches')
                 ->limit(3)
@@ -308,8 +308,8 @@ class AdminController extends Controller
     {
         return DB::table('matches')
             ->join('users', function($join) {
-                $join->on('matches.user_one_id', '=', 'users.id')
-                     ->orOn('matches.user_two_id', '=', 'users.id');
+                $join->on('matches.user1_id', '=', 'users.id')
+                     ->orOn('matches.user2_id', '=', 'users.id');
             })
             ->selectRaw('users.name, COUNT(*) as matches')
             ->groupBy('users.id', 'users.name')
@@ -348,7 +348,7 @@ class AdminController extends Controller
         // Agregar subquery de matches
         $query->addSelect(DB::raw('COALESCE((
             SELECT COUNT(*) FROM `matches` 
-            WHERE (`matches`.`user_one_id` = `users`.`id` OR `matches`.`user_two_id` = `users`.`id`)
+            WHERE (`matches`.`user1_id` = `users`.`id` OR `matches`.`user2_id` = `users`.`id`)
         ), 0) as match_count'));
 
         // Agregar subquery para obtener el plan de suscripción
@@ -387,8 +387,8 @@ class AdminController extends Controller
 
         // Count matches
         $matchCount = DB::table('matches')
-            ->where('user_one_id', $id)
-            ->orWhere('user_two_id', $id)
+            ->where('user1_id', $id)
+            ->orWhere('user2_id', $id)
             ->count();
 
         return response()->json([
