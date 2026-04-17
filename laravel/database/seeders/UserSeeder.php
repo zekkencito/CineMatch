@@ -44,6 +44,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Administrator',
                 'email' => 'admin@gmail.com',
+                'is_admin' => true,
                 'age' => 30,
                 'bio' => 'Panel de administración de Cinematch',
                 'latitude' => $baseLatitude,
@@ -514,6 +515,7 @@ class UserSeeder extends Seeder
                 'password' => Hash::make($password),
                 'age' => $userData['age'],
                 'bio' => $userData['bio'],
+                'is_admin' => $userData['is_admin'] ?? false,
             ]);
 
             // Crear ubicación
