@@ -94,7 +94,7 @@ class AdminController extends Controller
 
             // Usuarios más activos (por likes enviados)
             $topUsers = User::selectRaw('users.name, COUNT(likes.id) as matches')
-                ->leftJoin('likes', 'users.id', '=', 'likes.liker_id')
+                ->leftJoin('likes', 'users.id', '=', 'likes.from_user_id')
                 ->groupBy('users.id', 'users.name')
                 ->orderByDesc('matches')
                 ->limit(3)

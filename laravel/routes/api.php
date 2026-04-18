@@ -27,6 +27,12 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/social-login', [AuthController::class, 'socialLogin']);
 
+Route::get('/limpiar-cache', function() {
+    Artisan::call('config:clear');
+    Artisan::call('cache:clear');
+    return 'Caché borrada con éxito';
+});
+
 // Rutas de películas y géneros (públicas)
 Route::get('/movies', [MovieController::class, 'getMovies']);
 Route::get('/movies/{id}', [MovieController::class, 'getMovie']);
@@ -150,4 +156,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin logout
     Route::post('/admin/logout', [AdminController::class, 'logout']);
+
+    
 });
