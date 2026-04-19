@@ -11,11 +11,11 @@ class PaymentTypeSeeder extends Seeder
     public function run(): void
     {
         DB::table('payment_types')->insert([
-            ['type'=>'Credit Card','created_at'=>now(),'updated_at'=>now()],
-            ['type'=>'Debit Card','created_at'=>now(),'updated_at'=>now()],
-            ['type'=>'PayPal','created_at'=>now(),'updated_at'=>now()],
-            ['type'=>'Mercado Pago','created_at'=>now(),'updated_at'=>now()],
-            ['type'=>'Bank Transfer','created_at'=>now(),'updated_at'=>now()],
+            ['name'=>'Credit Card','type'=>'Credit Card','created_at'=>now(),'updated_at'=>now()],
+            ['name'=>'Debit Card','type'=>'Debit Card','created_at'=>now(),'updated_at'=>now()],
+            ['name'=>'PayPal','type'=>'PayPal','created_at'=>now(),'updated_at'=>now()],
+            ['name'=>'Mercado Pago','type'=>'Mercado Pago','created_at'=>now(),'updated_at'=>now()],
+            ['name'=>'Bank Transfer','type'=>'Bank Transfer','created_at'=>now(),'updated_at'=>now()],
         ]);
     }
 }
