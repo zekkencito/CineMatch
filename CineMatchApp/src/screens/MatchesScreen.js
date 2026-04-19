@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -20,9 +20,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { matchService } from '../services/matchService';
 import { userService } from '../services/userService';
+import { gamificationService } from '../services/gamificationService';
 import MatchItem from '../components/MatchItem';
 import { useAuth } from '../context/AuthContext';
-import colors from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
 import { faMasksTheater } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faTicket, faStar, faHeart } from '@fortawesome/free-solid-svg-icons';
@@ -31,6 +32,8 @@ import api from '../config/api';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const MatchesScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const isPremium = user?.is_premium || user?.subscription?.is_premium;
   const [matches, setMatches] = useState([]);
@@ -100,7 +103,10 @@ const MatchesScreen = ({ navigation }) => {
       loadMatches();
       loadLikesReceived();
       loadUnreadPerMatch();
-    }, [])
+      if (user?.id) {
+        gamificationService.trackActivity(user.id, 'matches_open').catch(() => {});
+      }
+    }, [user?.id])
   );
 
   const loadMatches = async (isRefreshing = false) => {
@@ -165,6 +171,9 @@ const MatchesScreen = ({ navigation }) => {
   };
 
   const handleMatchPress = (match) => {
+    if (user?.id) {
+      gamificationService.trackActivity(user.id, 'chat_open').catch(() => {});
+    }
     navigation.navigate('Chat', { match });
   };
 
@@ -198,7 +207,7 @@ const MatchesScreen = ({ navigation }) => {
   if (loading) {
     return (
       <LinearGradient
-        colors={[colors.secondary, colors.secondaryLight]}
+        colors={[colors.gradient.start, colors.gradient.end]}
         style={styles.centerContainer}
       >
         <View style={styles.loadingBox}>
@@ -218,9 +227,12 @@ const MatchesScreen = ({ navigation }) => {
 
   return (
     <LinearGradient
-      colors={[colors.secondary, colors.secondaryLight]}
+      colors={[colors.gradient.heroStart, colors.gradient.start, colors.gradient.heroEnd]}
       style={styles.container}
     >
+      <View style={styles.backgroundGlowTop} pointerEvents="none" />
+      <View style={styles.backgroundGlowBottom} pointerEvents="none" />
+
       <Animated.View
         style={[
           styles.header,
@@ -500,9 +512,29 @@ const MatchesScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
+  },
+  backgroundGlowTop: {
+    position: 'absolute',
+    top: -110,
+    left: -70,
+    width: 230,
+    height: 230,
+    borderRadius: 120,
+    backgroundColor: colors.gradient.accentGlow,
+    opacity: 0.3,
+  },
+  backgroundGlowBottom: {
+    position: 'absolute',
+    bottom: 70,
+    right: -80,
+    width: 220,
+    height: 220,
+    borderRadius: 120,
+    backgroundColor: colors.overlayLight,
+    opacity: 0.24,
   },
   centerContainer: {
     flex: 1,
@@ -526,33 +558,43 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 45,
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    gap: 14,
+    paddingTop: Platform.OS === 'ios' ? 56 : 42,
+    paddingHorizontal: 18,
+    paddingBottom: 16,
+    gap: 12,
+    marginHorizontal: 0,
+    marginTop: 8,
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
   },
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   iconEmoji: {
     fontSize: 32,
   },
   title: {
-    fontSize: 30,
+    fontSize: 29,
     fontWeight: '900',
     color: colors.primary,
-    letterSpacing: 1,
+    letterSpacing: 0.6,
   },
   subtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginLeft: 4,
-    fontWeight: '500',
+    fontSize: 13,
+    color: colors.textMuted,
+    marginLeft: 2,
+    fontWeight: '600',
   },
   listContainer: {
     paddingHorizontal: 20,
+    paddingTop: 4,
     paddingBottom: 120,
     gap: 12,
   },
@@ -582,12 +624,17 @@ const styles = StyleSheet.create({
   },
   likesSection: {
     marginHorizontal: 20,
-    marginBottom: 16,
-    backgroundColor: colors.card,
-    borderRadius: 16,
+    marginBottom: 14,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: 18,
     padding: 14,
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 4,
   },
   likesSectionHeader: {
     flexDirection: 'row',
@@ -596,8 +643,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   likesSectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
     color: colors.text,
     flex: 1,
   },
@@ -605,13 +652,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingHorizontal: 10,
+    borderRadius: 999,
+    paddingHorizontal: 11,
     paddingVertical: 4,
     gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
   premiumBtnText: {
-    color: '#fff',
+    color: colors.textDark,
     fontSize: 11,
     fontWeight: '800',
   },

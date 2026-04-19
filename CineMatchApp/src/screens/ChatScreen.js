@@ -227,7 +227,7 @@ const ChatScreen = ({ route, navigation }) => {
   if (loading) {
     return (
       <LinearGradient
-        colors={[colors.secondary, colors.secondaryLight]}
+        colors={[colors.gradient.start, colors.gradient.end]}
         style={styles.loadingContainer}
       >
         <ActivityIndicator size="large" color={colors.primary} />
@@ -243,7 +243,7 @@ const ChatScreen = ({ route, navigation }) => {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
     >
       <LinearGradient
-        colors={[colors.secondary, colors.secondaryLight]}
+        colors={[colors.gradient.start, colors.gradient.end]}
         style={styles.flex}
       >
         {/* Lista de mensajes */}
@@ -452,3 +452,4 @@ const styles = StyleSheet.create({
 });
 
 export default ChatScreen;
+

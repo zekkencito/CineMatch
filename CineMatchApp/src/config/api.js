@@ -5,8 +5,7 @@ import Constants from 'expo-constants';
 
 // Configuración automática según la plataforma
 const getApiUrl = () => {
-  // Always use the production URL for standalone builds
-  const envApiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://cinematch-production-7ba5.up.railway.app/api';
+  const envApiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://pamelatarelo18.alwaysdata.net/api';
   console.log('📡 API Config: Usando URL:', envApiUrl);
   return envApiUrl;
 };

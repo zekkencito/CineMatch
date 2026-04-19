@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Image, StyleSheet, Dimensions, ScrollView, Platform } from 'react-native';
-import colors from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -9,11 +9,25 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const CARD_HEIGHT = Math.min(Math.max(SCREEN_H - 320, 360), 560);
 const CARD_WIDTH = SCREEN_W - 40;
 
+const FRAME_STYLES = {
+  classic_gold: { borderWidth: 2, borderColor: '#F5C518' },
+  noir_silver: { borderWidth: 2, borderColor: '#A7A7A7' },
+  neon_pop: { borderWidth: 2, borderColor: '#31E9FF' },
+  epic_scarlet: { borderWidth: 2, borderColor: '#FF5A5A' },
+  director_cut: { borderWidth: 2, borderColor: '#B09A5E' },
+};
+
 const UserCard = ({ user }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   // Validar que user existe y tiene las propiedades necesarias
   if (!user || !user.id) {
     return null;
   }
+
+  const equippedFrame = user.equipped_frame || user.equippedFrame || null;
+  const frameStyle = equippedFrame ? FRAME_STYLES[equippedFrame] : null;
 
   // Imágenes de placeholder por género/preferencias
   const getPlaceholderImage = () => {
@@ -38,12 +52,13 @@ const UserCard = ({ user }) => {
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, frameStyle]}>
       <Image
         source={{ uri: user.profile_photo || getPlaceholderImage() }}
         style={styles.image}
         resizeMode="cover"
       />
+      <View style={styles.imageScrim} />
 
       {/* Badge de Match % */}
       {(user.match_percentage && user.match_percentage > 0) ? (
@@ -114,58 +129,62 @@ const UserCard = ({ user }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    borderRadius: 24,
-    backgroundColor: '#ffffff',
+    borderRadius: 26,
+    backgroundColor: colors.surfaceElevated,
     overflow: 'hidden',
-    shadowColor: '#000',
     paddingTop: 0,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
-    borderWidth: 2,
-    borderColor: '#F5C518',
+    shadowOpacity: 0,
+    elevation: 0,
+    borderWidth: 0,
   },
   image: {
     width: '100%',
-    height: '50%',
+    height: '56%',
+  },
+  imageScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '44%',
+    height: '12%',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   matchBadge: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: '#000',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
+    top: 14,
+    right: 14,
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 14,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
     elevation: 4,
-    borderWidth: 2,
-    borderColor: '#F5C518',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   matchPercentage: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
-    color: '#F5C518',
+    color: colors.primary,
   },
   matchLabel: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
-    color: '#F5C518',
+    color: colors.primary,
     marginTop: -2,
-    letterSpacing: 0.5,
+    letterSpacing: 0.7,
   },
   infoContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.surfaceElevated,
   },
   infoContent: {
     paddingHorizontal: 16,
@@ -245,47 +264,49 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
-    paddingBottom: 12,
-    borderBottomWidth: 3,
-    borderBottomColor: '#F5C518',
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   name: {
-    fontSize: 28,
+    fontSize: 29,
     fontWeight: '900',
-    color: '#000',
+    color: colors.text,
     flex: 1,
-    letterSpacing: 0.8,
+    letterSpacing: 0.4,
   },
   distanceBadge: {
-    backgroundColor: '#000',
+    backgroundColor: 'rgba(245,197,24,0.12)',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   distanceText: {
     fontSize: 11,
-    color: '#F5C518',
-    fontWeight: '700',
+    color: colors.primary,
+    fontWeight: '800',
   },
   bio: {
     fontSize: 14,
-    color: '#444',
+    color: colors.textSecondary,
     marginBottom: 12,
     lineHeight: 21,
     fontWeight: '500',
   },
   compatibilityContainer: {
-    backgroundColor: '#FFF9E6',
+    backgroundColor: colors.surface,
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 12,
-    borderWidth: 2,
-    borderColor: '#F5C518',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   compatibilityTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#000',
+    color: colors.primary,
     marginBottom: 8,
     letterSpacing: 0.3,
   },
@@ -296,14 +317,14 @@ const styles = StyleSheet.create({
   },
   compatibilityText: {
     fontSize: 12,
-    color: '#000',
-    backgroundColor: '#FFFFFF',
+    color: colors.text,
+    backgroundColor: colors.card,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 999,
     fontWeight: '700',
-    borderWidth: 2,
-    borderColor: '#F5C518',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   genresContainer: {
     flexDirection: 'row',
@@ -317,37 +338,37 @@ const styles = StyleSheet.create({
   genresSectionTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#000',
+    color: colors.primary,
     marginBottom: 10,
     letterSpacing: 0.3,
   },
   genreTag: {
-    backgroundColor: '#000',
+    backgroundColor: colors.surface,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 24,
-    borderWidth: 2,
-    borderColor: '#F5C518',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   genreText: {
-    color: '#F5C518',
+    color: colors.primary,
     fontSize: 13,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   tapHintContainer: {
-    backgroundColor: '#000',
-    padding: 14,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    padding: 10,
+    borderRadius: 999,
     marginTop: 8,
-    borderWidth: 2,
-    borderColor: '#F5C518',
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
   },
   tapHintText: {
-    color: '#F5C518',
-    fontSize: 13,
-    fontWeight: '700',
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
     textAlign: 'center',
   },
   moviePosterIcon: {

@@ -121,6 +121,7 @@ class MatchController extends Controller
                         'age' => $otherUser->age,
                         'bio' => $otherUser->bio,
                         'profile_photo' => $otherUser->profile_photo,
+                        'equipped_frame' => $otherUser->equipped_frame,
                     ],
                     'matched_at' => $match->matched_at,
                 ];

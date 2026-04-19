@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { subscriptionService } from '../services/subscriptionService';
 import { paymentService } from '../services/paymentService';
 import paymentConfig from '../config/paymentConfig';
@@ -34,6 +35,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 const SubscriptionScreen = ({ navigation }) => {
+  const { colors: themeColors } = useTheme();
   const { refetchUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -325,7 +327,7 @@ const SubscriptionScreen = ({ navigation }) => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={[colors.secondary, colors.secondaryLight]} style={styles.loadingGradient}>
+        <LinearGradient colors={[themeColors.gradient.start, themeColors.gradient.end]} style={styles.loadingGradient}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Cargando...</Text>
@@ -341,7 +343,7 @@ const SubscriptionScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient colors={[colors.secondary, colors.secondaryLight]} style={styles.headerGradient}>
+      <LinearGradient colors={[themeColors.gradient.start, themeColors.gradient.end]} style={styles.headerGradient}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -355,7 +357,7 @@ const SubscriptionScreen = ({ navigation }) => {
         </View>
       </LinearGradient>
 
-      <LinearGradient colors={[colors.secondary, colors.secondaryLight]} style={styles.contentGradient}>
+      <LinearGradient colors={[themeColors.gradient.start, themeColors.gradient.end]} style={styles.contentGradient}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -836,3 +838,4 @@ const styles = StyleSheet.create({
 });
 
 export default SubscriptionScreen;
+

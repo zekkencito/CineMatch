@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
   Alert,
   ActivityIndicator,
@@ -15,36 +16,45 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
+// import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+// import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
 import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
 
-const { width } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [facebookLoading, setFacebookLoading] = useState(false);
-  const { login, loginWithGoogle, loginWithFacebook } = useAuth();
+  // const [googleLoading, setGoogleLoading] = useState(false);
+  // const [facebookLoading, setFacebookLoading] = useState(false);
+  const { login } = useAuth();
 
   // Referencias para navegación entre inputs
   const passwordInputRef = useRef(null);
+  const scrollViewRef = useRef(null);
+  const focusPasswordInput = () => {
+    passwordInputRef.current?.focus();
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 120);
+  };
+
 
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
-  useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: '815909950118-ub202cfiv226mgf25t803lhgquclpcjv.apps.googleusercontent.com',
-      offlineAccess: true,
-    });
-  }, []);
+  // Comentado para Expo Go - Google Sign-in requiere módulos nativos
+  // useEffect(() => {
+  //   GoogleSignin.configure({
+  //     webClientId: '815909950118-ub202cfiv226mgf25t803lhgquclpcjv.apps.googleusercontent.com',
+  //     offlineAccess: true,
+  //   });
+  // }, []);
 
   useEffect(() => {
     Animated.parallel([
@@ -84,95 +94,100 @@ const LoginScreen = ({ navigation }) => {
       setLoading(false);
     }
   };
+// Comentado para Expo Go - Google Sign-in requiere módulos nativos
+  // const handleGoogleSignIn = async () => {
+  //   try {
+  //     setGoogleLoading(true);
+  //     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+  //     const signInResult = await GoogleSignin.signIn();
 
-  const handleGoogleSignIn = async () => {
-    try {
-      setGoogleLoading(true);
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      const signInResult = await GoogleSignin.signIn();
+  //     const idToken = signInResult?.data?.idToken || signInResult?.idToken;
 
-      const idToken = signInResult?.data?.idToken || signInResult?.idToken;
+  //     if (!idToken) {
+  //       throw new Error('No se obtuvo el token de Google');
+  //     }
 
-      if (!idToken) {
-        throw new Error('No se obtuvo el token de Google');
-      }
+  //     const userInfo = signInResult?.data?.user || signInResult?.user || {};
 
-      const userInfo = signInResult?.data?.user || signInResult?.user || {};
+  //     await loginWithGoogle({
+  //       idToken,
+  //       name: userInfo.name,
+  //       email: userInfo.email,
+  //       photo: userInfo.photo,
+  //     });
+  //   } catch (error) {
+  //     if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+  //       // Usuario canceló
+  //     } else if (error.code === statusCodes.IN_PROGRESS) {
+  //       // Ya en progreso
+  //     } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+  //       Alert.alert('Error', 'Google Play Services no está disponible en este dispositivo.');
+  //     } else {
+  //       Alert.alert(
+  //         'Error al iniciar con Google',
+  //         error?.message || 'Ocurrió un error. Inténtalo de nuevo.'
+  //       );
+  //     }
+  //   } finally {
+  //     setGoogleLoading(false);
+  //   }
+  // };
 
-      await loginWithGoogle({
-        idToken,
-        name: userInfo.name,
-        email: userInfo.email,
-        photo: userInfo.photo,
-      });
-    } catch (error) {
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // Usuario canceló
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        // Ya en progreso
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert('Error', 'Google Play Services no está disponible en este dispositivo.');
-      } else {
-        Alert.alert(
-          'Error al iniciar con Google',
-          error?.message || 'Ocurrió un error. Inténtalo de nuevo.'
-        );
-      }
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
+  // Comentado para Expo Go - Facebook Sign-in requiere módulos nativos
+  // const handleFacebookSignIn = async () => {
+  //   try {
+  //     setFacebookLoading(true);
+  //     const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
 
-  const handleFacebookSignIn = async () => {
-    try {
-      setFacebookLoading(true);
-      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+  //     if (result.isCancelled) {
+  //       return;
+  //     }
 
-      if (result.isCancelled) {
-        return;
-      }
+  //     const data = await AccessToken.getCurrentAccessToken();
+  //     if (!data) {
+  //       throw new Error('No se obtuvo el token de Facebook');
+  //     }
 
-      const data = await AccessToken.getCurrentAccessToken();
-      if (!data) {
-        throw new Error('No se obtuvo el token de Facebook');
-      }
-
-      await loginWithFacebook({
-        accessToken: data.accessToken,
-      });
-    } catch (error) {
-      if (!error?.message?.includes('cancel')) {
-        Alert.alert(
-          'Error al iniciar con Facebook',
-          error?.message || 'Ocurrió un error. Inténtalo de nuevo.'
-        );
-      }
-    } finally {
-      setFacebookLoading(false);
-    }
-  };
+  //     await loginWithFacebook({
+  //       accessToken: data.accessToken,
+  //     });
+  //   } finally {
+  //     setFacebookLoading(false);
+  //   }
+  // };
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 24}
       style={styles.container}
     >
       <LinearGradient
-        colors={[colors.secondary, colors.secondaryLight, colors.secondary]}
+        colors={[colors.gradient.heroStart, colors.gradient.start, colors.gradient.heroEnd]}
         style={styles.gradient}
       >
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [
-                { translateY: slideAnim },
-                { scale: scaleAnim }
-              ]
-            }
-          ]}
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
         >
+          <Animated.View
+            style={[
+              styles.content,
+              {
+                opacity: fadeAnim,
+                transform: [
+                  { translateY: slideAnim },
+                  { scale: scaleAnim }
+                ]
+              }
+            ]}
+          >
+            <View style={styles.bgOrbTop} />
+            <View style={styles.bgOrbBottom} />
+
           {/* Logo Area */}
           <View style={styles.logoContainer}>
             <View style={styles.logoBox}>
@@ -199,7 +214,7 @@ const LoginScreen = ({ navigation }) => {
                 autoCapitalize="none"
                 keyboardType="email-address"
                 returnKeyType="next"
-                onSubmitEditing={() => passwordInputRef.current?.focus()}
+                onSubmitEditing={focusPasswordInput}
                 blurOnSubmit={false}
               />
             </View>
@@ -216,6 +231,11 @@ const LoginScreen = ({ navigation }) => {
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   returnKeyType="done"
+                  onFocus={() => {
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                    }, 120);
+                  }}
                   onSubmitEditing={handleLogin}
                 />
                 <TouchableOpacity
@@ -243,46 +263,7 @@ const LoginScreen = ({ navigation }) => {
               )}
             </TouchableOpacity>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>O</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Botones de login social */}
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={handleGoogleSignIn}
-              activeOpacity={0.8}
-              disabled={googleLoading}
-            >
-              {googleLoading ? (
-                <ActivityIndicator size="small" color="#4285F4" />
-              ) : (
-                <Text style={styles.socialButtonTextGoogle}>G</Text>
-              )}
-              <Text style={styles.socialButtonLabel}>
-                {googleLoading ? 'Conectando...' : 'Continuar con Google'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.socialButton, styles.socialButtonFacebook]}
-              onPress={handleFacebookSignIn}
-              activeOpacity={0.8}
-              disabled={facebookLoading}
-            >
-              {facebookLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.socialButtonTextFb}>f</Text>
-              )}
-              <Text style={[styles.socialButtonLabel, { color: '#fff' }]}>
-                {facebookLoading ? 'Conectando...' : 'Continuar con Facebook'}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.dividerSmall} />
+            <Text style={styles.helperText}>Accede con correo y contraseña para continuar.</Text>
 
             <TouchableOpacity
               style={styles.registerButton}
@@ -295,15 +276,16 @@ const LoginScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              Para continuar, acepta nuestros{' '}
-              <Text style={styles.footerLink}>Términos</Text> &{' '}
-              <Text style={styles.footerLink}>Política de Privacidad</Text>
-            </Text>
-          </View>
-        </Animated.View>
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                Para continuar, acepta nuestros{' '}
+                <Text style={styles.footerLink}>Términos</Text> &{' '}
+                <Text style={styles.footerLink}>Política de Privacidad</Text>
+              </Text>
+            </View>
+          </Animated.View>
+        </ScrollView>
       </LinearGradient>
     </KeyboardAvoidingView>
   );
@@ -316,67 +298,97 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 44,
+  },
+  content: {
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    minHeight: height * 0.95,
+  },
+  bgOrbTop: {
+    position: 'absolute',
+    top: -120,
+    right: -70,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: colors.gradient.accentGlow,
+  },
+  bgOrbBottom: {
+    position: 'absolute',
+    bottom: -150,
+    left: -100,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(255,255,255,0.03)',
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 30,
   },
   logoBox: {
-    width: 80,
-    height: 80,
+    width: 92,
+    height: 92,
     backgroundColor: colors.primary,
-    borderRadius: 20,
+    borderRadius: colors.radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  logoEmoji: {
-    fontSize: 42,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
   logoImage: {
     width: '100%',
     height: '100%',
   },
   logo: {
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: '900',
     color: colors.primary,
-    letterSpacing: 1,
-    marginBottom: 8,
+    letterSpacing: 0.8,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    letterSpacing: 0.5,
+    fontSize: 14,
+    color: colors.textMuted,
+    letterSpacing: 0.4,
   },
   form: {
-    gap: 20,
+    gap: 16,
+    backgroundColor: colors.surface,
+    borderRadius: colors.radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 18,
   },
   inputContainer: {
-    gap: 8,
+    gap: 7,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.primary,
     marginLeft: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   input: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 18,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: colors.radius.md,
+    padding: 16,
     fontSize: 16,
     color: colors.text,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.border,
   },
   eyeButton: {
@@ -389,107 +401,67 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     backgroundColor: colors.primary,
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: colors.radius.md,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
+    marginTop: 6,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.24,
+    shadowRadius: 10,
+    elevation: 5,
   },
   loginButtonDisabled: {
     opacity: 0.7,
   },
   loginButtonText: {
     color: colors.textDark,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   loginButtonIcon: {
     color: colors.textDark,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginLeft: 8,
+    marginLeft: 7,
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 12,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    color: colors.textSecondary,
-    paddingHorizontal: 16,
+  helperText: {
+    color: colors.textMuted,
     fontSize: 12,
-    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: -2,
   },
   registerButton: {
-    backgroundColor: 'transparent',
-    borderRadius: 16,
-    padding: 18,
+    backgroundColor: 'rgba(245,197,24,0.07)',
+    borderRadius: colors.radius.md,
+    paddingVertical: 15,
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.primary,
   },
   registerButtonText: {
     color: colors.primary,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: colors.border,
-    gap: 10,
-  },
-  socialButtonFacebook: {
-    backgroundColor: '#1877F2',
-    borderColor: '#1877F2',
-  },
-  socialButtonTextGoogle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#4285F4',
-  },
-  socialButtonTextFb: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#fff',
-  },
-  socialButtonLabel: {
     fontSize: 15,
     fontWeight: '700',
-    color: colors.text,
-  },
-  dividerSmall: {
-    height: 4,
+    letterSpacing: 0.3,
   },
   footer: {
-    marginTop: 32,
+    marginTop: 24,
     alignItems: 'center',
+    paddingHorizontal: 14,
   },
   footerText: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.textMuted,
     textAlign: 'center',
+    lineHeight: 18,
   },
   footerLink: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
 

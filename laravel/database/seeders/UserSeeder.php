@@ -8,11 +8,30 @@ use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Location;
 use App\Models\Subscription;
+use App\Models\UserMatch;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
+        $frameUnlockByStreak = [
+            1 => ['classic_gold'],
+            3 => ['classic_gold', 'noir_silver'],
+            7 => ['classic_gold', 'noir_silver', 'neon_pop'],
+            14 => ['classic_gold', 'noir_silver', 'neon_pop', 'epic_scarlet'],
+            30 => ['classic_gold', 'noir_silver', 'neon_pop', 'epic_scarlet', 'director_cut'],
+        ];
+
+        $streakProfilesByEmail = [
+            'pamela@gmail.com' => ['streak' => 14, 'frame' => 'epic_scarlet'],
+            'roberto@gmail.com' => ['streak' => 30, 'frame' => 'director_cut'],
+            'maria@test.com' => ['streak' => 7, 'frame' => 'neon_pop'],
+            'carlos@test.com' => ['streak' => 3, 'frame' => 'noir_silver'],
+            'ana@test.com' => ['streak' => 1, 'frame' => 'classic_gold'],
+        ];
+
+        $createdUsersByEmail = [];
+
         // Coordenadas base (Nuevo Casas Grandes, Chihuahua)
         $baseLatitude = 30.4336;
         $baseLongitude = -107.9063;
@@ -40,6 +59,21 @@ class UserSeeder extends Seeder
 
         // Array de usuarios de prueba
         $testUsers = [
+            // Usuario Admin
+            [
+                'name' => 'Administrator',
+                'email' => 'admin@gmail.com',
+                'age' => 30,
+                'bio' => 'Panel de administración de Cinematch',
+                'latitude' => $baseLatitude,
+                'longitude' => $baseLongitude,
+                'city' => 'Nuevo Casas Grandes',
+                'country' => 'México',
+                'genres' => [$sciFiGenreId, $actionGenreId],
+                'directors' => [],
+                'movies' => []
+            ],
+
             // Usuario 1: María García
             [
                 'name' => 'María García',
@@ -492,13 +526,16 @@ class UserSeeder extends Seeder
         $count = 0;
         foreach ($testUsers as $userData) {
             // Crear usuario
+            $password = $userData['email'] === 'admin@gmail.com' ? 'admin123' : '123456';
             $user = User::create([
                 'name' => $userData['name'],
                 'email' => $userData['email'],
-                'password' => Hash::make('123456'),
+                'password' => Hash::make($password),
                 'age' => $userData['age'],
                 'bio' => $userData['bio'],
             ]);
+
+            $createdUsersByEmail[$userData['email']] = $user;
 
             // Crear ubicación
             Location::create([
@@ -549,13 +586,70 @@ class UserSeeder extends Seeder
                 ]);
             }
 
+            if (isset($streakProfilesByEmail[$userData['email']])) {
+                $profile = $streakProfilesByEmail[$userData['email']];
+                $streak = (int) $profile['streak'];
+                $frames = ['classic_gold'];
+
+                if ($streak >= 30) {
+                    $frames = $frameUnlockByStreak[30];
+                } elseif ($streak >= 14) {
+                    $frames = $frameUnlockByStreak[14];
+                } elseif ($streak >= 7) {
+                    $frames = $frameUnlockByStreak[7];
+                } elseif ($streak >= 3) {
+                    $frames = $frameUnlockByStreak[3];
+                }
+
+                $user->update([
+                    'current_streak' => $streak,
+                    'best_streak' => $streak,
+                    'last_active_date' => now()->toDateString(),
+                    'equipped_frame' => $profile['frame'],
+                    'total_activities' => $streak * 4,
+                ]);
+
+                foreach ($frames as $frameId) {
+                    DB::table('user_unlocked_frames')->insert([
+                        'user_id' => $user->id,
+                        'frame_id' => $frameId,
+                        'unlocked_at' => now(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
             $count++;
             echo "✅ Usuario creado: {$userData['name']} ({$userData['email']})\n";
         }
 
         echo "\n🎉 {$count} usuarios creados exitosamente!\n";
-        echo "📧 Todos los usuarios tienen la contraseña: 123456\n";
+        echo "📧 Admin: admin@gmail.com | Contraseña: admin123\n";
+        echo "📧 Otros usuarios: contraseña 123456\n";
         echo "🌍 Ubicación base: Nuevo Casas Grandes, Chihuahua\n";
         echo "📱 Radio de búsqueda: 7 km\n";
+
+        $pamela = $createdUsersByEmail['pamela@gmail.com'] ?? null;
+        $matchCandidates = [
+            $createdUsersByEmail['roberto@gmail.com'] ?? null,
+            $createdUsersByEmail['maria@test.com'] ?? null,
+            $createdUsersByEmail['carlos@test.com'] ?? null,
+        ];
+
+        if ($pamela) {
+            foreach ($matchCandidates as $candidate) {
+                if (!$candidate) {
+                    continue;
+                }
+
+                UserMatch::firstOrCreate([
+                    'user_one_id' => min($pamela->id, $candidate->id),
+                    'user_two_id' => max($pamela->id, $candidate->id),
+                ]);
+            }
+
+            echo "🍿 Pamela ahora tiene 3 matches de prueba.\n";
+        }
     }
 }

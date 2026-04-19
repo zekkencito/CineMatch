@@ -1,5 +1,6 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import api from '../config/api';
 
@@ -15,6 +16,11 @@ Notifications.setNotificationHandler({
 export const notificationService = {
     async registerForPushNotificationsAsync() {
         let token;
+
+        // Expo Go no soporta push remoto en SDK 53+
+        if (Constants.appOwnership === 'expo') {
+            return null;
+        }
 
         if (Platform.OS === 'android') {
             await Notifications.setNotificationChannelAsync('default', {

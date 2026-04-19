@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,16 +12,32 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useAuth } from '../context/AuthContext';
-import colors from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
+import { gamificationService } from '../services/gamificationService';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+
+const FRAME_CATALOG = gamificationService.getFrameCatalog();
+
+const FRAME_VISUALS = {
+  classic_gold: { borderColor: '#F5C518' },
+  noir_silver: { borderColor: '#A7A7A7' },
+  neon_pop: { borderColor: '#31E9FF' },
+  epic_scarlet: { borderColor: '#FF5A5A' },
+  director_cut: { borderColor: '#B09A5E' },
+};
+
 const ProfileScreen = ({ navigation }) => {
-  const { user, logout, updateUser } = useAuth();
+  const { colors, selectedBackground } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { user, logout, updateUser, setUser } = useAuth();
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [localPhoto, setLocalPhoto] = useState(null);
+  const [gamification, setGamification] = useState(null);
 
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -41,6 +57,40 @@ const ProfileScreen = ({ navigation }) => {
       }),
     ]).start();
   }, []);
+
+  const loadGamification = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const state = await gamificationService.getState(user.id);
+      setGamification(state);
+      if (state.equippedFrame && user?.equipped_frame !== state.equippedFrame) {
+        setUser((prev) => ({ ...(prev || {}), equipped_frame: state.equippedFrame }));
+      }
+    } catch (error) {
+      console.warn('No se pudo cargar gamificacion:', error);
+    }
+  }, [user?.id, user?.equipped_frame, setUser]);
+
+  useEffect(() => {
+    loadGamification();
+  }, [loadGamification]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadGamification();
+    }, [loadGamification])
+  );
+
+  const equipFrame = async (frameId) => {
+    if (!user?.id) return;
+    try {
+      const next = await gamificationService.equipFrame(user.id, frameId);
+      setGamification(next);
+      setUser((prev) => ({ ...(prev || {}), equipped_frame: next.equippedFrame }));
+    } catch (error) {
+      Alert.alert('Aviso', 'No se pudo equipar el marco en este momento.');
+    }
+  };
 
   const pickImage = async () => {
     try {
@@ -107,39 +157,44 @@ const ProfileScreen = ({ navigation }) => {
   const menuItems = [
     {
       title: 'Preferencias de Películas',
-      icon: <Ionicons name="film-sharp" size={30} color="white" />,
+      iconName: 'film-sharp',
       subtitle: 'Personaliza tus gustos y preferencias',
       onPress: () => navigation.navigate('Preferencias'),
     },
     {
       title: 'Editar Perfil',
-      icon: <Ionicons name="pencil-sharp" size={30} color="white" />,
+      iconName: 'pencil-sharp',
       subtitle: 'Actualiza tu información personal',
       onPress: () => navigation.navigate('Editar Perfil'),
     },
     {
       title: 'Suscripción',
-      icon: <Ionicons name="star" size={30} color="white" />,
+      iconName: 'star',
       subtitle: 'Características Premium',
       onPress: () => navigation.navigate('Suscripción'),
     },
     {
       title: 'Ajustes',
-      icon: <Ionicons name="settings" size={30} color="white" />,
+      iconName: 'settings',
       subtitle: 'Preferencias de la app y privacidad',
-      onPress: () => Alert.alert('Próximamente', 'Función de ajustes próximamente!'),
+      onPress: () => navigation.navigate('Ajustes'),
     },
     {
       title: 'Ayuda y Soporte',
-      icon: <Ionicons name="help-circle-sharp" size={30} color="white" />,
+      iconName: 'help-circle-sharp',
       subtitle: 'Obtén ayuda o contáctanos',
-      onPress: () => Alert.alert('Próximamente', 'Función de ayuda y soporte próximamente!'),
+      onPress: () => navigation.navigate('Ayuda'),
     },
   ];
 
+  const equippedFrame = gamification?.equippedFrame || user?.equipped_frame || 'classic_gold';
+  const equippedFrameStyle = FRAME_VISUALS[equippedFrame] || FRAME_VISUALS.classic_gold;
+  const selectedBackgroundData = gamificationService.getBackgroundById(selectedBackground);
+  const profileGradient = [colors.gradient.heroStart, colors.gradient.start, colors.gradient.heroEnd];
+
   return (
     <LinearGradient
-      colors={[colors.secondary, colors.secondaryLight]}
+      colors={profileGradient}
       style={styles.container}
     >
       <ScrollView
@@ -164,7 +219,7 @@ const ProfileScreen = ({ navigation }) => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <View style={[styles.avatarWrapper, { borderWidth: 0, padding: 4, backgroundColor: colors.secondary }]}>
+                <View style={[styles.avatarWrapper, styles.avatarFrame, equippedFrameStyle, { padding: 4, backgroundColor: colors.secondary }]}>
                   <Image
                     source={{
                       uri: localPhoto || user?.profile_photo || 'https://via.placeholder.com/140',
@@ -179,7 +234,7 @@ const ProfileScreen = ({ navigation }) => {
                 </View>
               </LinearGradient>
             ) : (
-              <View style={styles.avatarWrapper}>
+              <View style={[styles.avatarWrapper, styles.avatarFrame, equippedFrameStyle]}>
                 <Image
                   source={{
                     uri: localPhoto || user?.profile_photo || 'https://via.placeholder.com/140',
@@ -219,6 +274,43 @@ const ProfileScreen = ({ navigation }) => {
           ) : null}
         </Animated.View>
 
+        <View style={styles.streakCard}>
+          <View style={styles.streakHeader}>
+            <Text style={styles.streakTitle}>Racha de cine</Text>
+            <Text style={styles.streakValue}>🔥 {gamification?.currentStreak || 0} dias</Text>
+          </View>
+          <Text style={styles.streakSubtext}>
+            Mejor racha: {gamification?.bestStreak || 0} dias
+          </Text>
+          <Text style={styles.streakSubtext}>
+            Fondo activo: {selectedBackgroundData?.name || 'Predeterminado'}
+          </Text>
+
+          <Text style={styles.framesTitle}>Marcos desbloqueados</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.framesRow}>
+            {FRAME_CATALOG.filter((frame) => (gamification?.unlockedFrames || []).includes(frame.id)).map((frame) => {
+              const isEquipped = gamification?.equippedFrame === frame.id;
+              return (
+                <TouchableOpacity
+                  key={frame.id}
+                  style={[
+                    styles.frameChip,
+                    {
+                      borderColor: frame.borderColor,
+                      backgroundColor: isEquipped ? frame.accentColor : colors.surface,
+                    },
+                  ]}
+                  activeOpacity={0.85}
+                  onPress={() => equipFrame(frame.id)}
+                >
+                  <Text style={[styles.frameChipText, isEquipped && styles.frameChipTextEquipped]}>{frame.name}</Text>
+                  {isEquipped ? <Text style={styles.frameChipEquipped}>Equipado</Text> : null}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {/* Menu Items */}
         <View style={styles.menuSection}>
           {menuItems.map((item, index) => (
@@ -228,9 +320,7 @@ const ProfileScreen = ({ navigation }) => {
               onPress={item.onPress}
             >
               <View style={styles.menuLeft}>
-                <View style={styles.menuIconBox}>
-                  <Text style={styles.menuIcon}>{item.icon}</Text>
-                </View>
+                <Ionicons name={item.iconName} size={22} color={colors.text} />
                 <View>
                   <Text style={styles.menuTitle}>{item.title}</Text>
                   <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
@@ -255,7 +345,7 @@ const ProfileScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -269,7 +359,9 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   avatarContainer: {
     position: 'relative',
@@ -291,13 +383,16 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.surfaceElevated,
     padding: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
+  },
+  avatarFrame: {
+    borderWidth: 3,
   },
   avatar: {
     width: '100%',
@@ -325,7 +420,7 @@ const styles = StyleSheet.create({
     height: 48,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 4,
+    borderWidth: 2,
     borderColor: colors.secondary,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -343,10 +438,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   name: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '900',
     color: colors.primary,
-    letterSpacing: 1,
+    letterSpacing: 0.4,
   },
   ageBadge: {
     backgroundColor: colors.primary,
@@ -384,7 +479,7 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 15,
     color: colors.textSecondary,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   locationInfo: {
     flexDirection: 'row',
@@ -396,7 +491,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: 'rgba(245, 197, 24, 0.15)',
     borderRadius: 24,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.primary,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -413,8 +508,67 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   menuSection: {
-    gap: 12,
-    marginBottom: 8,
+    gap: 10,
+    marginBottom: 10,
+  },
+  streakCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 12,
+    gap: 6,
+  },
+  streakHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  streakTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  streakValue: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  streakSubtext: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  framesTitle: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  framesRow: {
+    gap: 8,
+    paddingTop: 2,
+  },
+  frameChip: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 118,
+    gap: 3,
+  },
+  frameChipText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  frameChipTextEquipped: {
+    color: colors.textDark,
+  },
+  frameChipEquipped: {
+    fontSize: 10,
+    color: colors.textDark,
+    fontWeight: '800',
   },
   menuLeft: {
     flexDirection: 'row',
@@ -455,17 +609,17 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
-    padding: 18,
-    borderRadius: 18,
+    backgroundColor: colors.surfaceElevated,
+    padding: 16,
+    borderRadius: 16,
     gap: 14,
     borderWidth: 1,
-    borderColor: 'rgba(245, 197, 24, 0.2)',
+    borderColor: colors.border,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 4,
   },
   menuIcon: {
     fontSize: 24,
@@ -475,32 +629,32 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   menuTitle: {
-    fontSize: 17,
+    fontSize: 16,
     color: colors.text,
     fontWeight: '800',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   menuSubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: colors.textMuted,
     fontWeight: '500',
   },
   menuArrow: {
-    fontSize: 28,
+    fontSize: 24,
     color: colors.primary,
     fontWeight: '900',
   },
   logoutButton: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     padding: 14,
-    borderRadius: 18,
+    borderRadius: 14,
     alignItems: 'center',
     marginBottom: 20,
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
-    borderWidth: 3,
-    borderColor: colors.textDark,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
@@ -512,9 +666,9 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     color: colors.textDark,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   version: {
     textAlign: 'center',
@@ -525,3 +679,4 @@ const styles = StyleSheet.create({
 });
 
 export default ProfileScreen;
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,8 +18,9 @@ import Swiper from 'react-native-deck-swiper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { userService } from '../services/userService';
 import { matchService } from '../services/matchService';
+import { gamificationService } from '../services/gamificationService';
 import UserCard from '../components/UserCard';
-import colors from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faMasksTheater, faStar, faReply, faXmark, faFaceSmile } from '@fortawesome/free-solid-svg-icons';
@@ -27,6 +28,8 @@ import { faMasksTheater, faStar, faReply, faXmark, faFaceSmile } from '@fortawes
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +93,22 @@ const HomeScreen = ({ navigation }) => {
       useNativeDriver: true,
     }).start();
   }, []);
+
+  useEffect(() => {
+    const registerDailyActivity = async () => {
+      if (!user?.id) return;
+      try {
+        const progress = await gamificationService.trackActivity(user.id, 'home_open');
+        if (progress.newlyUnlocked?.length) {
+          Alert.alert('Marco desbloqueado', 'Has desbloqueado un nuevo marco de perfil. Equipalo en tu Perfil.');
+        }
+      } catch (error) {
+        // silencioso
+      }
+    };
+
+    registerDailyActivity();
+  }, [user?.id]);
 
   useEffect(() => {
     if (modalVisible) {
@@ -214,6 +233,9 @@ const HomeScreen = ({ navigation }) => {
 
     try {
       const result = await matchService.sendLike(swipedUser.id, type);
+      if (user?.id) {
+        await gamificationService.trackActivity(user.id, 'swipe');
+      }
       if (result.matched) {
         Alert.alert(
           "🎬 Encontramos un Amigo de Butaca!",
@@ -247,7 +269,7 @@ const HomeScreen = ({ navigation }) => {
   if (loading) {
     return (
       <LinearGradient
-        colors={[colors.secondary, colors.secondaryLight]}
+        colors={[colors.gradient.start, colors.gradient.end]}
         style={styles.centerContainer}
       >
         <View style={styles.loadingBox}>
@@ -268,7 +290,7 @@ const HomeScreen = ({ navigation }) => {
   if (users.length === 0) {
     return (
       <LinearGradient
-        colors={[colors.secondary, colors.secondaryLight]}
+        colors={[colors.gradient.start, colors.gradient.end]}
         style={styles.centerContainer}
       >
         <View style={styles.emptyContainer}>
@@ -290,10 +312,16 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <LinearGradient
-      colors={[colors.secondary, colors.secondaryLight]}
+      colors={[colors.gradient.heroStart, colors.gradient.start, colors.gradient.heroEnd]}
       style={styles.container}
     >
+      <View style={styles.backgroundGlowTop} pointerEvents="none" />
+      <View style={styles.backgroundGlowBottom} pointerEvents="none" />
+
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
+        <View style={styles.headerPill}>
+          <Text style={styles.headerPillText}>DESCUBRIR</Text>
+        </View>
         {isPremium && (
           <TouchableOpacity
             style={styles.premiumBadge}
@@ -310,7 +338,7 @@ const HomeScreen = ({ navigation }) => {
             resizeMode="contain"
           />
         </View>
-        <Text style={styles.subtitle}>Desliza para encontrar a tus amigos cinéfilos</Text>
+        <Text style={styles.subtitle}>Desliza y conecta con tus Amigos de Butaca</Text>
       </Animated.View>
 
       {/* Botón flotante de refresh */}
@@ -352,7 +380,7 @@ const HomeScreen = ({ navigation }) => {
             }
           }}
           backgroundColor="transparent"
-          stackSize={3}
+          stackSize={1}
           stackScale={5}
           stackSeparation={14}
           animateCardOpacity
@@ -589,9 +617,29 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
+  },
+  backgroundGlowTop: {
+    position: 'absolute',
+    top: -120,
+    right: -70,
+    width: 260,
+    height: 260,
+    borderRadius: 140,
+    backgroundColor: colors.gradient.accentGlow,
+    opacity: 0.45,
+  },
+  backgroundGlowBottom: {
+    position: 'absolute',
+    bottom: 40,
+    left: -90,
+    width: 230,
+    height: 230,
+    borderRadius: 130,
+    backgroundColor: colors.overlayLight,
+    opacity: 0.35,
   },
   centerContainer: {
     flex: 1,
@@ -656,41 +704,57 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 35 : 45,
-    paddingBottom: 10,
-    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 32 : 38,
+    paddingBottom: 16,
+    paddingHorizontal: 18,
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     position: 'relative',
+    marginHorizontal: 0,
+    marginTop: 8,
+  },
+  headerPill: {
+    backgroundColor: 'rgba(245,197,24,0.18)',
+    borderColor: colors.primary,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  headerPillText: {
+    color: colors.primary,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.9,
   },
   premiumBadge: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 45 : 45,
-    left: 20,
+    top: Platform.OS === 'ios' ? 16 : 14,
+    left: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: 'rgba(245,197,24,0.15)',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#ffd700',
+    borderColor: colors.primary,
     zIndex: 10,
   },
   premiumBadgeText: {
-    color: '#ffd700',
+    color: colors.primary,
     fontSize: 12,
     fontWeight: '800',
     marginLeft: 4,
     letterSpacing: 0.5,
   },
   logoBox: {
-    height: 120,
-    width: 200,
+    height: 92,
+    width: 156,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 2,
+    marginTop: 2,
+    marginBottom: 1,
   },
   logoEmoji: {
     fontSize: 32,
@@ -792,99 +856,90 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   subtitle: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    letterSpacing: 0.5,
-    fontWeight: '500',
+    fontSize: 13,
+    color: colors.textMuted,
+    letterSpacing: 0.35,
+    fontWeight: '600',
 
   },
   swiperContainer: {
     flex: 1,
     justifyContent: 'flex-start',
-    marginTop: -50,
+    marginTop: -24,
     marginBottom: 0,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
   // Fila de botones de accion debajo de las tarjetas
   actionButtonsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 20,
+    gap: 24,
     paddingBottom: Platform.OS === 'ios' ? 100 : 96,
-    paddingTop: 4,
+    paddingTop: 14,
     zIndex: 20,
-    elevation: 20,
+    elevation: 0,
+    backgroundColor: 'transparent',
+    marginHorizontal: 18,
+    borderRadius: 28,
   },
   // Boton rojo de rechazar (X)
   rejectButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.textDark,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: colors.surfaceElevated,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 6,
-    borderWidth: 2,
-    borderColor: colors.primary,
+    shadowOpacity: 0,
+    elevation: 0,
+    borderWidth: 0,
   },
   // Boton verde de aceptar (carita feliz)
   acceptButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 6,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowOpacity: 0,
+    elevation: 0,
+    borderWidth: 0,
   },
   // Boton de deshacer swipe (rewind)
   undoButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#ffd700',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowOpacity: 0,
+    elevation: 0,
+    borderWidth: 0,
   },
   refreshButton: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 35 : 35,
-    right: 24,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    top: Platform.OS === 'ios' ? 18 : 16,
+    right: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 7,
     zIndex: 10,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   refreshButtonIcon: {
-    fontSize: 26,
+    fontSize: 24,
     color: colors.textDark,
     fontWeight: '900',
   },

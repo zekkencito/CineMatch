@@ -1,22 +1,22 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet, Platform, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import MatchesScreen from '../screens/MatchesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import colors from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Fontisto from '@expo/vector-icons/Fontisto';
 import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../config/firebase';
-import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 const Tab = createBottomTabNavigator();
 
 // Componente personalizado para cada tab con animaciones
-const AnimatedTabIcon = ({ focused, iconName, iconLib = 'material' }) => {
+const AnimatedTabIcon = ({ focused, iconName, iconLib = 'material', palette, styles }) => {
   const scaleAnim = useRef(new Animated.Value(focused ? 1 : 0.9)).current;
   const lineWidthAnim = useRef(new Animated.Value(focused ? 1 : 0)).current;
 
@@ -37,7 +37,7 @@ const AnimatedTabIcon = ({ focused, iconName, iconLib = 'material' }) => {
     ]).start();
   }, [focused]);
 
-  const color = focused ? colors.primary : '#000000';
+  const color = focused ? palette.primary : palette.textSecondary;
   const size = iconLib === 'fontisto' ? 24 : 28;
 
   return (
@@ -67,6 +67,8 @@ const AnimatedTabIcon = ({ focused, iconName, iconLib = 'material' }) => {
 };
 
 const MainNavigator = ({ navigation: parentNavigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadPerMatch, setUnreadPerMatch] = useState({});
@@ -112,36 +114,37 @@ const MainNavigator = ({ navigation: parentNavigation }) => {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          borderTopColor: 'transparent',
-          borderTopWidth: 0,
-          height: Platform.OS === 'ios' ? 90 : (72 + Math.max(insets.bottom, 0)),
+          backgroundColor: colors.surfaceElevated,
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          height: Platform.OS === 'ios' ? 94 : (78 + Math.max(insets.bottom, 0)),
           paddingBottom: Platform.OS === 'ios' ? 24 : Math.max(insets.bottom, 12),
-          paddingTop: 8,
-          paddingHorizontal: 16,
+          paddingTop: 10,
+          paddingHorizontal: 12,
           shadowColor: colors.textDark,
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          elevation: 12,
+          shadowOffset: { width: 0, height: -8 },
+          shadowOpacity: 0.34,
+          shadowRadius: 22,
+          elevation: 16,
           position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
+          bottom: Platform.OS === 'ios' ? 8 : 6,
+          left: 14,
+          right: 14,
         },
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: '#000000',
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarShowLabel: true,
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '700',
+          fontSize: 12,
+          fontWeight: '600',
           letterSpacing: 0.3,
-          marginTop: 12,
+          marginTop: 5,
         },
         tabBarItemStyle: {
-          paddingVertical: 6,
+          paddingVertical: 4,
+          borderRadius: 16,
         },
       }}
     >
@@ -150,15 +153,16 @@ const MainNavigator = ({ navigation: parentNavigation }) => {
         component={HomeScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon focused={focused} iconName="film" iconLib="fontisto" />
+            <AnimatedTabIcon focused={focused} iconName="film" iconLib="fontisto" palette={colors} styles={styles} />
           ),
           tabBarLabel: ({ focused }) => (
             <Text style={[
               styles.tabLabel,
               {
-                color: focused ? colors.primary : '#000000',
+                color: focused ? colors.primary : colors.textSecondary,
                 fontWeight: focused ? '800' : '600',
-              }
+              },
+              focused && styles.tabLabelActive,
             ]}>
               Palomeros
             </Text>
@@ -173,7 +177,7 @@ const MainNavigator = ({ navigation: parentNavigation }) => {
         options={{
           tabBarIcon: ({ focused }) => (
             <View>
-              <AnimatedTabIcon focused={focused} iconName="chat" />
+              <AnimatedTabIcon focused={focused} iconName="chat" palette={colors} styles={styles} />
               {unreadCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
@@ -187,9 +191,10 @@ const MainNavigator = ({ navigation: parentNavigation }) => {
             <Text style={[
               styles.tabLabel,
               {
-                color: focused ? colors.primary : '#000000',
+                color: focused ? colors.primary : colors.textSecondary,
                 fontWeight: focused ? '800' : '600',
-              }
+              },
+              focused && styles.tabLabelActive,
             ]}>
               Butaca
             </Text>
@@ -201,15 +206,16 @@ const MainNavigator = ({ navigation: parentNavigation }) => {
         component={ProfileScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon focused={focused} iconName="account" />
+            <AnimatedTabIcon focused={focused} iconName="account" palette={colors} styles={styles} />
           ),
           tabBarLabel: ({ focused }) => (
             <Text style={[
               styles.tabLabel,
               {
-                color: focused ? colors.primary : '#000000',
+                color: focused ? colors.primary : colors.textSecondary,
                 fontWeight: focused ? '800' : '600',
-              }
+              },
+              focused && styles.tabLabelActive,
             ]}>
               Perfil
             </Text>
@@ -220,14 +226,15 @@ const MainNavigator = ({ navigation: parentNavigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   iconContainer: {
-    width: 56,
-    height: 48,
+    width: 62,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
     position: 'relative',
+    borderRadius: 14,
   },
   iconText: {
     fontSize: 26,
@@ -252,22 +259,25 @@ const styles = StyleSheet.create({
     borderColor: colors.card,
   },
   badgeText: {
-    color: '#fff',
+    color: colors.textDark,
     fontSize: 10,
     fontWeight: '900',
   },
   activeIndicator: {
     position: 'absolute',
-    bottom: -10,
-    width: 40,
+    bottom: -1,
+    width: 22,
     height: 3,
     backgroundColor: colors.primary,
-    borderRadius: 2,
+    borderRadius: 20,
   },
   tabLabel: {
-    fontSize: 11,
-    letterSpacing: 0.3,
-    marginTop: -1,
+    fontSize: 12,
+    letterSpacing: 0.2,
+    marginTop: 0,
+  },
+  tabLabelActive: {
+    letterSpacing: 0.35,
   },
 });
 

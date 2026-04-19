@@ -27,6 +27,7 @@ if (false && Platform.OS !== 'web') {
 }
 import * as Location from 'expo-location';
 import colors from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
 import tmdbMovieService from '../services/tmdbMovieService';
 import preferenceService from '../services/preferenceService';
 import { subscriptionService } from '../services/subscriptionService';
@@ -39,6 +40,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const PreferencesScreen = ({ navigation, route }) => {
+  const { colors: themeColors } = useTheme();
   const isInitialSetup = route?.params?.isInitialSetup || false;
   const fromSocialLogin = route?.params?.fromSocialLogin || false;
 
@@ -422,7 +424,14 @@ const PreferencesScreen = ({ navigation, route }) => {
 
   // Renderizar tabs
   const renderTabs = () => (
-    <View style={styles.tabsContainer}>
+    <View
+      style={[
+        styles.tabsContainer,
+        {
+          backgroundColor: themeColors.gradient.end,
+        },
+      ]}
+    >
       <TouchableOpacity
         style={[styles.tab, activeTab === 'genres' && styles.activeTab]}
         onPress={() => setActiveTab('genres')}
@@ -859,7 +868,7 @@ const PreferencesScreen = ({ navigation, route }) => {
   if (loading) {
     return (
       <LinearGradient
-        colors={[colors.secondary, colors.secondaryLight]}
+        colors={[themeColors.gradient.start, themeColors.gradient.end]}
         style={styles.loadingContainer}
       >
         <View style={styles.loadingLogoBox}>
@@ -876,9 +885,9 @@ const PreferencesScreen = ({ navigation, route }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.gradient.start }]}>
       <LinearGradient
-        colors={[colors.secondary, colors.secondaryLight]}
+        colors={[themeColors.gradient.start, themeColors.gradient.end]}
         style={styles.headerGradient}
       >
         <Animated.View
@@ -917,7 +926,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <LinearGradient
-          colors={[colors.secondary, colors.secondaryLight]}
+          colors={[themeColors.gradient.start, themeColors.gradient.end]}
           style={styles.scrollViewGradient}
         >
           <ScrollView
@@ -934,7 +943,14 @@ const PreferencesScreen = ({ navigation, route }) => {
         </LinearGradient>
       </KeyboardAvoidingView>
 
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          {
+            backgroundColor: themeColors.gradient.end,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
           onPress={savePreferences}
@@ -959,7 +975,7 @@ const PreferencesScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.secondary,
+    backgroundColor: 'transparent',
   },
   flex: {
     flex: 1,
@@ -1620,7 +1636,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 20,
-    backgroundColor: colors.card,
+    backgroundColor: 'transparent',
     shadowColor: colors.textDark,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
@@ -1671,3 +1687,4 @@ const styles = StyleSheet.create({
 });
 
 export default PreferencesScreen;
+

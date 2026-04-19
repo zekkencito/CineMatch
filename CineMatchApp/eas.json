@@ -6,17 +6,26 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://pamelatarelo18.alwaysdata.net/api"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://pamelatarelo18.alwaysdata.net/api"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://pamelatarelo18.alwaysdata.net/api"
+      },
       "android": {
         "buildType": "app-bundle"
       }

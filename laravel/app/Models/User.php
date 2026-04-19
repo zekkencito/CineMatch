@@ -23,6 +23,11 @@ class User extends Authenticatable
         'google_id',
         'facebook_id',
         'is_admin',
+        'current_streak',
+        'best_streak',
+        'last_active_date',
+        'equipped_frame',
+        'total_activities',
     ];
 
     /**
@@ -43,6 +48,10 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'age' => 'integer',
+        'current_streak' => 'integer',
+        'best_streak' => 'integer',
+        'total_activities' => 'integer',
+        'last_active_date' => 'date',
     ];
 
     /**
@@ -53,6 +62,11 @@ class User extends Authenticatable
     public function location()
     {
         return $this->hasOne(Location::class);
+    }
+
+    public function unlockedFrames()
+    {
+        return $this->hasMany(UserUnlockedFrame::class);
     }
     
     // Géneros favoritos del usuario

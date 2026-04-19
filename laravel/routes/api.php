@@ -10,6 +10,7 @@ use App\Http\Controllers\PreferencesController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\GamificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -87,6 +88,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/subscription/cancel', [SubscriptionController::class, 'cancelSubscription']);
     Route::get('/subscription/likes-count', [SubscriptionController::class, 'getDailyLikesCount']);
 
+    // Gamificación
+    Route::get('/gamification/state', [GamificationController::class, 'getState']);
+    Route::post('/gamification/activity', [GamificationController::class, 'trackActivity']);
+    Route::post('/gamification/equip-frame', [GamificationController::class, 'equipFrame']);
+
     // DEBUG: Verificar pipeline de notificaciones
     Route::get('/debug/push-status', function (\Illuminate\Http\Request $request) {
         $user = $request->user();
@@ -125,25 +131,29 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Rutas de Admin (sin middleware de autenticación para evitar redirecciones)
 Route::post('/admin/login', [AdminController::class, 'login']);
-Route::get('/admin/dashboard/stats', [AdminController::class, 'getDashboardStats']);
-Route::get('/admin/dashboard/charts', [AdminController::class, 'getDashboardCharts']);
 
-// Admin - Usuarios
-Route::get('/admin/users', [AdminController::class, 'getUsers']);
-Route::get('/admin/users/{id}', [AdminController::class, 'getUser']);
-Route::post('/admin/users', [AdminController::class, 'createUser']);
-Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
-Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
-Route::get('/admin/users/statistics/summary', [AdminController::class, 'getUserStatistics']);
+// Admin - Rutas protegidas (requieren autenticación)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/admin/dashboard/stats', [AdminController::class, 'getDashboardStats']);
+    Route::get('/admin/dashboard/charts', [AdminController::class, 'getDashboardCharts']);
 
-// Admin - Planes de Suscripción
-Route::get('/admin/subscription-plans', [AdminController::class, 'getSubscriptionPlans']);
-Route::get('/admin/subscription-plans/{id}', [AdminController::class, 'getSubscriptionPlan']);
-Route::post('/admin/subscription-plans', [AdminController::class, 'createSubscriptionPlan']);
-Route::put('/admin/subscription-plans/{id}', [AdminController::class, 'updateSubscriptionPlan']);
-Route::delete('/admin/subscription-plans/{id}', [AdminController::class, 'deleteSubscriptionPlan']);
-Route::get('/admin/subscriptions/statistics', [AdminController::class, 'getSubscriptionStatistics']);
-Route::get('/admin/users/{userId}/subscriptions', [AdminController::class, 'getUserSubscriptions']);
+    // Admin - Usuarios
+    Route::get('/admin/users', [AdminController::class, 'getUsers']);
+    Route::get('/admin/users/{id}', [AdminController::class, 'getUser']);
+    Route::post('/admin/users', [AdminController::class, 'createUser']);
+    Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
+    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
+    Route::get('/admin/users/statistics/summary', [AdminController::class, 'getUserStatistics']);
 
-// Admin logout
-Route::post('/admin/logout', [AdminController::class, 'logout']);
+    // Admin - Planes de Suscripción
+    Route::get('/admin/subscription-plans', [AdminController::class, 'getSubscriptionPlans']);
+    Route::get('/admin/subscription-plans/{id}', [AdminController::class, 'getSubscriptionPlan']);
+    Route::post('/admin/subscription-plans', [AdminController::class, 'createSubscriptionPlan']);
+    Route::put('/admin/subscription-plans/{id}', [AdminController::class, 'updateSubscriptionPlan']);
+    Route::delete('/admin/subscription-plans/{id}', [AdminController::class, 'deleteSubscriptionPlan']);
+    Route::get('/admin/subscriptions/statistics', [AdminController::class, 'getSubscriptionStatistics']);
+    Route::get('/admin/users/{userId}/subscriptions', [AdminController::class, 'getUserSubscriptions']);
+
+    // Admin logout
+    Route::post('/admin/logout', [AdminController::class, 'logout']);
+});

@@ -185,7 +185,7 @@ const RegisterScreen = ({ navigation }) => {
       style={styles.keyboardView}
     >
       <LinearGradient
-        colors={[colors.secondary, colors.secondaryLight]}
+        colors={[colors.gradient.start, colors.gradient.end]}
         style={styles.container}
       >
         <ScrollView
@@ -747,3 +747,4 @@ const styles = StyleSheet.create({
 });
 
 export default RegisterScreen;
+

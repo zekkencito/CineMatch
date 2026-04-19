@@ -2,23 +2,38 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import ChatScreen from '../screens/ChatScreen';
 import PreferencesScreen from '../screens/PreferencesScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import SubscriptionScreen from '../screens/SubscriptionScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import HelpScreen from '../screens/HelpScreen';
 import OnboardingTutorial from '../components/OnboardingTutorial';
 import { tutorialService } from '../services/tutorialService';
 import { ActivityIndicator, View } from 'react-native';
-import colors from '../constants/colors';
 
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
   const { isAuthenticated, loading, pendingSocialOnboarding } = useAuth();
+  const { colors } = useTheme();
   const [showTutorial, setShowTutorial] = useState(false);
   const navigationRef = useRef(null);
+
+  const navigationTheme = {
+    dark: colors.background !== '#F7F7F7',
+    colors: {
+      primary: colors.primary,
+      background: 'transparent',
+      card: colors.surfaceElevated,
+      text: colors.text,
+      border: colors.border,
+      notification: colors.primary,
+    },
+  };
 
   // Verificar si el tutorial debe mostrarse (solo cuentas nuevas)
   const checkTutorial = async () => {
@@ -84,7 +99,7 @@ const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef} theme={navigationTheme}>
       {isAuthenticated ? (
         <>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -107,6 +122,16 @@ const AppNavigator = () => {
           <Stack.Screen 
             name="Suscripción" 
             component={SubscriptionScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Ajustes"
+            component={SettingsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Ayuda"
+            component={HelpScreen}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>

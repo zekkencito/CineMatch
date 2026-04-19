@@ -13,10 +13,12 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import api from '../config/api';
 import colors from '../constants/colors';
 
 const EditProfileScreen = ({ navigation, route }) => {
+  const { colors: themeColors } = useTheme();
   const { user, setUser, clearPendingSocialOnboarding } = useAuth();
   const fromSocialLogin = route?.params?.fromSocialLogin || false;
   const [loading, setLoading] = useState(false);
@@ -71,11 +73,11 @@ const EditProfileScreen = ({ navigation, route }) => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: themeColors.gradient.start }]}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       <LinearGradient
-        colors={[colors.secondary, colors.secondaryLight]}
+        colors={[themeColors.gradient.start, themeColors.gradient.end]}
         style={styles.headerGradient}
       >
         <View style={styles.header}>
@@ -97,7 +99,7 @@ const EditProfileScreen = ({ navigation, route }) => {
           showsVerticalScrollIndicator={false}
         >
           <LinearGradient
-            colors={[colors.secondary, colors.secondaryLight]}
+            colors={[themeColors.gradient.start, themeColors.gradient.end]}
             style={styles.formGradient}
           >
             <View style={styles.form}>
@@ -186,7 +188,7 @@ const EditProfileScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.secondary,
+    backgroundColor: 'transparent',
   },
   headerGradient: {
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
@@ -326,3 +328,4 @@ const styles = StyleSheet.create({
 });
 
 export default EditProfileScreen;
+
