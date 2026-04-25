@@ -14,7 +14,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   RefreshControl,
   Animated,
 } from 'react-native';
@@ -25,6 +24,7 @@ import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc } from 'firebase/fi
 import { useAuth } from '../context/AuthContext';
 import chatService from '../services/chatService';
 import colors from '../constants/colors';
+import CustomAlert from '../components/CustomAlert';
 
 const ChatScreen = ({ route, navigation }) => {
   const { match } = route.params; // Recibe el objeto match completo
@@ -35,9 +35,26 @@ const ChatScreen = ({ route, navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
   const [otherIsTyping, setOtherIsTyping] = useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: '',
+    message: '',
+    type: 'info',
+    buttons: [{ text: 'OK', onPress: () => {} }]
+  });
   const flatListRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const typingDotsAnim = useRef(new Animated.Value(0)).current;
+
+  const showAlert = (title, message, type = 'info') => {
+    setAlertConfig({
+      title,
+      message,
+      type,
+      buttons: [{ text: 'OK', onPress: () => setAlertVisible(false) }]
+    });
+    setAlertVisible(true);
+  };
 
   // Usuario con el que estamos chateando
   const otherUser = match.user || match;
@@ -123,7 +140,7 @@ const ChatScreen = ({ route, navigation }) => {
     } catch (error) {
       console.error('Error loading messages:', error);
       if (!isRefreshing) {
-        Alert.alert('Error', 'No se pudieron cargar los mensajes');
+        showAlert('Error', 'No se pudieron cargar los mensajes', 'error');
       }
     } finally {
       if (isRefreshing) {
@@ -183,7 +200,7 @@ const ChatScreen = ({ route, navigation }) => {
         status: error.response?.status,
         stack: error.stack,
       });
-      Alert.alert('Error', 'No se pudo enviar el mensaje. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo enviar el mensaje. Intenta de nuevo.', 'error');
       setNewMessage(messageText); // Restaurar el mensaje si falla
     } finally {
       setSending(false);
@@ -308,6 +325,14 @@ const ChatScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
       </LinearGradient>
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttons={alertConfig.buttons}
+        onClose={() => setAlertVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 };

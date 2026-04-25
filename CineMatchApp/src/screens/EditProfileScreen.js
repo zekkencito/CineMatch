@@ -8,7 +8,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,12 +15,20 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../config/api';
 import colors from '../constants/colors';
+import CustomAlert from '../components/CustomAlert';
 
 const EditProfileScreen = ({ navigation, route }) => {
   const { colors: themeColors } = useTheme();
   const { user, setUser, clearPendingSocialOnboarding } = useAuth();
   const fromSocialLogin = route?.params?.fromSocialLogin || false;
   const [loading, setLoading] = useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: '',
+    message: '',
+    type: 'info',
+    buttons: [{ text: 'OK', onPress: () => {} }]
+  });
   const [formData, setFormData] = useState({
     name: user?.name || '',
     age: user?.age?.toString() || '',
@@ -32,14 +39,24 @@ const EditProfileScreen = ({ navigation, route }) => {
   const ageInputRef = useRef(null);
   const bioInputRef = useRef(null);
 
+  const showAlert = (title, message, type = 'info', buttons = null) => {
+    setAlertConfig({
+      title,
+      message,
+      type,
+      buttons: buttons || [{ text: 'OK', onPress: () => setAlertVisible(false) }]
+    });
+    setAlertVisible(true);
+  };
+
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      Alert.alert('Error', 'El nombre es obligatorio');
+      showAlert('Error', 'El nombre es obligatorio', 'error');
       return;
     }
 
     if (formData.age && (parseInt(formData.age) < 18 || parseInt(formData.age) > 120)) {
-      Alert.alert('Error', 'La edad debe estar entre 18 y 120 años');
+      showAlert('Error', 'La edad debe estar entre 18 y 120 años', 'error');
       return;
     }
 
@@ -57,14 +74,14 @@ const EditProfileScreen = ({ navigation, route }) => {
           clearPendingSocialOnboarding();
           navigation.navigate('MainTabs');
         } else {
-          Alert.alert('\u00c9xito', 'Perfil actualizado correctamente', [
-            { text: 'OK', onPress: () => navigation.goBack() }
+          showAlert('Éxito', 'Perfil actualizado correctamente', 'success', [
+            { text: 'OK', onPress: () => { setAlertVisible(false); navigation.goBack(); } }
           ]);
         }
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', 'No se pudo actualizar el perfil. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo actualizar el perfil. Intenta de nuevo.', 'error');
     } finally {
       setLoading(false);
     }
@@ -181,6 +198,15 @@ const EditProfileScreen = ({ navigation, route }) => {
             </View>
           </LinearGradient>
         </ScrollView>
+        
+        <CustomAlert
+          visible={alertVisible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          type={alertConfig.type}
+          buttons={alertConfig.buttons}
+          onClose={() => setAlertVisible(false)}
+        />
     </KeyboardAvoidingView>
   );
 };

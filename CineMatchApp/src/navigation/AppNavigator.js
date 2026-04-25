@@ -11,6 +11,7 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import SubscriptionScreen from '../screens/SubscriptionScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import HelpScreen from '../screens/HelpScreen';
+import MovieReviewsScreen from '../screens/MovieReviewsScreen';
 import OnboardingTutorial from '../components/OnboardingTutorial';
 import { tutorialService } from '../services/tutorialService';
 import { ActivityIndicator, View } from 'react-native';
@@ -132,6 +133,11 @@ const AppNavigator = () => {
           <Stack.Screen
             name="Ayuda"
             component={HelpScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="MovieReviews"
+            component={MovieReviewsScreen}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Linking,
-  Alert,
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from 'react-native-vector-icons/FontAwesome5';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import CustomAlert from '../components/CustomAlert';
 
 const faqs = [
   {
@@ -37,17 +37,34 @@ const HelpScreen = () => {
   const navigation = useNavigation();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: '',
+    message: '',
+    type: 'info',
+    buttons: [{ text: 'OK', onPress: () => {} }]
+  });
+
+  const showAlert = (title, message, type = 'info') => {
+    setAlertConfig({
+      title,
+      message,
+      type,
+      buttons: [{ text: 'OK', onPress: () => setAlertVisible(false) }]
+    });
+    setAlertVisible(true);
+  };
 
   const openLink = async (url, fallbackMessage) => {
     try {
       const canOpen = await Linking.canOpenURL(url);
       if (!canOpen) {
-        Alert.alert('No disponible', fallbackMessage);
+        showAlert('No disponible', fallbackMessage, 'warning');
         return;
       }
       await Linking.openURL(url);
     } catch (error) {
-      Alert.alert('No disponible', fallbackMessage);
+      showAlert('No disponible', fallbackMessage, 'warning');
     }
   };
 
@@ -58,7 +75,7 @@ const HelpScreen = () => {
     >
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={18} color={colors.primary} />
+          <Icon name="chevron-left" size={18} color={colors.primary} />
           <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
 
@@ -73,13 +90,13 @@ const HelpScreen = () => {
             onPress={() => openLink('mailto:soporte@cinematch.app?subject=Soporte%20CineMatch', 'No se pudo abrir tu app de correo.')}
           >
             <View style={styles.iconCircle}>
-              <Ionicons name="mail" size={18} color={colors.primary} />
+              <Icon name="envelope" size={18} color={colors.primary} />
             </View>
             <View style={styles.actionTextWrap}>
               <Text style={styles.actionTitle}>Correo de soporte</Text>
               <Text style={styles.actionSubtitle}>soporte@cinematch.app</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            <Icon name="chevron-right" size={18} color={colors.textMuted} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -87,13 +104,13 @@ const HelpScreen = () => {
             onPress={() => openLink('https://wa.me/51999999999', 'No se pudo abrir WhatsApp en este dispositivo.')}
           >
             <View style={styles.iconCircle}>
-              <Ionicons name="logo-whatsapp" size={18} color={colors.primary} />
+              <Icon name="whatsapp" size={18} color={colors.primary} />
             </View>
             <View style={styles.actionTextWrap}>
               <Text style={styles.actionTitle}>WhatsApp</Text>
               <Text style={styles.actionSubtitle}>Respuesta en horario de atención</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            <Icon name="chevron-right" size={18} color={colors.textMuted} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -101,13 +118,13 @@ const HelpScreen = () => {
             onPress={() => openLink('https://cinematch.app/faq', 'No se pudo abrir el centro de ayuda.')}
           >
             <View style={styles.iconCircle}>
-              <Ionicons name="help-circle" size={18} color={colors.primary} />
+              <Icon name="question-circle" size={18} color={colors.primary} />
             </View>
             <View style={styles.actionTextWrap}>
               <Text style={styles.actionTitle}>Centro de ayuda web</Text>
               <Text style={styles.actionSubtitle}>Guías y preguntas frecuentes</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            <Icon name="chevron-right" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -122,6 +139,15 @@ const HelpScreen = () => {
         </View>
 
       </ScrollView>
+      
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttons={alertConfig.buttons}
+        onClose={() => setAlertVisible(false)}
+      />
     </LinearGradient>
   );
 };

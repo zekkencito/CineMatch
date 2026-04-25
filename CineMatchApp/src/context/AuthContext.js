@@ -24,16 +24,12 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         // Cargar user localmente primero para no bloquear la interfaz
         const userData = await storage.getUser();
+        
         if (userData) {
+          // Agregar el token al objeto user para que esté disponible en el contexto
+          userData.token = token;
           setUser(userData);
           setIsAuthenticated(true);
-        }
-
-        // Pero pedirle al backend el usuario más actualizado para reflejar Premium silenciosamente
-        try {
-          await refetchUser();
-        } catch (e) {
-          console.log('Fallo al refetch user silencioso', e);
         }
 
         // Registrar para notificaciones push
@@ -57,6 +53,7 @@ export const AuthProvider = ({ children }) => {
           age: 25,
           bio: 'Movie lover and cinephile 🎬',
           profile_photo: 'https://i.pravatar.cc/300?img=12',
+          token: 'mock-token-123',
         };
         await storage.saveToken('mock-token-123');
         await storage.saveUser(mockUser);
@@ -67,6 +64,8 @@ export const AuthProvider = ({ children }) => {
 
       // Login real con API
       const data = await authService.login(email, password);
+      // Agregar token al objeto user
+      data.user.token = data.token;
       setUser(data.user);
       setIsAuthenticated(true);
 
@@ -89,6 +88,8 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const data = await authService.register(userData);
+      // Agregar token al objeto user
+      data.user.token = data.token;
       setUser(data.user);
       setIsAuthenticated(true);
 
@@ -114,6 +115,8 @@ export const AuthProvider = ({ children }) => {
         photo,
       });
 
+      // Agregar token al objeto user
+      data.user.token = data.token;
       setUser(data.user);
       setIsAuthenticated(true);
 
@@ -146,6 +149,8 @@ export const AuthProvider = ({ children }) => {
         provider: 'facebook',
       });
 
+      // Agregar token al objeto user
+      data.user.token = data.token;
       setUser(data.user);
       setIsAuthenticated(true);
 
@@ -182,7 +187,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const updatedUser = await authService.updateProfile(userData);
       // Merge returned fields with current user to avoid overwriting complete user with partial response
-      const merged = { ...(user || {}), ...(updatedUser || {}) };
+      // Mantener el token existente
+      const merged = { ...(user || {}), ...(updatedUser || {}), token: user?.token };
       setUser(merged);
       // Persist merged user to storage (authService.updateProfile may have saved partial data)
       await storage.saveUser(merged);
@@ -198,7 +204,8 @@ export const AuthProvider = ({ children }) => {
       // Extraemos el objeto user de la respuesta { success: true, user: {...} }
       const newUserData = responseData.user ? responseData.user : responseData;
 
-      const merged = { ...(user || {}), ...(newUserData || {}) };
+      // Mantener el token existente
+      const merged = { ...(user || {}), ...(newUserData || {}), token: user?.token };
       setUser(merged);
       await storage.saveUser(merged);
       return merged;
@@ -215,6 +222,7 @@ export const AuthProvider = ({ children }) => {
         setUser,
         loading,
         isAuthenticated,
+        setIsAuthenticated,
         pendingSocialOnboarding,
         clearPendingSocialOnboarding,
         login,

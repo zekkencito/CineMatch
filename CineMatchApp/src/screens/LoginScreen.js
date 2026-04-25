@@ -9,17 +9,20 @@ import {
   ScrollView,
   Platform,
   Alert,
-  ActivityIndicator,
   Animated,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-// import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-// import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
 import { useAuth } from '../context/AuthContext';
 import colors from '../constants/colors';
+import typography from '../constants/typography';
+import spacing from '../constants/spacing';
+import Button from '../components/Button';
+import Input from '../components/Input';
+import Card from '../components/Card';
 
 const { height } = Dimensions.get('window');
 

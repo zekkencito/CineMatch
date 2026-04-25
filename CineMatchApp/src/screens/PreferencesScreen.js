@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
   Image,
   Animated,
@@ -31,22 +30,34 @@ import { useTheme } from '../context/ThemeContext';
 import tmdbMovieService from '../services/tmdbMovieService';
 import preferenceService from '../services/preferenceService';
 import { subscriptionService } from '../services/subscriptionService';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faClapperboard } from '@fortawesome/free-solid-svg-icons';
-import { faMasksTheater } from '@fortawesome/free-solid-svg-icons';
-import { faEarthAmericas } from '@fortawesome/free-solid-svg-icons';
-import { faTicket } from '@fortawesome/free-solid-svg-icons';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import Icon from 'react-native-vector-icons/FontAwesome5';
+import CustomAlert from '../components/CustomAlert';
 
 const PreferencesScreen = ({ navigation, route }) => {
   const { colors: themeColors } = useTheme();
   const isInitialSetup = route?.params?.isInitialSetup || false;
   const fromSocialLogin = route?.params?.fromSocialLogin || false;
 
+  const showAlert = (title, message, type = 'info', buttons = null) => {
+    setAlertConfig({
+      title,
+      message,
+      type,
+      buttons: buttons || [{ text: 'OK', onPress: () => setAlertVisible(false) }]
+    });
+    setAlertVisible(true);
+  };
+
   const [activeTab, setActiveTab] = useState('genres');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: '',
+    message: '',
+    type: 'info',
+    buttons: [{ text: 'OK', onPress: () => {} }]
+  });
 
   // Reaccionar al cambio de tab enviado por el tutorial
   useEffect(() => {
@@ -185,7 +196,7 @@ const PreferencesScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error cargando preferencias:', error);
-      Alert.alert('Error', 'No se pudieron cargar las preferencias');
+      showAlert('Error', 'No se pudieron cargar las preferencias', 'error');
     } finally {
       setLoading(false);
     }
@@ -200,9 +211,10 @@ const PreferencesScreen = ({ navigation, route }) => {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== 'granted') {
-        Alert.alert(
+        showAlert(
           'Permisos denegados',
-          'Se necesitan permisos de ubicación para actualizar tu posición'
+          'Se necesitan permisos de ubicación para actualizar tu posición',
+          'warning'
         );
         return;
       }
@@ -240,14 +252,14 @@ const PreferencesScreen = ({ navigation, route }) => {
           country,
         });
 
-        Alert.alert('✓ Ubicación actualizada', `${city}, ${country}`);
+        showAlert('✓ Ubicación actualizada', `${city}, ${country}`, 'success');
       } catch (error) {
         console.error('Error guardando ubicación:', error);
-        Alert.alert('Advertencia', 'Ubicación actualizada localmente pero no se pudo guardar en el servidor');
+        showAlert('Advertencia', 'Ubicación actualizada localmente pero no se pudo guardar en el servidor', 'warning');
       }
     } catch (error) {
       console.error('Error obteniendo ubicación:', error);
-      Alert.alert('Error', 'No se pudo obtener tu ubicación. Verifica que el GPS esté activado.');
+      showAlert('Error', 'No se pudo obtener tu ubicación. Verifica que el GPS esté activado.', 'error');
     } finally {
       setUpdatingLocation(false);
     }
@@ -302,7 +314,7 @@ const PreferencesScreen = ({ navigation, route }) => {
   // Agregar director
   const addDirector = (director) => {
     if (selectedDirectors.find(d => d.id === director.id)) {
-      Alert.alert('Info', 'Este director ya está en tu lista');
+      showAlert('Info', 'Este director ya está en tu lista', 'info');
       return;
     }
 
@@ -323,7 +335,7 @@ const PreferencesScreen = ({ navigation, route }) => {
   // Agregar película
   const addMovie = (movie) => {
     if (watchedMovies.find(m => m.id === movie.id)) {
-      Alert.alert('Info', 'Esta película ya está en tu lista');
+      showAlert('Info', 'Esta película ya está en tu lista', 'info');
       return;
     }
 
@@ -346,12 +358,12 @@ const PreferencesScreen = ({ navigation, route }) => {
   const savePreferences = async () => {
     // Validaciones
     if (selectedGenres.length === 0) {
-      Alert.alert('Error', 'Selecciona al menos 1 género');
+      showAlert('Error', 'Selecciona al menos 1 género', 'error');
       return;
     }
 
     if (selectedDirectors.length === 0) {
-      Alert.alert('Error', 'Agrega al menos 1 director favorito');
+      showAlert('Error', 'Agrega al menos 1 director favorito', 'error');
       return;
     }
 
@@ -388,20 +400,22 @@ const PreferencesScreen = ({ navigation, route }) => {
         }),
       ]);
 
-      Alert.alert(
+      showAlert(
         '✅ Guardado',
         'Tus preferencias se guardaron correctamente',
+        'success',
         [{
           text: 'OK',
           onPress: () => {
+            setAlertVisible(false);
             if (fromSocialLogin) {
-              navigation.navigate('Editar Perfil', { fromSocialLogin: true });
+              navigation.navigate('MainTabs');
             } else if (isInitialSetup) {
-              navigation.replace('MainTabs');
+              navigation.navigate('MainTabs');
             } else {
               navigation.goBack();
             }
-          }
+          },
         }]
       );
     } catch (error) {
@@ -416,7 +430,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         console.error('Validation errors:', error.response.data?.errors);
       }
 
-      Alert.alert('Error', errorMessage);
+      showAlert('Error', errorMessage, 'error');
     } finally {
       setSaving(false);
     }
@@ -436,7 +450,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'genres' && styles.activeTab]}
         onPress={() => setActiveTab('genres')}
       >
-        <FontAwesomeIcon icon={faMasksTheater} size={32} color={activeTab === 'genres' ? colors.primary : 'white'} />
+        <Icon name="film" size={32} color={activeTab === 'genres' ? colors.primary : 'white'} />
         <Text style={[styles.tabText, activeTab === 'genres' && styles.activeTabText]}>
           Géneros
         </Text>
@@ -446,7 +460,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'directors' && styles.activeTab]}
         onPress={() => setActiveTab('directors')}
       >
-        <FontAwesomeIcon icon={faClapperboard} size={32} color={activeTab === 'directors' ? colors.primary : 'white'} />
+        <Icon name="film" size={32} color={activeTab === 'directors' ? colors.primary : 'white'} />
         <Text style={[styles.tabText, activeTab === 'directors' && styles.activeTabText]}>
           Directores
         </Text>
@@ -456,7 +470,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'movies' && styles.activeTab]}
         onPress={() => setActiveTab('movies')}
       >
-        <FontAwesomeIcon icon={faTicket} size={32} color={activeTab === 'movies' ? colors.primary : 'white'} />
+        <Icon name="ticket" size={32} color={activeTab === 'movies' ? colors.primary : 'white'} />
         <Text style={[styles.tabText, activeTab === 'movies' && styles.activeTabText]}>
           Películas
         </Text>
@@ -466,7 +480,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'radius' && styles.activeTab]}
         onPress={() => setActiveTab('radius')}
       >
-        <FontAwesomeIcon icon={faEarthAmericas} size={32} color={activeTab === 'radius' ? colors.primary : 'white'} />
+        <Icon name="globe" size={32} color={activeTab === 'radius' ? colors.primary : 'white'} />
         <Text style={[styles.tabText, activeTab === 'radius' && styles.activeTabText]}>
           Distancia
         </Text>
@@ -697,12 +711,12 @@ const PreferencesScreen = ({ navigation, route }) => {
   // Renderizar radio
   const renderRadius = () => {
     const getRadiusCategory = () => {
-      if (searchRadius <= 5) return { emoji: <FontAwesome5 name="walking" size={24} color="black" />, text: 'Muy cerca', desc: 'Solo tu vecindario' };
-      if (searchRadius <= 50) return { emoji: <FontAwesome5 name="car" size={24} color="black" />, text: 'Regional', desc: 'Área urbana / ciudades cercanas' };
-      if (searchRadius <= 500) return { emoji: <FontAwesome5 name="bus" size={24} color="black" />, text: 'Extendido', desc: 'Regiones cercanas' };
-      if (searchRadius <= 2000) return { emoji: <FontAwesome5 name="plane" size={24} color="black" />, text: 'Continental', desc: 'Varias provincias/estados' };
-      if (searchRadius <= 10000) return { emoji: <FontAwesome5 name="globe" size={24} color="black" />, text: 'Intercontinental', desc: 'Amplia cobertura regional' };
-      return { emoji: <FontAwesome5 name="globe-americas" size={24} color="black" />, text: 'Global', desc: 'Cobertura mundial (hasta 20000 km)' };
+      if (searchRadius <= 5) return { emoji: <Icon name="walking" size={24} color="black" />, text: 'Muy cerca', desc: 'Solo tu vecindario' };
+      if (searchRadius <= 50) return { emoji: <Icon name="car" size={24} color="black" />, text: 'Regional', desc: 'Área urbana / ciudades cercanas' };
+      if (searchRadius <= 500) return { emoji: <Icon name="bus" size={24} color="black" />, text: 'Extendido', desc: 'Regiones cercanas' };
+      if (searchRadius <= 2000) return { emoji: <Icon name="plane" size={24} color="black" />, text: 'Continental', desc: 'Varias provincias/estados' };
+      if (searchRadius <= 10000) return { emoji: <Icon name="globe" size={24} color="black" />, text: 'Intercontinental', desc: 'Amplia cobertura regional' };
+      return { emoji: <Icon name="globe" size={24} color="black" />, text: 'Global', desc: 'Cobertura mundial (hasta 20000 km)' };
     };
 
     const category = getRadiusCategory();
@@ -757,7 +771,7 @@ const PreferencesScreen = ({ navigation, route }) => {
                   description={`${userLocation.city || 'Tu ciudad'}, ${userLocation.country || 'Tu país'}`}
                 >
                   <View style={styles.markerContainer}>
-                    <MaterialIcons name="gps-fixed" size={24} color="black" />
+                    <Icon name="map-marker" size={24} color="black" />
                   </View>
                 </Marker>
 
@@ -791,7 +805,7 @@ const PreferencesScreen = ({ navigation, route }) => {
                 {updatingLocation ? (
                   <ActivityIndicator color={colors.primary} size="small" />
                 ) : (
-                  <Text style={styles.gpsButtonText}><MaterialIcons name="gps-fixed" size={16} color={colors.primary} /> Actualizar GPS</Text>
+                  <Text style={styles.gpsButtonText}><Icon name="map-marker" size={16} color={colors.primary} /> Actualizar GPS</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -942,6 +956,15 @@ const PreferencesScreen = ({ navigation, route }) => {
           </ScrollView>
         </LinearGradient>
       </KeyboardAvoidingView>
+      
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttons={alertConfig.buttons}
+        onClose={() => setAlertVisible(false)}
+      />
 
       <View
         style={[

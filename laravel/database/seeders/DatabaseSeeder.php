@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
      * 2. PaymentTypeSeeder - Tipos de pago (Credit Card, PayPal, etc.)
      * 3. GenreSeeder - Géneros de películas (Action, Drama, etc.)
      * 4. UserSeeder - Usuarios con ubicaciones, géneros favoritos, directores y suscripciones
+     * 5. MovieForumSeeder - Películas populares para el foro
      *
      * @return void
      */
@@ -23,7 +24,9 @@ class DatabaseSeeder extends Seeder
             SubscriptionPlanSeeder::class,
             PaymentTypeSeeder::class,
             GenreSeeder::class,
+            MovieSeeder::class,
             UserSeeder::class,
+            MovieForumReviewSeeder::class,
         ]);
 
         echo "\n🎉 Base de datos poblada exitosamente\n";

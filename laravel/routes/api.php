@@ -11,35 +11,188 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\GamificationController;
+use App\Http\Controllers\MovieForumController;
+use App\Http\Controllers\DailyRecommendationController;
+use App\Http\Controllers\MovieRatingController;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
 */
 
-// Rutas públicas (sin autenticación)
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/social-login', [AuthController::class, 'socialLogin']);
+// Rutas de limpieza de caché (accesible por URL)
+Route::get('/clear-cache', function() {
+    try {
+        Artisan::call('route:clear');
+        Artisan::call('config:clear');
+        Artisan::call('cache:clear');
+        Artisan::call('view:clear');
+        
+        return response()->json([
+            'message' => 'Caché limpiada correctamente',
+            'timestamp' => now(),
+            'routes_loaded' => count(app('router')->getRoutes())
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'timestamp' => now()
+        ], 500);
+    }
+});
 
-Route::get('/limpiar-cache', function() {
-    Artisan::call('config:clear');
-    Artisan::call('cache:clear');
-    return 'Caché borrada con éxito';
+// Rutas de prueba
+Route::get('/test', function() {
+    return response()->json([
+        'message' => 'API funcionando correctamente',
+        'timestamp' => now(),
+        'server_info' => [
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'routes_count' => count(app('router')->getRoutes())
+        ]
+    ]);
+});
+
+Route::get('/test-rating', function() {
+    return response()->json([
+        'message' => 'Ruta de calificación funcionando',
+        'timestamp' => now(),
+        'rating_test' => [
+            'movie_id' => 123456,
+            'rating' => 8.5,
+            'total_ratings' => 42
+        ]
+    ]);
 });
 
 // Rutas de películas y géneros (públicas)
 Route::get('/movies', [MovieController::class, 'getMovies']);
-Route::get('/movies/{id}', [MovieController::class, 'getMovie']);
+Route::get('/movies/{id}', [MovieController::class, 'getMovie'])->where('id', '[0-9]+');
 Route::get('/movies/search', [MovieController::class, 'searchMovies']);
 Route::get('/genres', [MovieController::class, 'getGenres']);
 Route::get('/directors', [MovieController::class, 'getDirectors']);
+
+// Calificaciones de Películas (públicas)
+Route::get('/movies/{id}/rating', [MovieRatingController::class, 'getMovieRating'])->where('id', '[0-9]+');
+Route::post('/movies/{id}/rate', [MovieRatingController::class, 'rateMovie'])->where('id', '[0-9]+');
+Route::post('/movies/ratings', [MovieRatingController::class, 'getMoviesRatings']);
+
+// Rutas de autenticación (públicas)
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/social-login', [AuthController::class, 'socialLogin']);
+
+// Rutas de limpieza de caché (accesible por URL) - FUERA del middleware auth
+Route::get('/clear-cache', function() {
+    try {
+        Artisan::call('route:clear');
+        Artisan::call('config:clear');
+        Artisan::call('cache:clear');
+        Artisan::call('view:clear');
+        
+        return response()->json([
+            'message' => 'Caché limpiada correctamente',
+            'timestamp' => now(),
+            'routes_loaded' => count(app('router')->getRoutes())
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'timestamp' => now()
+        ], 500);
+    }
+});
+
+// Ruta de diagnóstico para el modelo Movie
+Route::get('/diagnose-movie/{movieId?}', function($movieId = 42640) {
+    try {
+        // Probar si el modelo Movie existe
+        $movieCount = \App\Models\Movie::count();
+        $result = [
+            'model_works' => true,
+            'total_movies' => $movieCount
+        ];
+        
+        // Probar si hay películas con tmdb_movie_id
+        $tmdbMovies = \App\Models\Movie::whereNotNull('tmdb_movie_id')->count();
+        $result['tmdb_movies_count'] = $tmdbMovies;
+        
+        // Probar búsqueda específica
+        $movie = \App\Models\Movie::where('tmdb_movie_id', $movieId)->first();
+        $result['tmdb_search'] = [
+            'search_id' => $movieId,
+            'found' => $movie ? true : false,
+            'title' => $movie ? $movie->title : null,
+            'local_id' => $movie ? $movie->id : null
+        ];
+        
+        // Probar búsqueda por ID normal
+        $movieById = \App\Models\Movie::find($movieId);
+        $result['id_search'] = [
+            'search_id' => $movieId,
+            'found' => $movieById ? true : false,
+            'title' => $movieById ? $movieById->title : null
+        ];
+        
+        return response()->json($result);
+        
+    } catch (Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
+// Ruta de prueba simple para calificación (FUERA del middleware auth)
+Route::post('/test-rating/{movieId}', function(Request $request, $movieId) {
+    try {
+        return response()->json([
+            'message' => 'Ruta de prueba funciona',
+            'movieId' => $movieId,
+            'rating' => $request->get('rating'),
+            'timestamp' => now()
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// Ruta de diagnóstico para reseñas
+Route::get('/debug-reviews/{movieId}', function($movieId) {
+    try {
+        // Buscar por ID local
+        $reviewsLocal = \App\Models\MovieForumReview::where('movie_id', $movieId)->get();
+        
+        // Buscar por tmdb_movie_id
+        $movie = \App\Models\Movie::where('tmdb_movie_id', $movieId)->first();
+        $reviewsTmdb = $movie ? \App\Models\MovieForumReview::where('movie_id', $movie->id)->get() : collect();
+        
+        return response()->json([
+            'movieId' => $movieId,
+            'reviews_local' => $reviewsLocal->count(),
+            'reviews_tmdb' => $reviewsTmdb->count(),
+            'movie_found' => $movie ? [
+                'id' => $movie->id,
+                'title' => $movie->title,
+                'tmdb_movie_id' => $movie->tmdb_movie_id
+            ] : null,
+            'reviews_local_data' => $reviewsLocal,
+            'reviews_tmdb_data' => $reviewsTmdb
+        ]);
+    } catch (Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
+// Rutas temporales fuera del middleware auth (para pruebas)
+Route::post('/test-rate-movie/{movieId}', [MovieForumController::class, 'rateMovie']);
+Route::post('/movie-forum/movies/{id}/reviews', [MovieForumController::class, 'createReview']);
+Route::delete('/movie-forum/reviews/{id}', [MovieForumController::class, 'deleteReview']);
 
 // Rutas protegidas (requieren autenticación)
 Route::middleware('auth:sanctum')->group(function () {
@@ -97,71 +250,29 @@ Route::middleware('auth:sanctum')->group(function () {
     // Gamificación
     Route::get('/gamification/state', [GamificationController::class, 'getState']);
     Route::post('/gamification/activity', [GamificationController::class, 'trackActivity']);
-    Route::post('/gamification/equip-frame', [GamificationController::class, 'equipFrame']);
-
-    // DEBUG: Verificar pipeline de notificaciones
-    Route::get('/debug/push-status', function (\Illuminate\Http\Request $request) {
-        $user = $request->user();
-        $token = $user->expo_push_token;
-
-        // Intentar enviar notificación de prueba si hay token
-        $pushResult = null;
-        if ($token) {
-            try {
-                $response = \Illuminate\Support\Facades\Http::withHeaders([
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                ])->post('https://exp.host/--/api/v2/push/send', [
-                    'to' => $token,
-                    'sound' => 'default',
-                    'title' => '🔔 Test CineMatch',
-                    'body' => 'Pipeline de notificaciones funcionando correctamente',
-                    'data' => ['type' => 'test'],
-                ]);
-                $pushResult = $response->json();
-            } catch (\Exception $e) {
-                $pushResult = ['error' => $e->getMessage()];
-            }
-        }
-
-        return response()->json([
-            'user_id' => $user->id,
-            'user_name' => $user->name,
-            'has_token' => !empty($token),
-            'token_preview' => $token ? substr($token, 0, 30) . '...' : null,
-            'expo_api_response' => $pushResult,
-        ]);
-    });
-
-}); 
-
-// Rutas de Admin (sin middleware de autenticación para evitar redirecciones)
-Route::post('/admin/login', [AdminController::class, 'login']);
-
-// Admin - Rutas protegidas (requieren autenticación)
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/admin/dashboard/stats', [AdminController::class, 'getDashboardStats']);
-    Route::get('/admin/dashboard/charts', [AdminController::class, 'getDashboardCharts']);
-
-    // Admin - Usuarios
-    Route::get('/admin/users', [AdminController::class, 'getUsers']);
-    Route::get('/admin/users/{id}', [AdminController::class, 'getUser']);
-    Route::post('/admin/users', [AdminController::class, 'createUser']);
-    Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
-    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
-    Route::get('/admin/users/statistics/summary', [AdminController::class, 'getUserStatistics']);
-
-    // Admin - Planes de Suscripción
-    Route::get('/admin/subscription-plans', [AdminController::class, 'getSubscriptionPlans']);
-    Route::get('/admin/subscription-plans/{id}', [AdminController::class, 'getSubscriptionPlan']);
-    Route::post('/admin/subscription-plans', [AdminController::class, 'createSubscriptionPlan']);
-    Route::put('/admin/subscription-plans/{id}', [AdminController::class, 'updateSubscriptionPlan']);
-    Route::delete('/admin/subscription-plans/{id}', [AdminController::class, 'deleteSubscriptionPlan']);
-    Route::get('/admin/subscriptions/statistics', [AdminController::class, 'getSubscriptionStatistics']);
-    Route::get('/admin/users/{userId}/subscriptions', [AdminController::class, 'getUserSubscriptions']);
-
-    // Admin logout
-    Route::post('/admin/logout', [AdminController::class, 'logout']);
-
     
+    // Movie Forum
+    Route::get('/movie-forum/movies', [MovieForumController::class, 'getMovies']);
+    Route::get('/movie-forum/movies/{id}', [MovieForumController::class, 'getMovieDetail']);
+    Route::post('/movie-forum/movies', [MovieForumController::class, 'createMovieWithReview']);
+    Route::get('/movie-forum/reviews', [MovieForumController::class, 'getReviews']);
+    Route::post('/movie-forum/reviews', [MovieForumController::class, 'createReview']);
+    Route::put('/movie-forum/reviews/{id}', [MovieForumController::class, 'updateReview']);
+    Route::delete('/movie-forum/reviews/{id}', [MovieForumController::class, 'deleteReview']);
+    Route::post('/movie-forum/reviews/{id}/react', [MovieForumController::class, 'reactToReview']);
+    Route::get('/movie-forum/reviews/{id}/replies', [MovieForumController::class, 'getReviewReplies']);
+    Route::post('/movie-forum/reviews/{id}/replies', [MovieForumController::class, 'createReply']);
+    Route::get('/movie-forum/movies/{id}/reviews', [MovieForumController::class, 'getMovieReviews']);
+    Route::post('/movie-forum/movies/{id}/rate', [MovieForumController::class, 'rateMovie']);
+    Route::post('/movie-forum/movies/{id}/reviews', [MovieForumController::class, 'createReview']);
+    Route::post('/movie-forum/movies-with-review', [MovieForumController::class, 'createMovieWithReview']);
+    
+    // Endpoints para películas de TMDB
+    Route::get('/movie-forum/check-tmdb-movie/{tmdbId}', [MovieForumController::class, 'checkTmdbMovie']);
+    Route::post('/movie-forum/add-tmdb-movie', [MovieForumController::class, 'addTmdbMovie']);
+
+    // Recomendación Diaria
+    Route::get('/daily-recommendation', [DailyRecommendationController::class, 'getDailyRecommendation']);
+    Route::get('/daily-recommendation/status', [DailyRecommendationController::class, 'getDailyStatus']);
+    Route::post('/daily-recommendation/reset', [DailyRecommendationController::class, 'resetDailyRecommendations']);
 });

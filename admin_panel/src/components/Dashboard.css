@@ -1,17 +1,27 @@
-/* Dashboard Styles */
+/* Dashboard Styles - Modern & Clean Design */
 
 :root {
-  --color-primary: #FFFF00;
-  --color-primary-light: #FFFF4D;
-  --color-dark: #1a1a1a;
-  --color-darker: #0d0d0d;
-  --color-gray: #2a2a2a;
-  --color-white: #ffffff;
-  --color-light: #262626;
-  --color-border: #FFFF00;
-  --color-text: #ffffff;
-  --color-text-light: #b0b0b0;
-  --color-bg: #0d0d0d;
+  --color-primary: #FFD700;
+  --color-primary-light: #FFF44F;
+  --color-primary-dark: #FFA500;
+  --color-dark: #0F0F0F;
+  --color-darker: #050505;
+  --color-gray: #1F1F1F;
+  --color-white: #FFFFFF;
+  --color-light: #121212;
+  --color-lighter: #1B1B1B;
+  --color-border: #FFD700;
+  --color-text: #FFFFFF;
+  --color-text-light: #BDBDBD;
+  --color-text-muted: #9E9E9E;
+  --color-bg: #050505;
+  --color-success: #54E69D;
+  --color-danger: #FF6B6B;
+  --color-warning: #FFB84D;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-glow: 0 0 20px rgba(255, 215, 0, 0.12);
 }
 
 * {
@@ -21,11 +31,10 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
+  overflow-x: hidden;
 }
 
 .dashboard-container {
@@ -34,14 +43,14 @@ body {
   overflow: hidden;
 }
 
-/* Sidebar */
+/* Sidebar - Mejorado */
 .sidebar {
   width: 220px;
-  background: var(--color-dark);
-  border-right: 1px solid var(--color-primary);
+  background: linear-gradient(180deg, #0F0F0F 0%, #050505 100%);
+  border-right: 1px solid rgba(255, 215, 0, 0.1);
   display: flex;
   flex-direction: column;
-  transition: width 0.3s ease;
+  transition: all 0.3s ease;
   overflow-y: auto;
 }
 
@@ -54,22 +63,32 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 24px 20px 20px;
-  border-bottom: 1px solid rgba(255, 255, 0, 0.15);
+  padding: 24px 20px;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.08);
+  background: rgba(255, 215, 0, 0.03);
 }
 
 .sidebar-logo {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 10px;
+  background: rgba(255, 215, 0, 0.1);
+  padding: 4px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-brand:hover .sidebar-logo {
+  transform: scale(1.05);
+  background: rgba(255, 215, 0, 0.15);
 }
 
 .sidebar-brand-name {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   color: var(--color-primary);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.1);
 }
 
 .sidebar.closed .sidebar-brand {
@@ -78,26 +97,32 @@ body {
 
 .sidebar-nav {
   flex: 1;
-  padding: 80px 0 20px 0;
+  padding: 20px 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 20px;
-  color: rgba(255, 255, 255, 0.6);
+  padding: 12px 16px;
+  margin: 0 8px;
+  color: var(--color-text-light);
   text-decoration: none;
   transition: all 0.3s ease;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
 .nav-item:hover {
-  background: rgba(255, 215, 0, 0.1);
+  background: rgba(255, 215, 0, 0.08);
   color: var(--color-primary);
+  transform: translateX(4px);
+}
 }
 
 .nav-item.active {

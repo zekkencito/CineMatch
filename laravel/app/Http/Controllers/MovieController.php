@@ -14,21 +14,8 @@ class MovieController extends Controller
      */
     public function getMovies(Request $request)
     {
-        $query = Movie::with(['genres', 'directors']);
-
-        // Filtrar por género si se especifica
-        if ($request->has('genre_id')) {
-            $query->whereHas('genres', function ($q) use ($request) {
-                $q->where('genres.id', $request->genre_id);
-            });
-        }
-
-        // Filtrar por director si se especifica
-        if ($request->has('director_id')) {
-            $query->whereHas('directors', function ($q) use ($request) {
-                $q->where('directors.id', $request->director_id);
-            });
-        }
+        // No cargar relaciones que no existen
+        $query = Movie::query();
 
         // Búsqueda por título
         if ($request->has('search')) {
@@ -44,11 +31,24 @@ class MovieController extends Controller
     }
 
     /**
-     * Obtener película por ID
+     * Obtener una película específica
      */
     public function getMovie($id)
     {
-        $movie = Movie::with(['genres', 'directors'])->findOrFail($id);
+        // Primero intentar encontrar por ID local (sin relaciones)
+        $movie = Movie::find($id);
+        
+        // Si no se encuentra por ID local, buscar por tmdb_movie_id
+        if (!$movie) {
+            $movie = Movie::where('tmdb_movie_id', $id)->first();
+        }
+
+        if (!$movie) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Película no encontrada'
+            ], 404);
+        }
 
         return response()->json([
             'success' => true,
@@ -98,8 +98,7 @@ class MovieController extends Controller
             'query' => 'required|string|min:2',
         ]);
 
-        $movies = Movie::with(['genres', 'directors'])
-            ->where('title', 'like', '%' . $request->query . '%')
+        $movies = Movie::where('title', 'like', '%' . $request->query . '%')
             ->limit(10)
             ->get();
 

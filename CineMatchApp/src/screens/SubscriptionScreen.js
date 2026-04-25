@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Platform,
   RefreshControl,
@@ -19,20 +18,8 @@ import { paymentService } from '../services/paymentService';
 import paymentConfig from '../config/paymentConfig';
 import colors from '../constants/colors';
 import preferenceService from '../services/preferenceService';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import {
-  faStar,
-  faFilm,
-  faGlobeAmericas,
-  faHeart,
-  faEye,
-  faUndo,
-  faFilter,
-  faInfoCircle,
-  faRocket,
-  faCheck,
-  faArrowLeft,
-} from '@fortawesome/free-solid-svg-icons';
+import Icon from 'react-native-vector-icons/FontAwesome5';
+import CustomAlert from '../components/CustomAlert';
 
 const SubscriptionScreen = ({ navigation }) => {
   const { colors: themeColors } = useTheme();
@@ -42,6 +29,24 @@ const SubscriptionScreen = ({ navigation }) => {
   const [upgrading, setUpgrading] = useState(false);
   const [currentPlan, setCurrentPlan] = useState(null);
   const [plans, setPlans] = useState(null);
+  const [pendingOrder, setPendingOrder] = useState(null);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: '',
+    message: '',
+    type: 'info',
+    buttons: [{ text: 'OK', onPress: () => {} }]
+  });
+
+  const showAlert = (title, message, type = 'info', buttons = null) => {
+    setAlertConfig({
+      title,
+      message,
+      type,
+      buttons: buttons || [{ text: 'OK', onPress: () => setAlertVisible(false) }]
+    });
+    setAlertVisible(true);
+  };
 
   useEffect(() => {
     loadSubscriptionData();
@@ -68,11 +73,13 @@ const SubscriptionScreen = ({ navigation }) => {
             .then(() => {
               console.log('User data reloaded successfully');
               // Mostrar mensaje de éxito
-              Alert.alert(
+              showAlert(
                 '🎉 ¡Premium activado!',
                 '¡Felicidades! Ahora eres usuario Premium y tienes acceso a todas las funciones exclusivas.',
+                'success',
                 [{
                   text: 'OK', onPress: () => {
+                    setAlertVisible(false);
                     loadSubscriptionData();
                     // Vuelve a la pantalla principal para que toda la app se refresque y sepa que es premium
                     navigation.reset({
@@ -85,14 +92,14 @@ const SubscriptionScreen = ({ navigation }) => {
             })
             .catch((error) => {
               console.error('Error reloading user data:', error);
-              Alert.alert(
+              showAlert(
                 'Atención',
                 'El pago se completó correctamente, pero hubo un problema al actualizar tus datos de inmediato. Por favor, cierra y vuelve a abrir la app.',
-                [{ text: 'OK' }]
+                'warning'
               );
             });
         } else if (status === 'cancelled') {
-          Alert.alert('Pago cancelado', 'Has cancelado el pago. Puedes intentarlo nuevamente.');
+          showAlert('Pago cancelado', 'Has cancelado el pago. Puedes intentarlo nuevamente.', 'info');
         }
       }
     };
@@ -165,7 +172,7 @@ const SubscriptionScreen = ({ navigation }) => {
       console.error('❌ Error response:', error.response);
       console.error('❌ Error data:', error?.response?.data);
       if (!isRefreshing) {
-        Alert.alert('Error', 'No se pudo cargar la información de suscripciones: ' + (error.message || 'Error desconocido'));
+        showAlert('Error', 'No se pudo cargar la información de suscripciones: ' + (error.message || 'Error desconocido'), 'error');
       }
     } finally {
       if (isRefreshing) {
@@ -176,20 +183,20 @@ const SubscriptionScreen = ({ navigation }) => {
     }
   };
 
-  const [pendingOrder, setPendingOrder] = useState(null);
-
   const handleUpgrade = async () => {
     const premiumPrice = plans?.premium?.price;
     console.log('💳 handleUpgrade - plans:', JSON.stringify(plans));
     console.log('💳 handleUpgrade - premiumPrice:', premiumPrice);
-    Alert.alert(
+    showAlert(
       '💳 Actualizar a Premium',
       `¿Deseas actualizar a Premium por $${premiumPrice}/mes?`,
+      'info',
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel', onPress: () => setAlertVisible(false) },
         {
           text: 'Confirmar',
           onPress: async () => {
+            setAlertVisible(false);
             setUpgrading(true);
             try {
               // Crear orden en el servidor
@@ -201,12 +208,13 @@ const SubscriptionScreen = ({ navigation }) => {
 
               // Si es mock (desarrollo), activar directamente
               if (createResp.mock) {
-                Alert.alert(
+                showAlert(
                   '🧪 Modo desarrollo',
                   'Estás en modo de prueba (PayPal no configurado). ¿Quieres simular un pago exitoso?',
+                  'info',
                   [
-                    { text: 'Cancelar', style: 'cancel', onPress: () => setPendingOrder(null) },
-                    { text: 'Simular pago', onPress: () => handleVerifyPayment() }
+                    { text: 'Cancelar', style: 'cancel', onPress: () => { setAlertVisible(false); setPendingOrder(null); } },
+                    { text: 'Simular pago', onPress: () => { setAlertVisible(false); handleVerifyPayment(); } }
                   ]
                 );
               } else {
@@ -214,15 +222,15 @@ const SubscriptionScreen = ({ navigation }) => {
                 await paymentService.openApprovalUrl(createResp.approveUrl);
 
                 // Mostrar instrucción para verificar al volver
-                Alert.alert(
+                showAlert(
                   'Pago en progreso',
                   'Se abrió PayPal en el navegador. Completa el pago y vuelve a la app, luego pulsa "Verificar pago" para activar tu suscripción.',
-                  [{ text: 'OK' }]
+                  'info'
                 );
               }
             } catch (error) {
               console.error('Error initiating PayPal flow:', error);
-              Alert.alert('Error', (error.message || error)?.toString() || 'No se pudo iniciar el pago');
+              showAlert('Error', (error.message || error)?.toString() || 'No se pudo iniciar el pago', 'error');
             } finally {
               setUpgrading(false);
             }
@@ -243,8 +251,9 @@ const SubscriptionScreen = ({ navigation }) => {
         } catch (e) {
           console.warn('Could not refetch user after upgrade:', e);
         }
-        Alert.alert('🎉 ¡Premium activado!', response.message, [{
+        showAlert('🎉 ¡Premium activado!', response.message, 'success', [{
           text: 'OK', onPress: () => {
+            setAlertVisible(false);
             setPendingOrder(null);
             loadSubscriptionData();
             navigation.reset({
@@ -254,11 +263,11 @@ const SubscriptionScreen = ({ navigation }) => {
           }
         }]);
       } else {
-        Alert.alert('No verificado', response.message || 'El pago no fue verificado.');
+        showAlert('No verificado', response.message || 'El pago no fue verificado.', 'error');
       }
     } catch (err) {
       console.error('Verification error:', err);
-      Alert.alert('Error', err.message || 'No se pudo verificar el pago.');
+      showAlert('Error', err.message || 'No se pudo verificar el pago.', 'error');
     } finally {
       setUpgrading(false);
     }
@@ -266,7 +275,7 @@ const SubscriptionScreen = ({ navigation }) => {
 
   const handleVerifyPayment = async () => {
     if (!pendingOrder?.orderID) {
-      Alert.alert('Sin orden', 'No hay una orden pendiente para verificar. Por favor inicia el pago primero.');
+      showAlert('Sin orden', 'No hay una orden pendiente para verificar. Por favor inicia el pago primero.', 'warning');
       return;
     }
 
@@ -274,9 +283,10 @@ const SubscriptionScreen = ({ navigation }) => {
   };
 
   const handleCancel = async () => {
-    Alert.alert(
+    showAlert(
       '😢 Cancelar Suscripción',
       '¿Estás seguro de que deseas cancelar? Mantendrás tus beneficios hasta que expire.',
+      'warning',
       [
         { text: 'No', style: 'cancel' },
         {
@@ -292,13 +302,13 @@ const SubscriptionScreen = ({ navigation }) => {
                 } catch (e) {
                   console.warn('No se pudo restablecer radio en el servidor:', e);
                 }
-                Alert.alert('Cancelado', response.message, [
-                  { text: 'OK', onPress: loadSubscriptionData }
+                showAlert('Cancelado', response.message, 'success', [
+                  { text: 'OK', onPress: () => { setAlertVisible(false); loadSubscriptionData(); } }
                 ]);
               }
             } catch (error) {
               console.error('Error cancelling:', error);
-              Alert.alert('Error', 'No se pudo cancelar la suscripción');
+              showAlert('Error', 'No se pudo cancelar la suscripción', 'error');
             }
           }
         }
@@ -347,7 +357,7 @@ const SubscriptionScreen = ({ navigation }) => {
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <FontAwesomeIcon icon={faArrowLeft} size={18} color={colors.primary} style={{ marginRight: 8 }} />
+              <Icon name="chevron-left" size={18} color={colors.primary} style={{ marginRight: 8 }} />
               <Text style={styles.backButtonText}>Volver</Text>
             </View>
           </TouchableOpacity>
@@ -376,7 +386,7 @@ const SubscriptionScreen = ({ navigation }) => {
           <View style={styles.currentPlanCard}>
             <View style={styles.planHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <FontAwesomeIcon icon={isPremium ? faStar : faFilm} size={20} color={isPremium ? '#ffd700' : colors.primary} style={{ marginRight: 8 }} />
+                <Icon name={isPremium ? 'star' : 'film'} size={20} color={isPremium ? '#ffd700' : colors.primary} style={{ marginRight: 8 }} />
                 <Text style={styles.planTitle}>{isPremium ? 'Premium' : 'Plan Gratis'}</Text>
               </View>
               {isPremium && currentPlan?.status === 'active' && (
@@ -401,38 +411,38 @@ const SubscriptionScreen = ({ navigation }) => {
             <View style={styles.benefitsContainer}>
               <Text style={styles.benefitsTitle}>Tus beneficios actuales:</Text>
               <View style={styles.benefitItem}>
-                <FontAwesomeIcon icon={faGlobeAmericas} size={20} color={colors.primary} style={styles.benefitIcon} />
+                <Icon name="globe" size={20} color={colors.primary} style={styles.benefitIcon} />
                 <Text style={styles.benefitText}>
                   Radio de búsqueda: hasta 50 km
                 </Text>
               </View>
               <View style={styles.benefitItem}>
-                <FontAwesomeIcon icon={faHeart} size={20} color={colors.primary} style={styles.benefitIcon} />
+                <Icon name="heart" size={20} color={colors.primary} style={styles.benefitIcon} />
                 <Text style={styles.benefitText}>
                   Palomitas diarias: {benefits.daily_likes_limit === 'unlimited' ? 'Ilimitadas' : benefits.daily_likes_limit}
                 </Text>
               </View>
               {benefits.can_see_likes && (
                 <View style={styles.benefitItem}>
-                  <FontAwesomeIcon icon={faEye} size={20} color={colors.primary} style={styles.benefitIcon} />
+                  <Icon name="eye" size={20} color={colors.primary} style={styles.benefitIcon} />
                   <Text style={styles.benefitText}>Ver quién quiere palomitas contigo</Text>
                 </View>
               )}
               {benefits.can_undo_swipes && (
                 <View style={styles.benefitItem}>
-                  <FontAwesomeIcon icon={faUndo} size={20} color={colors.primary} style={styles.benefitIcon} />
+                  <Icon name="undo" size={20} color={colors.primary} style={styles.benefitIcon} />
                   <Text style={styles.benefitText}>Deshacer Amigos Palomeros rechazados</Text>
                 </View>
               )}
               {benefits.has_advanced_filters && (
                 <View style={styles.benefitItem}>
-                  <FontAwesomeIcon icon={faFilter} size={20} color={colors.primary} style={styles.benefitIcon} />
+                  <Icon name="filter" size={20} color={colors.primary} style={styles.benefitIcon} />
                   <Text style={styles.benefitText}>Filtros avanzados</Text>
                 </View>
               )}
               {benefits.is_featured && (
                 <View style={styles.benefitItem}>
-                  <FontAwesomeIcon icon={faStar} size={20} color={colors.primary} style={styles.benefitIcon} />
+                  <Icon name="star" size={20} color={colors.primary} style={styles.benefitIcon} />
                   <Text style={styles.benefitText}>Perfil destacado</Text>
                 </View>
               )}
@@ -450,13 +460,13 @@ const SubscriptionScreen = ({ navigation }) => {
             <View style={styles.premiumCard}>
               <View style={styles.premiumHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <FontAwesomeIcon icon={faStar} size={20} color={'#ffd700'} style={{ marginRight: 8 }} />
+                  <Icon name="star" size={20} color={'#ffd700'} style={{ marginRight: 8 }} />
                   <Text style={styles.premiumTitle}>Actualiza a Premium</Text>
                 </View>
 
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <FontAwesomeIcon icon={faFilm} size={16} color={colors.primary} style={{ marginRight: 8 }} />
+                <Icon name="film" size={16} color={colors.primary} style={{ marginRight: 8 }} />
                 <Text style={styles.premiumPrice}>${plans.premium.price}/mes</Text>
               </View>
               <Text style={styles.premiumSubtitle}>Desbloquea todas las funciones:</Text>
@@ -468,12 +478,12 @@ const SubscriptionScreen = ({ navigation }) => {
 
                   // Decide icon for descriptive purpose (replace emoji)
                   const getDescriptorIcon = () => {
-                    if (lower.includes('radio') || lower.includes('distancia') || lower.includes('km')) return faGlobeAmericas;
-                    if (lower.includes('ilimit') || (lower.includes('likes') && lower.includes('ilimit'))) return faHeart;
-                    if (lower.includes('ver qui') || lower.includes('ver quién') || lower.includes('ver likes')) return faEye;
-                    if (lower.includes('deshacer') || lower.includes('undo')) return faUndo;
-                    if (lower.includes('filtro') || lower.includes('filtros')) return faFilter;
-                    if (lower.includes('destac') || lower.includes('perfil destacado')) return faStar;
+                    if (lower.includes('radio') || lower.includes('distancia') || lower.includes('km')) return 'globe';
+                    if (lower.includes('ilimit') || (lower.includes('likes') && lower.includes('ilimit'))) return 'heart';
+                    if (lower.includes('ver qui') || lower.includes('ver quién') || lower.includes('ver likes')) return 'eye';
+                    if (lower.includes('deshacer') || lower.includes('undo')) return 'undo';
+                    if (lower.includes('filtro') || lower.includes('filtros')) return 'filter';
+                    if (lower.includes('destac') || lower.includes('perfil destacado')) return 'star';
                     return null;
                   };
 
@@ -488,9 +498,9 @@ const SubscriptionScreen = ({ navigation }) => {
 
                   return (
                     <View key={index} style={styles.featureItem}>
-                      <FontAwesomeIcon icon={faCheck} size={18} color={'#4caf50'} style={{ marginRight: 10 }} />
+                      <Icon name="check" size={18} color={'#4caf50'} style={{ marginRight: 10 }} />
                       {descriptorIcon && (
-                        <FontAwesomeIcon icon={descriptorIcon} size={16} color={colors.primary} style={{ marginRight: 8 }} />
+                        <Icon name={descriptorIcon} size={16} color={colors.primary} style={{ marginRight: 8 }} />
                       )}
                       <Text style={styles.featureText}>{cleaned}</Text>
                     </View>
@@ -512,7 +522,7 @@ const SubscriptionScreen = ({ navigation }) => {
                       <ActivityIndicator color="#fff" />
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                        <FontAwesomeIcon icon={faCheck} size={24} color={'#fff'} style={{ marginRight: 8 }} />
+                        <Icon name="check" size={24} color={'#fff'} style={{ marginRight: 8 }} />
                         <Text style={styles.upgradeButtonText}>Verificar Pago Realizado</Text>
                       </View>
                     )}
@@ -536,7 +546,7 @@ const SubscriptionScreen = ({ navigation }) => {
                     <ActivityIndicator color="#fff" />
                   ) : (
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                      <FontAwesomeIcon icon={faRocket} size={30} color={'#fff'} style={{ marginRight: 8 }} />
+                      <Icon name="rocket" size={30} color={'#fff'} style={{ marginRight: 8 }} />
                       <Text style={styles.upgradeButtonText}>Actualizar Ahora</Text>
                     </View>
                   )}
@@ -548,7 +558,7 @@ const SubscriptionScreen = ({ navigation }) => {
           {/* Info adicional */}
           <View style={styles.infoCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <FontAwesomeIcon icon={faInfoCircle} size={18} color={colors.primary} style={{ marginRight: 8 }} />
+              <Icon name="info-circle" size={18} color={colors.primary} style={{ marginRight: 8 }} />
               <Text style={styles.infoTitle}>Información</Text>
             </View>
             <Text style={styles.infoText}>
@@ -560,6 +570,15 @@ const SubscriptionScreen = ({ navigation }) => {
           </View>
         </ScrollView>
       </LinearGradient>
+      
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttons={alertConfig.buttons}
+        onClose={() => setAlertVisible(false)}
+      />
     </View>
   );
 };

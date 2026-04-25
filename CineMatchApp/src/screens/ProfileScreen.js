@@ -6,7 +6,6 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Animated,
   Platform,
@@ -18,8 +17,9 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { gamificationService } from '../services/gamificationService';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import CustomAlert from '../components/CustomAlert';
+import useCustomAlert from '../hooks/useCustomAlert';
+import Icon from 'react-native-vector-icons/FontAwesome5';
 
 const FRAME_CATALOG = gamificationService.getFrameCatalog();
 
@@ -35,6 +35,7 @@ const ProfileScreen = ({ navigation }) => {
   const { colors, selectedBackground } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { user, logout, updateUser, setUser } = useAuth();
+  const { alertConfig, showSuccess, showError, showWarning, showInfo, showConfirm, hideAlert } = useCustomAlert();
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [localPhoto, setLocalPhoto] = useState(null);
   const [gamification, setGamification] = useState(null);
@@ -88,7 +89,7 @@ const ProfileScreen = ({ navigation }) => {
       setGamification(next);
       setUser((prev) => ({ ...(prev || {}), equipped_frame: next.equippedFrame }));
     } catch (error) {
-      Alert.alert('Aviso', 'No se pudo equipar el marco en este momento.');
+      showError('Aviso', 'No se pudo equipar el marco en este momento.');
     }
   };
 
@@ -97,7 +98,7 @@ const ProfileScreen = ({ navigation }) => {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (permissionResult.granted === false) {
-        Alert.alert('Permisos requeridos', 'Por favor, permite el acceso a tus fotos');
+        showWarning('Permisos requeridos', 'Por favor, permite el acceso a tus fotos');
         return;
       }
 
@@ -127,31 +128,49 @@ const ProfileScreen = ({ navigation }) => {
           // Actualizar el perfil con la imagen en base64
           await updateUser({ profile_photo: base64data });
 
-          Alert.alert('Éxito', 'Foto de perfil actualizada!');
+          showSuccess('Éxito', 'Foto de perfil actualizada!');
         } catch (error) {
           console.error('Error subiendo la foto:', error);
-          Alert.alert('Error', 'No se pudo subir la foto. La imagen se muestra localmente solo.');
+          showError('Error', 'No se pudo subir la foto. La imagen se muestra localmente solo.');
         } finally {
           setUploadingPhoto(false);
         }
       }
     } catch (error) {
       console.error('Error eligiendo la imagen:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+      showError('Error', 'No se pudo seleccionar la imagen');
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert('Cerrar Sesión', '¿Estás seguro de que quieres cerrar sesión?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Cerrar Sesión',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-        },
-      },
-    ]);
+  const handleLogout = async () => {
+    const confirmed = await showConfirm(
+      'Cerrar Sesión',
+      '¿Estás seguro de que quieres cerrar sesión?',
+      'Cerrar Sesión',
+      'Cancelar'
+    );
+    
+    if (confirmed) {
+      try {
+        await logout();
+        // No es necesario navegar manualmente, el AuthContext manejará el cambio
+        // y AppNavigator mostrará automáticamente AuthNavigator
+      } catch (error) {
+        console.error('Error closing session:', error);
+        showError('Error', 'No se pudo cerrar sesión. Intenta de nuevo.');
+      }
+    }
+  };
+
+  const getBootstrapIconName = (ioniconName) => {
+    const iconMap = {
+      'film-sharp': 'film',
+      'pencil-sharp': 'pencil',
+      'star': 'star',
+      'settings': 'cog',
+      'help-circle-sharp': 'question-circle'
+    };
+    return iconMap[ioniconName] || 'info-circle';
   };
 
   const menuItems = [
@@ -249,7 +268,7 @@ const ProfileScreen = ({ navigation }) => {
               </View>
             )}
             <View style={styles.editIconContainer}>
-              <FontAwesome name="camera" size={24} color="black" />
+              <Icon name="camera" size={24} color="black" />
             </View>
           </TouchableOpacity>
 
@@ -320,7 +339,7 @@ const ProfileScreen = ({ navigation }) => {
               onPress={item.onPress}
             >
               <View style={styles.menuLeft}>
-                <Ionicons name={item.iconName} size={22} color={colors.text} />
+                <Icon name={getBootstrapIconName(item.iconName)} size={22} color={colors.text} />
                 <View>
                   <Text style={styles.menuTitle}>{item.title}</Text>
                   <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
@@ -341,6 +360,16 @@ const ProfileScreen = ({ navigation }) => {
 
         <Text style={styles.version}>CineMatch v1.0.0</Text>
       </ScrollView>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttons={alertConfig.buttons}
+        onClose={hideAlert}
+      />
     </LinearGradient>
   );
 };

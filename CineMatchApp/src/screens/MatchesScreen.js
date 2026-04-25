@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  Alert,
   Animated,
   Platform,
   RefreshControl,
@@ -24,10 +23,9 @@ import { gamificationService } from '../services/gamificationService';
 import MatchItem from '../components/MatchItem';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { faMasksTheater } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faTicket, faStar, faHeart } from '@fortawesome/free-solid-svg-icons';
+import Icon from 'react-native-vector-icons/FontAwesome5';
 import api from '../config/api';
+import CustomAlert from '../components/CustomAlert';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -41,8 +39,25 @@ const MatchesScreen = ({ navigation }) => {
   const [likesReceived, setLikesReceived] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: '',
+    message: '',
+    type: 'info',
+    buttons: [{ text: 'OK', onPress: () => {} }]
+  });
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+
+  const showAlert = (title, message, type = 'info', buttons = null) => {
+    setAlertConfig({
+      title,
+      message,
+      type,
+      buttons: buttons || [{ text: 'OK', onPress: () => setAlertVisible(false) }]
+    });
+    setAlertVisible(true);
+  };
 
   // Profile modal state
   const [profileModalVisible, setProfileModalVisible] = useState(false);
@@ -140,7 +155,7 @@ const MatchesScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error al cargar los  Amigos de Butaca:', error);
       if (!isRefreshing) {
-        Alert.alert('Error', '  Error al cargar los Amigos de Butaca. Por favor, verifica tu conexión e inténtalo de nuevo.');
+        showAlert('Error', 'Error al cargar los Amigos de Butaca. Por favor, verifica tu conexión e inténtalo de nuevo.', 'error');
       }
       setMatches([]);
     } finally {
@@ -244,7 +259,7 @@ const MatchesScreen = ({ navigation }) => {
       >
         <View style={styles.headerTop}>
           <View style={styles.iconBox}>
-            <FontAwesomeIcon icon={faTicket} size={32} color={colors.primary} />
+            <Icon name="ticket" size={32} color={colors.primary} />
           </View>
           <Text style={styles.title}>Amigos de Butaca</Text>
         </View>
@@ -260,7 +275,7 @@ const MatchesScreen = ({ navigation }) => {
       {likesReceived.length > 0 && (
         <View style={styles.likesSection}>
           <View style={styles.likesSectionHeader}>
-            <FontAwesomeIcon icon={faHeart} size={16} color={colors.primary} />
+            <Icon name="heart" size={16} color={colors.primary} />
             <Text style={styles.likesSectionTitle}>
               {isPremium ? `${likesReceived.length} personas te dieron Like` : 'Alguien te dio Like 👀'}
             </Text>
@@ -269,7 +284,7 @@ const MatchesScreen = ({ navigation }) => {
                 onPress={() => navigation.navigate('Suscripción')}
                 style={styles.premiumBtn}
               >
-                <FontAwesomeIcon icon={faStar} size={12} color="#fff" />
+                <Icon name="star" size={12} color="#fff" />
                 <Text style={styles.premiumBtnText}>Premium</Text>
               </TouchableOpacity>
             )}
@@ -308,7 +323,7 @@ const MatchesScreen = ({ navigation }) => {
             }
           ]}
         >
-          <FontAwesomeIcon icon={faMasksTheater} size={64} color={colors.primary} />
+          <Icon name="theater-masks" size={64} color={colors.primary} />
           <Text style={styles.emptyText}>Aún no tienes Amigos de Butaca</Text>
           <Text style={styles.emptySubtext}>
             Comienza a hacer swipes para encontrar personas que compartan tu gusto en películas.
@@ -508,6 +523,15 @@ const MatchesScreen = ({ navigation }) => {
           </Animated.View>
         </View>
       </Modal>
+
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttons={alertConfig.buttons}
+        onClose={() => setAlertVisible(false)}
+      />
     </LinearGradient>
   );
 };

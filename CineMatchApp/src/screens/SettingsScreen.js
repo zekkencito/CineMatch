@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from 'react-native-vector-icons/FontAwesome5';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -117,7 +117,7 @@ const SettingsScreen = () => {
     >
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={18} color={colors.primary} />
+          <Icon name="chevron-left" size={18} color={colors.primary} />
           <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
 
@@ -138,8 +138,8 @@ const SettingsScreen = () => {
                   onPress={() => setThemeMode(option.key)}
                   activeOpacity={0.85}
                 >
-                  <Ionicons
-                    name={option.icon}
+                  <Icon
+                    name={option.icon === 'sunny' ? 'sun' : option.icon === 'moon' ? 'moon' : 'adjust'}
                     size={16}
                     color={selected ? colors.textDark : colors.textSecondary}
                   />

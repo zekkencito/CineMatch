@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   TouchableOpacity,
   Dimensions,
@@ -22,15 +21,23 @@ import { gamificationService } from '../services/gamificationService';
 import UserCard from '../components/UserCard';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faMasksTheater, faStar, faReply, faXmark, faFaceSmile } from '@fortawesome/free-solid-svg-icons';
+import CustomAlert from '../components/CustomAlert';
+import useCustomAlert from '../hooks/useCustomAlert';
+import Icon from 'react-native-vector-icons/FontAwesome5';
+import typography from '../constants/typography';
+import spacing from '../constants/spacing';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
+  // Context and hooks
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
+  const { alertConfig, showSuccess, showError, showWarning, showInfo, showConfirm, hideAlert } = useCustomAlert();
+  const isPremium = user?.subscription?.is_premium || user?.is_premium;
+
+  // State management
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -39,23 +46,24 @@ const HomeScreen = ({ navigation }) => {
   const [finished, setFinished] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const swiperRef = useRef(null);
+  const [isUndoing, setIsUndoing] = useState(false);
   const [swiperKey, setSwiperKey] = useState(0);
   const [swiperStartIndex, setSwiperStartIndex] = useState(0);
+
+  // Refs
+  const swiperRef = useRef(null);
   const currentCardIndexRef = useRef(0);
 
-  // Animación para fade in
+  // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  // Animación para bottom sheet
   const modalTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const headerSlideAnim = useRef(new Animated.Value(-50)).current;
 
-  // PanResponder para swipe hacia abajo
+  // PanResponder for modal swipe down gesture
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Solo activar si es swipe vertical hacia abajo
         return gestureState.dy > 5 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
       },
       onPanResponderMove: (_, gestureState) => {
@@ -65,7 +73,6 @@ const HomeScreen = ({ navigation }) => {
       },
       onPanResponderRelease: (_, gestureState) => {
         if (gestureState.dy > 150) {
-          // Cerrar modal si se desliza más de 150px
           Animated.timing(modalTranslateY, {
             toValue: SCREEN_HEIGHT,
             duration: 250,
@@ -75,7 +82,6 @@ const HomeScreen = ({ navigation }) => {
             setTimeout(() => setSelectedUser(null), 100);
           });
         } else {
-          // Volver a posición original
           Animated.spring(modalTranslateY, {
             toValue: 0,
             useNativeDriver: true,
@@ -85,13 +91,23 @@ const HomeScreen = ({ navigation }) => {
     })
   ).current;
 
+  // Effects and animations
   useEffect(() => {
     loadUsers({ reset: true });
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
+    
+    // Start entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(headerSlideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   useEffect(() => {
@@ -100,15 +116,20 @@ const HomeScreen = ({ navigation }) => {
       try {
         const progress = await gamificationService.trackActivity(user.id, 'home_open');
         if (progress.newlyUnlocked?.length) {
-          Alert.alert('Marco desbloqueado', 'Has desbloqueado un nuevo marco de perfil. Equipalo en tu Perfil.');
+          showInfo(
+            '¡Nuevo marco desbloqueado!',
+            'Has desbloqueado un nuevo marco de perfil. Equípalo en tu Perfil.'
+          ).then(() => {
+            navigation.navigate('Perfil');
+          });
         }
       } catch (error) {
-        // silencioso
+        // Silencioso
       }
     };
 
     registerDailyActivity();
-  }, [user?.id]);
+  }, [user?.id, navigation]);
 
   useEffect(() => {
     if (modalVisible) {
@@ -127,7 +148,8 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [modalVisible]);
 
-  const closeModal = () => {
+  // Modal handlers
+  const closeModal = useCallback(() => {
     Animated.timing(modalTranslateY, {
       toValue: SCREEN_HEIGHT,
       duration: 250,
@@ -136,26 +158,24 @@ const HomeScreen = ({ navigation }) => {
       setModalVisible(false);
       setTimeout(() => setSelectedUser(null), 100);
     });
-  };
+  }, []);
 
-  const [isUndoing, setIsUndoing] = useState(false);
-  const isPremium = user?.subscription?.is_premium || user?.is_premium;
-
-  const handleUndoSwipe = async () => {
+  // User action handlers
+  const handleUndoSwipe = useCallback(async () => {
     if (!isPremium) {
-      Alert.alert(
-        'Función Premium 🌟',
-        'Deshacer un swipe (Rewind) es una función exclusiva de CineMatch Premium. ¡Actualiza para recuperar a ese perfil!',
+      showInfo(
+        '🌟 Función Premium',
+        'Deshacer un swipe (Rewind) es exclusivo de CineMatch Premium. ¡Actualiza para recuperar ese perfil!',
         [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Ver Planes', onPress: () => navigation.navigate('Suscripción') },
+          { text: 'Actualizar', onPress: () => navigation.navigate('Suscripción') }
         ]
       );
       return;
     }
 
     if (currentCardIndexRef.current === 0) {
-      Alert.alert('Atención', 'No hay perfiles pasados en esta ronda para deshacer.');
+      showWarning('Atención', 'No hay perfiles pasados en esta ronda para deshacer.');
       return;
     }
 
@@ -169,11 +189,34 @@ const HomeScreen = ({ navigation }) => {
         }
       }
     } catch (error) {
-      Alert.alert('Aviso', error.message || 'No hay acciones recientes para deshacer.');
+      showWarning('Aviso', error.message || 'No hay acciones recientes para deshacer.');
     } finally {
       setIsUndoing(false);
     }
-  };
+  }, [isPremium, navigation]);
+
+  const handleRefresh = useCallback(() => {
+    loadUsers({ reset: true });
+  }, []);
+
+  const handleCardPress = useCallback(async (cardIndex) => {
+    const u = users && users[cardIndex];
+    if (u) {
+      setSelectedUser(u);
+      setModalVisible(true);
+      
+      // Load full profile data
+      try {
+        const fullProfile = await userService.getUserProfile(u.id);
+        const profileData = fullProfile?.user || fullProfile;
+        if (profileData) {
+          setSelectedUser(prev => ({ ...prev, ...profileData }));
+        }
+      } catch (e) {
+        // Silencioso: mostrar datos básicos
+      }
+    }
+  }, [users]);
 
   const loadUsers = async ({ reset = false } = {}) => {
     try {
@@ -212,7 +255,7 @@ const HomeScreen = ({ navigation }) => {
 
     } catch (error) {
       console.error('❌ Error loading users:', error);
-      Alert.alert('Error', 'Problema al cargar Amigos Palomeros. Por favor, revisa tu conexión e inténtalo de nuevo.');
+      showError('Error', 'Problema al cargar Amigos Palomeros. Por favor, revisa tu conexión e inténtalo de nuevo.');
       if (reset) setUsers([]);
     } finally {
       setLoading(false);
@@ -237,12 +280,12 @@ const HomeScreen = ({ navigation }) => {
         await gamificationService.trackActivity(user.id, 'swipe');
       }
       if (result.matched) {
-        Alert.alert(
+        showSuccess(
           "🎬 Encontramos un Amigo de Butaca!",
           `¡${swipedUser.name} y tú tienen gustos similares! Pueden comenzar a chatear.`,
           [
-            { text: 'Seguir buscando', style: 'cancel' },
-            { text: 'Chatear ahora', onPress: () => navigation.navigate('Amigos de Butaca') },
+            { text: 'Seguir viendo', style: 'cancel' },
+            { text: 'Ir al Chat', onPress: () => navigation.navigate('Chats', { screen: 'Chat', params: { match: result.match } }) }
           ]
         );
       }
@@ -252,58 +295,88 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleSwipedAll = () => {
-    Alert.alert(
+    showInfo(
       "🎬 ¡Ya no hay más!",
       "Ya viste a todos los usuarios disponibles en tu área. Puedes recargar para buscar nuevos.",
       [
-        {
-          text: 'Recargar',
-          onPress: () => {
-            loadUsers();
-          }
-        }
+        { text: 'OK', style: 'cancel' },
+        { text: 'Recargar', onPress: () => loadUsers(true) }
       ]
     );
   };
 
+  // Loading state
   if (loading) {
     return (
       <LinearGradient
-        colors={[colors.gradient.start, colors.gradient.end]}
+        colors={[colors.gradient.heroStart, colors.gradient.start, colors.gradient.heroEnd]}
         style={styles.centerContainer}
       >
+        <View style={styles.backgroundElements}>
+          <View style={styles.bgOrbTop} />
+          <View style={styles.bgOrbBottom} />
+        </View>
+        
         <View style={styles.loadingBox}>
-          <View style={styles.loadingLogoBox}>
+          <Animated.View
+            style={[
+              styles.loadingLogoBox,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.8, 1]
+                }) }]
+              }
+            ]}
+          >
             <Image
               source={require('../../assets/logo.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />
-          </View>
+          </Animated.View>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Encontrando Amigos Palomeros...</Text>
+          <Text style={styles.loadingText}>Encontrando Amigos de Butaca...</Text>
         </View>
       </LinearGradient>
     );
   }
 
+  // Empty state
   if (users.length === 0) {
     return (
       <LinearGradient
-        colors={[colors.gradient.start, colors.gradient.end]}
+        colors={[colors.gradient.heroStart, colors.gradient.start, colors.gradient.heroEnd]}
         style={styles.centerContainer}
       >
+        <View style={styles.backgroundElements}>
+          <View style={styles.bgOrbTop} />
+          <View style={styles.bgOrbBottom} />
+        </View>
+        
         <View style={styles.emptyContainer}>
-          <FontAwesomeIcon icon={faMasksTheater} size={64} color={colors.primary} />
-          <Text style={styles.emptyText}>No hay más Amigos Palomeros cerca</Text>
-          <Text style={styles.emptySubtext}>Vuelve a revisar más tarde para encontrar más amantes del cine!</Text>
+          <Animated.View
+            style={[
+              styles.emptyIconContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: fadeAnim }]
+              }
+            ]}
+          >
+            <Icon name="theater-masks" size={80} color={colors.primary} />
+          </Animated.View>
+          <Text style={styles.emptyText}>No hay más Amigos de Butaca cerca</Text>
+          <Text style={styles.emptySubtext}>Vuelve más tarde para encontrar más amantes del cine</Text>
           <TouchableOpacity
             style={styles.reloadButton}
-            onPress={() => loadUsers({ reset: true })}
+            onPress={handleRefresh}
             activeOpacity={0.8}
             disabled={loading}
           >
-            <Text style={styles.reloadButtonText}>Recargar ↻</Text>
+            <Icon name="sync" size={16} color={colors.textDark} style={{ marginRight: 6 }} />
+            <Text style={styles.reloadButtonText}>Recargar</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -315,167 +388,170 @@ const HomeScreen = ({ navigation }) => {
       colors={[colors.gradient.heroStart, colors.gradient.start, colors.gradient.heroEnd]}
       style={styles.container}
     >
-      <View style={styles.backgroundGlowTop} pointerEvents="none" />
-      <View style={styles.backgroundGlowBottom} pointerEvents="none" />
+      {/* Background decorative elements */}
+      <View style={styles.backgroundElements}>
+        <View style={styles.bgOrbTop} />
+        <View style={styles.bgOrbBottom} />
+        <View style={styles.bgOrbRight} />
+      </View>
 
-      <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-        <View style={styles.headerPill}>
-          <Text style={styles.headerPillText}>DESCUBRIR</Text>
+      {/* Enhanced Header */}
+      <Animated.View style={[
+        styles.header,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: headerSlideAnim }]
+        }
+      ]}>
+        <View style={styles.headerContent}>
+          <View style={styles.headerTop}>
+            <View style={styles.headerPill}>
+              <Text style={styles.headerPillText}>🎬 DESCUBRIR</Text>
+            </View>
+            {isPremium && (
+              <TouchableOpacity
+                style={styles.premiumBadge}
+                onPress={() => navigation.navigate('Suscripción')}
+                activeOpacity={0.8}
+              >
+                <Icon name="star" size={14} color="#ffd700" />
+                <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <View style={styles.logoContainer}>
+            <View style={styles.logoBox}>
+              <Image
+                source={require('../../assets/logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.subtitle}>Desliza y conecta con tus Amigos de Butaca</Text>
+          </View>
         </View>
-        {isPremium && (
-          <TouchableOpacity
-            style={styles.premiumBadge}
-            onPress={() => navigation.navigate('Suscripción')}
-          >
-            <FontAwesomeIcon icon={faStar} size={14} color="#ffd700" />
-            <Text style={styles.premiumBadgeText}>PREMIUM</Text>
-          </TouchableOpacity>
-        )}
-        <View style={styles.logoBox}>
-          <Image
-            source={require('../../assets/logo.png')}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-        </View>
-        <Text style={styles.subtitle}>Desliza y conecta con tus Amigos de Butaca</Text>
       </Animated.View>
 
-      {/* Botón flotante de refresh */}
+      {/* Floating refresh button */}
       <TouchableOpacity
         style={styles.refreshButton}
-        onPress={() => loadUsers({ reset: true })}
+        onPress={handleRefresh}
         activeOpacity={0.8}
         disabled={loading}
       >
-        <Text style={styles.refreshButtonIcon}>↻</Text>
+        <Icon name="sync" size={20} color={colors.textDark} />
       </TouchableOpacity>
 
-      <View style={styles.swiperContainer}>
-        <Swiper
-          key={swiperKey}
-          ref={swiperRef}
-          cards={users}
-          cardIndex={swiperStartIndex}
-          renderCard={(user) => {
-            if (!user || !user.id) {
-              return null;
-            }
-            return <UserCard user={user} />;
-          }}
-          onSwiped={(cardIndex) => {
-            currentCardIndexRef.current = cardIndex + 1;
-            const remaining = users.length - (cardIndex + 1);
-            if (!finished && remaining < 5 && !isFetchingMore) {
-              loadUsers({ reset: false });
-            }
-          }}
-          onSwipedLeft={(cardIndex) => handleSwiped(cardIndex, 'left')}
-          onSwipedRight={(cardIndex) => handleSwiped(cardIndex, 'right')}
-          onSwipedAll={() => {
-            if (!finished) {
-              loadUsers({ reset: false });
-            } else {
-              handleSwipedAll();
-            }
-          }}
-          backgroundColor="transparent"
-          stackSize={1}
-          stackScale={5}
-          stackSeparation={14}
-          animateCardOpacity
-          verticalSwipe={false}
-          disableBottomSwipe
-          disableTopSwipe
-          onTapCard={async (cardIndex) => {
-            const u = users && users[cardIndex];
-            if (u) {
-              // Mostrar datos basicos inmediatamente
-              setSelectedUser(u);
-              setModalVisible(true);
-              // Cargar datos completos (incluye directores con foto)
-              try {
-                const fullProfile = await userService.getUserProfile(u.id);
-                const profileData = fullProfile?.user || fullProfile;
-                if (profileData) {
-                  setSelectedUser(prev => ({ ...prev, ...profileData }));
-                }
-              } catch (e) {
-                // Silencioso: se muestran los datos basicos
-              }
-            }
-          }}
-          infinite={false}
-          overlayLabels={{
-            left: {
-              title: 'LO SIENTO',
-              style: {
-                label: {
-                  backgroundColor: colors.textDark,
-                  borderColor: colors.textDark,
-                  color: colors.accent,
-                  borderWidth: 2,
-                  fontSize: 28,
-                  fontWeight: 'bold',
-                  borderRadius: 12,
-                  padding: 12,
-                },
-                wrapper: {
-                  flexDirection: 'column',
-                  alignItems: 'flex-end',
-                  justifyContent: 'flex-start',
-                  marginTop: 50,
-                  marginLeft: -30,
-                },
-              },
-            },
-            right: {
-              title: 'PALOMITAS',
-              style: {
-                label: {
-                  backgroundColor: colors.primary,
-                  borderColor: colors.primary,
-                  color: colors.textDark,
-                  borderWidth: 2,
-                  fontSize: 28,
-                  fontWeight: 'bold',
-                  borderRadius: 12,
-                  padding: 12,
-                },
-                wrapper: {
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  justifyContent: 'flex-start',
-                  marginTop: 50,
-                  marginLeft: 30,
-                },
-              },
-            },
-          }}
-        />
-      </View>
+      {/* Swiper Container */}
+<View style={styles.swiperContainer}>
+<Swiper
+key={swiperKey}
+ref={swiperRef}
+cards={users}
+cardIndex={swiperStartIndex}
+renderCard={(user) => {
+if (!user || !user.id) {
+return null;
+}
+return <UserCard user={user} />;
+}}
+onSwiped={(cardIndex) => {
+currentCardIndexRef.current = cardIndex + 1;
+const remaining = users.length - (cardIndex + 1);
+if (!finished && remaining < 5 && !isFetchingMore) {
+loadUsers({ reset: false });
+}
+}}
+onSwipedLeft={(cardIndex) => handleSwiped(cardIndex, 'left')}
+onSwipedRight={(cardIndex) => handleSwiped(cardIndex, 'right')}
+onSwipedAll={() => {
+if (!finished) {
+loadUsers({ reset: false });
+} else {
+handleSwipedAll();
+}
+}}
+backgroundColor="transparent"
+stackSize={1}
+stackScale={5}
+stackSeparation={14}
+animateCardOpacity
+verticalSwipe={false}
+disableBottomSwipe
+disableTopSwipe
+onTapCard={handleCardPress}
+infinite={false}
+overlayLabels={{
+left: {
+title: 'NO GRACIAS',
+style: {
+label: {
+backgroundColor: colors.textDark,
+borderColor: colors.textDark,
+color: colors.accent,
+borderWidth: 2,
+fontSize: 28,
+fontWeight: 'bold',
+borderRadius: 12,
+padding: 12,
+},
+wrapper: {
+flexDirection: 'column',
+alignItems: 'flex-end',
+justifyContent: 'flex-start',
+marginTop: 50,
+marginLeft: -30,
+},
+},
+},
+right: {
+title: '🍿 MATCH',
+style: {
+label: {
+backgroundColor: colors.primary,
+borderColor: colors.primary,
+color: colors.textDark,
+borderWidth: 2,
+fontSize: 28,
+fontWeight: 'bold',
+borderRadius: 12,
+padding: 12,
+},
+wrapper: {
+flexDirection: 'column',
+alignItems: 'flex-start',
+justifyContent: 'flex-start',
+marginTop: 50,
+marginLeft: 30,
+},
+},
+},
+}}
+/>
+</View>
 
-      {/* Botones de accion: rechazar (X), rewind y aceptar (carita) */}
+      {/* Enhanced Action Buttons */}
       <View style={styles.actionButtonsRow}>
         <TouchableOpacity
           style={styles.rejectButton}
           onPress={() => swiperRef.current && swiperRef.current.swipeLeft()}
           activeOpacity={0.7}
         >
-          <FontAwesomeIcon icon={faXmark} size={28} color={colors.primary} />
+          <Icon name="times" size={28} color={colors.primary} />
         </TouchableOpacity>
 
-        {/* Boton de Rewind (Undo) */}
+        {/* Rewind Button */}
         <TouchableOpacity
-          style={styles.undoButton}
+          style={[styles.undoButton, !isPremium && styles.undoButtonDisabled]}
           onPress={handleUndoSwipe}
           activeOpacity={0.8}
-          disabled={isUndoing || loading}
+          disabled={isUndoing || loading || !isPremium}
         >
           {isUndoing ? (
             <ActivityIndicator size="small" color={colors.textDark} />
           ) : (
-            <FontAwesomeIcon icon={faReply} size={18} color={colors.textDark} />
+            <Icon name="undo" size={18} color={colors.textDark} />
           )}
         </TouchableOpacity>
 
@@ -484,7 +560,7 @@ const HomeScreen = ({ navigation }) => {
           onPress={() => swiperRef.current && swiperRef.current.swipeRight()}
           activeOpacity={0.7}
         >
-          <FontAwesomeIcon icon={faFaceSmile} size={28} color={colors.textDark} />
+          <Icon name="smile" size={28} color={colors.textDark} />
         </TouchableOpacity>
       </View>
 
@@ -586,10 +662,10 @@ const HomeScreen = ({ navigation }) => {
                 );
               })()}
 
-              {/* Peliculas vistas */}
+              {/* Películas vistas */}
               {(selectedUser?.watched_movies_list && selectedUser.watched_movies_list.length > 0) ? (
                 <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Peliculas vistas</Text>
+                  <Text style={styles.modalSectionTitle}>Películas vistas</Text>
                 </View>
               ) : null}
               {(selectedUser?.watched_movies_list || []).map((m) => (
@@ -613,15 +689,39 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </Modal>
 
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttons={alertConfig.buttons}
+        onClose={hideAlert}
+      />
     </LinearGradient>
   );
 };
 
 const createStyles = (colors) => StyleSheet.create({
+  // Layout and container styles
   container: {
     flex: 1,
   },
-  backgroundGlowTop: {
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Background decorative elements
+  backgroundElements: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: -1,
+  },
+  bgOrbTop: {
     position: 'absolute',
     top: -120,
     right: -70,
@@ -631,7 +731,7 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.gradient.accentGlow,
     opacity: 0.45,
   },
-  backgroundGlowBottom: {
+  bgOrbBottom: {
     position: 'absolute',
     bottom: 40,
     left: -90,
@@ -641,128 +741,235 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.overlayLight,
     opacity: 0.35,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  bgOrbRight: {
+    position: 'absolute',
+    top: SCREEN_HEIGHT * 0.3,
+    right: -80,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,215,0,0.04)',
   },
-  loadingBox: {
 
+  // Loading state styles
+  loadingBox: {
     alignItems: 'center',
-    gap: 16,
+    gap: spacing.lg,
   },
   loadingLogoBox: {
     width: 200,
     height: 120,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: spacing.lg,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   loadingText: {
-    fontSize: 16,
+    ...typography.bodyMedium,
     color: colors.textSecondary,
-    marginTop: 8,
+    marginTop: spacing.md,
+    textAlign: 'center',
   },
+
+  // Empty state styles
   emptyContainer: {
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: spacing.xl,
   },
-  emptyEmoji: {
-    fontSize: 80,
-    marginBottom: 24,
+  emptyIconContainer: {
+    marginBottom: spacing.xl,
   },
   emptyText: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.h3,
     color: colors.primary,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     textAlign: 'center',
+    fontWeight: '700',
   },
   emptySubtext: {
-    fontSize: 15,
+    ...typography.bodyMedium,
     color: colors.textSecondary,
-    marginBottom: 32,
+    marginBottom: spacing.xl,
     textAlign: 'center',
+    lineHeight: 24,
   },
   reloadButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 36,
-    paddingVertical: 16,
-    borderRadius: 28,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: spacing.lg,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   reloadButtonText: {
+    ...typography.bodyStrong,
     color: colors.textDark,
-    fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '800',
     letterSpacing: 0.5,
+    fontSize: 14,
   },
+  // Header styles
   header: {
     paddingTop: Platform.OS === 'ios' ? 32 : 38,
-    paddingBottom: 16,
-    paddingHorizontal: 18,
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
-    gap: 6,
     position: 'relative',
-    marginHorizontal: 0,
-    marginTop: 8,
+    marginTop: spacing.sm,
+  },
+  headerContent: {
+    alignItems: 'center',
+    gap: spacing.md,
+    width: '100%',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: spacing.sm,
   },
   headerPill: {
     backgroundColor: 'rgba(245,197,24,0.18)',
     borderColor: colors.primary,
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
   headerPillText: {
+    ...typography.smallStrong,
     color: colors.primary,
-    fontSize: 10,
-    fontWeight: '800',
     letterSpacing: 0.9,
   },
   premiumBadge: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 16 : 14,
-    left: 14,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(245,197,24,0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: spacing.lg,
     borderWidth: 1,
     borderColor: colors.primary,
     zIndex: 10,
   },
   premiumBadgeText: {
+    ...typography.smallStrong,
     color: colors.primary,
-    fontSize: 12,
-    fontWeight: '800',
-    marginLeft: 4,
+    marginLeft: spacing.xs,
     letterSpacing: 0.5,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   logoBox: {
     height: 92,
     width: 156,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 2,
-    marginBottom: 1,
   },
-  logoEmoji: {
-    fontSize: 32,
+  subtitle: {
+    ...typography.bodyMedium,
+    color: colors.textMuted,
+    letterSpacing: 0.35,
+    fontWeight: '600',
+    textAlign: 'center',
   },
-  logoImage: {
-    width: '100%',
-    height: '100%',
+  // Swiper container styles
+  swiperContainer: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    marginTop: -24,
+    marginBottom: 0,
+    paddingHorizontal: spacing.md,
   },
+
+  // Action buttons styles
+  actionButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? 100 : 96,
+    paddingTop: spacing.lg,
+    zIndex: 20,
+    elevation: 0,
+    backgroundColor: 'transparent',
+    marginHorizontal: spacing.lg,
+  },
+  rejectButton: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: colors.surfaceElevated,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOpacity: 0,
+    elevation: 0,
+    borderWidth: 0,
+  },
+  acceptButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOpacity: 0,
+    elevation: 0,
+    borderWidth: 0,
+  },
+  undoButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOpacity: 0,
+    elevation: 0,
+    borderWidth: 0,
+  },
+  undoButtonDisabled: {
+    opacity: 0.5,
+  },
+  refreshButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 18 : 16,
+    right: spacing.lg,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 7,
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
+  refreshButtonIcon: {
+    fontSize: 20,
+    color: colors.textDark,
+    fontWeight: '900',
+  },
+
   // Bottom Sheet styles
   modalOverlay: {
     flex: 1,
@@ -796,28 +1003,28 @@ const createStyles = (colors) => StyleSheet.create({
     opacity: 0.5,
   },
   bottomSheetHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   bottomSheetTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    ...typography.h2,
     color: colors.primary,
-    marginBottom: 4,
+    marginBottom: spacing.sm,
+    fontWeight: '800',
   },
   bottomSheetSubtitle: {
-    fontSize: 14,
+    ...typography.bodyMedium,
     color: colors.textSecondary,
     fontWeight: '500',
   },
   moviesScrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    padding: spacing.md,
+    paddingBottom: spacing.xl,
   },
   movieItemContainer: {
-    marginBottom: 20,
+    marginBottom: spacing.xl,
     alignItems: 'center',
   },
   moviePoster: {
@@ -842,141 +1049,48 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 48,
   },
   movieTitle: {
-    marginTop: 10,
+    marginTop: spacing.sm,
     fontWeight: '700',
     fontSize: 16,
     color: colors.textDark,
     textAlign: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.lg,
   },
-  logo: {
-    fontSize: 25,
-    fontWeight: '900',
-    color: colors.primary,
-    letterSpacing: 1.2,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.textMuted,
-    letterSpacing: 0.35,
-    fontWeight: '600',
-
-  },
-  swiperContainer: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    marginTop: -24,
-    marginBottom: 0,
-    paddingHorizontal: 12,
-  },
-  // Fila de botones de accion debajo de las tarjetas
-  actionButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 24,
-    paddingBottom: Platform.OS === 'ios' ? 100 : 96,
-    paddingTop: 14,
-    zIndex: 20,
-    elevation: 0,
-    backgroundColor: 'transparent',
-    marginHorizontal: 18,
-    borderRadius: 28,
-  },
-  // Boton rojo de rechazar (X)
-  rejectButton: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: colors.surfaceElevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowOpacity: 0,
-    elevation: 0,
-    borderWidth: 0,
-  },
-  // Boton verde de aceptar (carita feliz)
-  acceptButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowOpacity: 0,
-    elevation: 0,
-    borderWidth: 0,
-  },
-  // Boton de deshacer swipe (rewind)
-  undoButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowOpacity: 0,
-    elevation: 0,
-    borderWidth: 0,
-  },
-  refreshButton: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 18 : 16,
-    right: 20,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 7,
-    zIndex: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-  },
-  refreshButtonIcon: {
-    fontSize: 24,
-    color: colors.textDark,
-    fontWeight: '900',
-  },
-  // Secciones dentro del bottom sheet modal (generos, directores)
+  // Modal section styles
   modalSection: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   modalSectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    ...typography.h4,
     color: colors.primary,
-    marginBottom: 10,
+    marginBottom: spacing.sm,
     letterSpacing: 0.3,
+    fontWeight: '800',
   },
   modalTagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
   modalTag: {
     backgroundColor: '#000',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: 20,
     borderWidth: 2,
     borderColor: colors.primary,
   },
   modalTagText: {
+    ...typography.smallStrong,
     color: colors.primary,
-    fontSize: 13,
     fontWeight: '700',
   },
-  // Grilla de directores con fotos en el modal
+  
+  // Directors grid styles
   directorsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: spacing.md,
   },
   directorCard: {
     width: 80,
@@ -989,7 +1103,7 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.border,
     borderWidth: 2,
     borderColor: colors.primary,
-    marginBottom: 6,
+    marginBottom: spacing.sm,
   },
   directorPhotoPlaceholder: {
     width: 64,
@@ -998,7 +1112,7 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: spacing.sm,
   },
   directorInitials: {
     color: colors.textDark,

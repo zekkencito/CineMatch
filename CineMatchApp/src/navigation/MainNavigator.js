@@ -4,6 +4,8 @@ import { Text, View, StyleSheet, Platform, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import MatchesScreen from '../screens/MatchesScreen';
+import MovieForumScreen from '../screens/MovieForumScreen';
+import DailyRecommendationScreen from '../screens/DailyRecommendationScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -202,6 +204,48 @@ const MainNavigator = ({ navigation: parentNavigation }) => {
         }}
       />
       <Tab.Screen
+        name="Foro de Películas"
+        component={MovieForumScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabIcon focused={focused} iconName="movie" palette={colors} styles={styles} />
+          ),
+          tabBarLabel: ({ focused }) => (
+            <Text style={[
+              styles.tabLabel,
+              {
+                color: focused ? colors.primary : colors.textSecondary,
+                fontWeight: focused ? '800' : '600',
+              },
+              focused && styles.tabLabelActive,
+            ]}>
+              Foro
+            </Text>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Recomendación Diaria"
+        component={DailyRecommendationScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabIcon focused={focused} iconName="gift" palette={colors} styles={styles} />
+          ),
+          tabBarLabel: ({ focused }) => (
+            <Text style={[
+              styles.tabLabel,
+              {
+                color: focused ? colors.primary : colors.textSecondary,
+                fontWeight: focused ? '800' : '600',
+              },
+              focused && styles.tabLabelActive,
+            ]}>
+              Diaria
+            </Text>
+          ),
+        }}
+      />
+      <Tab.Screen
         name="Perfil"
         component={ProfileScreen}
         options={{
@@ -228,53 +272,59 @@ const MainNavigator = ({ navigation: parentNavigation }) => {
 
 const createStyles = (colors) => StyleSheet.create({
   iconContainer: {
-    width: 62,
-    height: 40,
+    width: 68,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
     position: 'relative',
-    borderRadius: 14,
+    borderRadius: 16,
   },
   iconText: {
-    fontSize: 26,
+    fontSize: 28,
   },
   iconTextActive: {
     textShadowColor: colors.primary,
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
+    textShadowRadius: 10,
   },
   badge: {
     position: 'absolute',
-    top: 2,
-    right: -6,
+    top: 1,
+    right: -8,
     backgroundColor: colors.primary,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    borderRadius: 12,
+    minWidth: 22,
+    height: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 5,
     borderWidth: 2,
     borderColor: colors.card,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
   badgeText: {
     color: colors.textDark,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
   },
   activeIndicator: {
     position: 'absolute',
     bottom: -1,
-    width: 22,
-    height: 3,
+    width: 24,
+    height: 4,
     backgroundColor: colors.primary,
-    borderRadius: 20,
+    borderRadius: 2,
   },
   tabLabel: {
     fontSize: 12,
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
     marginTop: 0,
+    fontWeight: '600',
   },
   tabLabelActive: {
     letterSpacing: 0.35,
