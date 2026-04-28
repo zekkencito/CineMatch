@@ -30,7 +30,8 @@ const MovieSearchFilters = ({
   searchQuery,
   onSearchQueryChange 
 }) => {
-  const { colors } = useTheme();
+  const { colors, resolvedTheme } = useTheme();
+  const isLightTheme = resolvedTheme === 'light';
   const styles = useMemo(() => createStyles(colors), [colors]);
   
   const [showFilters, setShowFilters] = useState(false);
@@ -147,11 +148,11 @@ const MovieSearchFilters = ({
     <View style={styles.container}>
       {/* Search bar */}
       <View style={styles.searchContainer}>
-        <FontAwesomeIcon icon={faSearch} size={16} color="#999" style={styles.searchIcon} />
+        <FontAwesomeIcon icon={faSearch} size={16} color={colors.textMuted} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Buscar películas..."
-          placeholderTextColor="rgba(255, 255, 255, 0.6)"
+          placeholderTextColor={isLightTheme ? colors.textMuted : 'rgba(255, 255, 255, 0.6)'}
           value={searchQuery}
           onChangeText={onSearchQueryChange}
           onSubmitEditing={onSearch}
@@ -163,7 +164,7 @@ const MovieSearchFilters = ({
             setShowFilters(true);
           }}
         >
-          <FontAwesomeIcon icon={faFilter} size={14} color={getActiveFiltersCount() > 0 ? '#0a0a0a' : '#999'} />
+          <FontAwesomeIcon icon={faFilter} size={14} color={getActiveFiltersCount() > 0 ? colors.textDark : colors.textMuted} />
           {getActiveFiltersCount() > 0 && (
             <View style={styles.filterBadge}>
               <Text style={styles.filterBadgeText}>{getActiveFiltersCount()}</Text>
@@ -189,7 +190,7 @@ const MovieSearchFilters = ({
                   onPress={() => handleGenreToggle(genreId)}
                 >
                   <Text style={styles.activeFilterText}>{genre.name}</Text>
-                  <FontAwesomeIcon icon={faTimes} size={14} color="#0a0a0a" />
+                  <FontAwesomeIcon icon={faTimes} size={14} color={colors.textDark} />
                 </TouchableOpacity>
               ) : null;
             })}
@@ -203,7 +204,7 @@ const MovieSearchFilters = ({
                 }}
               >
                 <Text style={styles.activeFilterText}>{rating} estrellas</Text>
-                <FontAwesomeIcon icon={faTimes} size={14} color="#0a0a0a" />
+                <FontAwesomeIcon icon={faTimes} size={14} color={colors.textDark} />
               </TouchableOpacity>
             ))}
             {filters.years?.map(year => (
@@ -216,7 +217,7 @@ const MovieSearchFilters = ({
                 }}
               >
                 <Text style={styles.activeFilterText}>{year}</Text>
-                <FontAwesomeIcon icon={faTimes} size={14} color="#0a0a0a" />
+                <FontAwesomeIcon icon={faTimes} size={14} color={colors.textDark} />
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -249,7 +250,7 @@ const MovieSearchFilters = ({
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Filtros de búsqueda</Text>
             <TouchableOpacity onPress={() => setShowFilters(false)}>
-              <FontAwesomeIcon icon={faTimes} size={20} color="#FFD700" />
+              <FontAwesomeIcon icon={faTimes} size={20} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -261,13 +262,13 @@ const MovieSearchFilters = ({
                 onPress={() => toggleSection('genre')}
               >
                 <View style={styles.sectionTitleContainer}>
-                  <FontAwesomeIcon icon={faTheaterMasks} size={16} color="#FFD700" />
+                  <FontAwesomeIcon icon={faTheaterMasks} size={16} color={colors.primary} />
                   <Text style={styles.sectionTitle}>Géneros</Text>
                 </View>
                 <FontAwesomeIcon 
                   icon={expandedSections.genre ? faChevronUp : faChevronDown} 
                   size={12} 
-                  color="#999" 
+                  color={colors.textMuted} 
                 />
               </TouchableOpacity>
               
@@ -305,13 +306,13 @@ const MovieSearchFilters = ({
                 onPress={() => toggleSection('rating')}
               >
                 <View style={styles.sectionTitleContainer}>
-                  <FontAwesomeIcon icon={faStar} size={16} color="#FFD700" />
+                  <FontAwesomeIcon icon={faStar} size={16} color={colors.primary} />
                   <Text style={styles.sectionTitle}>Calificación mínima</Text>
                 </View>
                 <FontAwesomeIcon 
                   icon={expandedSections.rating ? faChevronUp : faChevronDown} 
                   size={12} 
-                  color="#999" 
+                  color={colors.textMuted} 
                 />
               </TouchableOpacity>
               
@@ -327,7 +328,7 @@ const MovieSearchFilters = ({
                         ]}
                         onPress={() => handleRatingChange(rating)}
                       >
-                        <FontAwesomeIcon icon={faStar} size={12} color="#FFD700" />
+                        <FontAwesomeIcon icon={faStar} size={12} color={colors.primary} />
                         <Text style={[
                           styles.ratingText,
                           filters.ratings?.includes(rating) && styles.ratingTextActive
@@ -348,13 +349,13 @@ const MovieSearchFilters = ({
                 onPress={() => toggleSection('year')}
               >
                 <View style={styles.sectionTitleContainer}>
-                  <FontAwesomeIcon icon={faCalendarAlt} size={16} color="#FFD700" />
+                  <FontAwesomeIcon icon={faCalendarAlt} size={16} color={colors.primary} />
                   <Text style={styles.sectionTitle}>Año de lanzamiento</Text>
                 </View>
                 <FontAwesomeIcon 
                   icon={expandedSections.year ? faChevronUp : faChevronDown} 
                   size={12} 
-                  color="#999" 
+                  color={colors.textMuted} 
                 />
               </TouchableOpacity>
               
@@ -392,13 +393,13 @@ const MovieSearchFilters = ({
                 onPress={() => toggleSection('sortBy')}
               >
                 <View style={styles.sectionTitleContainer}>
-                  <FontAwesomeIcon icon={faFilter} size={16} color="#FFD700" />
+                  <FontAwesomeIcon icon={faFilter} size={16} color={colors.primary} />
                   <Text style={styles.sectionTitle}>Ordenar por</Text>
                 </View>
                 <FontAwesomeIcon 
                   icon={expandedSections.sortBy ? faChevronUp : faChevronDown} 
                   size={12} 
-                  color="#999" 
+                  color={colors.textMuted} 
                 />
               </TouchableOpacity>
               
@@ -453,7 +454,7 @@ const createStyles = (colors) => StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 30,
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -461,21 +462,20 @@ const createStyles = (colors) => StyleSheet.create({
     zIndex: 1,
     pointerEvents: 'auto',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: '#000',
+    borderColor: colors.border,
+    shadowColor: colors.shadow.lg,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   searchIcon: {
-    color: '#999',
+    color: colors.textMuted,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#FFFFFF',
-    placeholderTextColor: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text,
     fontWeight: '500',
   },
   filterButton: {
@@ -489,9 +489,10 @@ const createStyles = (colors) => StyleSheet.create({
     zIndex: 2,
   },
   filterButtonActive: {
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    backgroundColor: colors.gradient.accentGlow,
   },
   filterBadge: {
+      backgroundColor: colors.error,
     position: 'absolute',
     top: -4,
     right: -4,
@@ -517,7 +518,7 @@ const createStyles = (colors) => StyleSheet.create({
   activeFilterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -527,11 +528,11 @@ const createStyles = (colors) => StyleSheet.create({
   },
   activeFilterText: {
     fontSize: 13,
-    color: '#0a0a0a',
+    color: colors.textDark,
     fontWeight: '700',
   },
   clearAllButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: colors.error,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
@@ -547,7 +548,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -555,13 +556,13 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 20,
+    borderBottomColor: colors.border,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#FFD700',
+    color: colors.primary,
   },
   modalContent: {
     flex: 1,
@@ -584,7 +585,7 @@ const createStyles = (colors) => StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
   },
   sectionContent: {
     paddingTop: 8,
@@ -595,24 +596,24 @@ const createStyles = (colors) => StyleSheet.create({
     gap: 8,
   },
   genreChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.card,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: colors.border,
   },
   genreChipActive: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   genreText: {
     fontSize: 12,
-    color: '#FFFFFF',
     fontWeight: '600',
+    color: colors.text,
   },
   genreTextActive: {
-    color: '#0a0a0a',
+    color: colors.textDark,
   },
   ratingList: {
     flexDirection: 'row',
@@ -622,25 +623,25 @@ const createStyles = (colors) => StyleSheet.create({
   ratingChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.card,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: colors.border,
     gap: 4,
   },
   ratingChipActive: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   ratingText: {
     fontSize: 14,
-    color: '#FFFFFF',
     fontWeight: '600',
+    color: colors.text,
   },
   ratingTextActive: {
-    color: '#0a0a0a',
+    color: colors.textDark,
   },
   yearList: {
     flexDirection: 'row',
@@ -648,50 +649,50 @@ const createStyles = (colors) => StyleSheet.create({
     gap: 8,
   },
   yearChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.card,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: colors.border,
   },
   yearChipActive: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   yearText: {
     fontSize: 12,
-    color: '#FFFFFF',
     fontWeight: '600',
+    color: colors.text,
   },
   yearTextActive: {
-    color: '#0a0a0a',
+    color: colors.textDark,
   },
   sortOption: {
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: colors.border,
   },
   sortOptionActive: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    backgroundColor: colors.gradient.accentGlow,
   },
   sortOptionText: {
     fontSize: 16,
-    color: '#FFFFFF',
     fontWeight: '500',
+    color: colors.text,
   },
   sortOptionTextActive: {
-    color: '#FFD700',
+    color: colors.primary,
     fontWeight: '700',
   },
   modalFooter: {
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: colors.border,
   },
   applyButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -699,7 +700,7 @@ const createStyles = (colors) => StyleSheet.create({
   applyButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0a0a0a',
+    color: colors.textDark,
   },
 
   });

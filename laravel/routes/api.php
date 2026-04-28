@@ -250,6 +250,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Gamificación
     Route::get('/gamification/state', [GamificationController::class, 'getState']);
     Route::post('/gamification/activity', [GamificationController::class, 'trackActivity']);
+    // Equipar marco en perfil
+    Route::post('/gamification/equip-frame', [GamificationController::class, 'equipFrame']);
     
     // Movie Forum
     Route::get('/movie-forum/movies', [MovieForumController::class, 'getMovies']);

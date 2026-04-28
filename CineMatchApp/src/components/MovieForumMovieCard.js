@@ -166,18 +166,18 @@ const MovieForumMovieCard = ({ movie, onPress, onWriteReview }) => {
 const createStyles = (colors) => StyleSheet.create({
   // Main card styles
   movieCard: {
-    backgroundColor: 'rgba(26, 26, 26, 0.9)',
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 20,
     marginBottom: spacing.md,
     marginHorizontal: spacing.md,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: colors.shadow.lg,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.2)',
+    borderColor: colors.border,
   },
   cardTouchable: {
     flexDirection: 'row',
@@ -191,7 +191,7 @@ const createStyles = (colors) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.overlayLight,
     transform: [{ translateX: -SCREEN_WIDTH }],
   },
 
@@ -209,14 +209,14 @@ const createStyles = (colors) => StyleSheet.create({
   posterPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: colors.gradient.accentGlow,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
   },
   posterPlaceholderText: {
     fontSize: 10,
-    color: '#FFD700',
+    color: colors.primary,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -233,13 +233,13 @@ const createStyles = (colors) => StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: colors.text,
     marginBottom: 2,
     lineHeight: 20,
   },
   year: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textMuted,
     fontWeight: '600',
   },
 
@@ -255,7 +255,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   reviewCountText: {
     fontSize: 11,
-    color: '#FFD700',
+    color: colors.primary,
     fontWeight: '600',
   },
   ratingInfoContainer: {
@@ -265,11 +265,11 @@ const createStyles = (colors) => StyleSheet.create({
   },
   ratingInfoText: {
     fontSize: 10,
-    color: '#999',
+    color: colors.textMuted,
     fontWeight: '500',
   },
   ratingButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -278,7 +278,7 @@ const createStyles = (colors) => StyleSheet.create({
     borderRadius: 10,
     marginTop: 4,
     alignSelf: 'center',
-    shadowColor: '#FFD700',
+    shadowColor: colors.gradient.accentGlow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -286,13 +286,13 @@ const createStyles = (colors) => StyleSheet.create({
   },
   ratingButtonText: {
     fontSize: 14,
-    color: '#0a0a0a',
+    color: colors.textDark,
     fontWeight: '700',
     marginLeft: 6,
   },
   ratingCountLabel: {
     fontSize: 12,
-    color: '#0a0a0a',
+    color: colors.textDark,
     fontWeight: '600',
     marginLeft: 6,
   },
@@ -307,11 +307,11 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.primary,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 10,
-    shadowColor: '#FFD700',
+    shadowColor: colors.gradient.accentGlow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -320,7 +320,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   reviewsButtonText: {
     fontSize: 12,
-    color: '#0a0a0a',
+    color: colors.textDark,
     fontWeight: '800',
     letterSpacing: 0.3,
   },
