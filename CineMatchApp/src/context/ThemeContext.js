@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { Appearance } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import baseColors from '../constants/colors';
+import { gamificationService } from '../services/gamificationService';
 
 const THEME_MODE_KEY = 'cinematch_theme_mode';
 const BACKGROUND_THEME_KEY = 'cinematch_equipped_profile_background';
@@ -41,36 +42,43 @@ const BACKGROUND_GRADIENTS = {
 
 const getBackgroundGradientSet = (backgroundId) => BACKGROUND_GRADIENTS[backgroundId] || BACKGROUND_GRADIENTS.default_classic;
 
+const LIGHT_GRADIENT = {
+  heroStart: '#FFFFFF',
+  start: '#FFFFFF',
+  end: '#F8F8F8',
+  heroEnd: '#FFFFFF',
+};
+
 const lightPalette = {
   ...baseColors,
   primary: '#FFA500',
   primaryLight: '#FFD700',
   primaryDark: '#FF8C00',
   secondary: '#FFFFFF',
-  secondaryLight: '#F9F9F9',
-  secondarySoft: '#F0F0F0',
-  background: '#FAFAFA',
+  secondaryLight: '#FFFFFF',
+  secondarySoft: '#F7F7F7',
+  background: '#FFFFFF',
   surface: '#FFFFFF',
-  surfaceElevated: '#F8F8F8',
+  surfaceElevated: '#FFFFFF',
   card: '#FFFFFF',
-  cardHover: '#F5F5F5',
+  cardHover: '#FAFAFA',
   text: '#0B0B0B',
   textSecondary: '#555555',
   textMuted: '#777777',
   textDark: '#000000',
-  border: '#E8E8E8',
-  borderStrong: '#DFDFDF',
+  border: '#E6E6E6',
+  borderStrong: '#DADADA',
   borderLight: '#FFD700',
-  overlay: 'rgba(0,0,0,0.5)',
-  overlayLight: 'rgba(0,0,0,0.08)',
-  overlayStrong: 'rgba(0,0,0,0.6)',
+  overlay: 'rgba(0,0,0,0.35)',
+  overlayLight: 'rgba(0,0,0,0.05)',
+  overlayStrong: 'rgba(0,0,0,0.5)',
   gradient: {
     ...baseColors.gradient,
-    start: 'rgba(250,250,250,0.85)',
-    end: 'rgba(240,240,240,0.90)',
-    heroStart: 'rgba(255,255,255,0.80)',
-    heroEnd: 'rgba(245,245,245,0.88)',
-    accentGlow: 'rgba(255,165,0,0.3)',
+    start: 'rgba(255,255,255,0.98)',
+    end: 'rgba(248,248,248,0.98)',
+    heroStart: 'rgba(255,255,255,1)',
+    heroEnd: 'rgba(250,250,250,0.98)',
+    accentGlow: 'rgba(255,165,0,0.18)',
   },
 };
 
@@ -114,8 +122,21 @@ export const ThemeProvider = ({ children }) => {
     const loadBackgroundTheme = async () => {
       try {
         const storedBackground = await AsyncStorage.getItem(BACKGROUND_THEME_KEY);
-        if (storedBackground && BACKGROUND_GRADIENTS[storedBackground]) {
+        // validate with current streak from gamification (API or local fallback)
+        const state = await gamificationService.getState();
+        const currentStreak = state?.currentStreak ?? 0;
+        const unlocked = gamificationService.getUnlockedBackgrounds(currentStreak);
+
+        if (storedBackground && BACKGROUND_GRADIENTS[storedBackground] && unlocked.includes(storedBackground)) {
           setSelectedBackgroundState(storedBackground);
+        } else {
+          // if stored background is no longer valid/unlocked, fallback to default
+          setSelectedBackgroundState('default_classic');
+          try {
+            await AsyncStorage.setItem(BACKGROUND_THEME_KEY, 'default_classic');
+          } catch (e) {
+            // ignore write failures
+          }
         }
       } catch (error) {
         console.warn('No se pudo cargar el fondo seleccionado:', error);
@@ -143,8 +164,18 @@ export const ThemeProvider = ({ children }) => {
       return;
     }
 
-    setSelectedBackgroundState(backgroundId);
     try {
+      // validate against unlocked backgrounds according to current streak
+      const state = await gamificationService.getState();
+      const currentStreak = state?.currentStreak ?? 0;
+      const unlocked = gamificationService.getUnlockedBackgrounds(currentStreak);
+      if (!unlocked.includes(backgroundId)) {
+        // do not allow equipping a locked background
+        console.warn('Intento de equipar fondo bloqueado por racha:', backgroundId);
+        return;
+      }
+
+      setSelectedBackgroundState(backgroundId);
       await AsyncStorage.setItem(BACKGROUND_THEME_KEY, backgroundId);
     } catch (error) {
       console.warn('No se pudo guardar el fondo seleccionado:', error);
@@ -172,7 +203,9 @@ export const ThemeProvider = ({ children }) => {
 
   const colors = useMemo(() => {
     const palette = resolvedTheme === 'light' ? lightPalette : baseColors;
-    const bgGradient = getBackgroundGradientSet(selectedBackground);
+    const bgGradient = resolvedTheme === 'light'
+      ? LIGHT_GRADIENT
+      : getBackgroundGradientSet(selectedBackground);
 
     return {
       ...palette,

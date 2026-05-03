@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { getImageUrl, IMAGE_SIZES } from '../config/tmdb';
 import { userRatingService } from '../services/userRatingService';
-import colors from '../constants/colors';
 import spacing from '../constants/spacing';
 import typography from '../constants/typography';
+import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.85;
@@ -30,6 +30,7 @@ const SimpleFlipCard = ({
   onWatchedMovie,
   onReviews
 }) => {
+  const { colors } = useTheme();
   const [isRevealed, setIsRevealed] = useState(false);
   const [scratchCount, setScratchCount] = useState(0);
   const [isScratching, setIsScratching] = useState(false);
@@ -50,6 +51,7 @@ const SimpleFlipCard = ({
   const celebrateAnimation = useRef(new Animated.Value(0)).current;
 
   const appGradientColors = [colors.card, colors.surface];
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Reiniciar estado de rascado cuando cambia la película
   useEffect(() => {
@@ -503,7 +505,7 @@ const getGenreNames = (genreIds) => {
   return genreIds.map(id => genreNames[id] || `ID:${id}`).slice(0, 3);
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlay,
@@ -528,7 +530,7 @@ const styles = StyleSheet.create({
   counterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `rgba(255, 215, 0, 0.15)`,
+    backgroundColor: colors.gradient.accentGlow,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 20,
@@ -591,7 +593,7 @@ const styles = StyleSheet.create({
   },
   frontRating: {
     ...typography.h4,
-    color: '#FFD700',
+    color: colors.primary,
     fontWeight: '600'
   },
   ratingSource: {
@@ -654,7 +656,7 @@ const styles = StyleSheet.create({
   },
   backMetaRating: {
     ...typography.body,
-    color: '#FFD700',
+    color: colors.primary,
     fontWeight: '500'
   },
   backMetaSource: {

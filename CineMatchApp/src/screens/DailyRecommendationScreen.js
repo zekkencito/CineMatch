@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,20 +8,23 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
-  Animated
+  Animated,
+  StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import SimpleFlipCard from '../components/SimpleFlipCard';
 import { dailyRecommendationService } from '../services/dailyRecommendationService';
 import { tmdbRandomService } from '../services/tmdbRandomService';
-import colors from '../constants/colors';
 import spacing from '../constants/spacing';
 import typography from '../constants/typography';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const DailyRecommendationScreen = ({ navigation }) => {
+  const { colors, resolvedTheme } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [dailyStatus, setDailyStatus] = useState(null);
   const [currentMovie, setCurrentMovie] = useState(null);
   const [showCard, setShowCard] = useState(false);
@@ -419,6 +422,7 @@ const DailyRecommendationScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle={resolvedTheme === 'light' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
       <View style={styles.headerBackground}>
         {/* Header con animaciones */}
         <Animated.View style={[
@@ -515,7 +519,7 @@ const DailyRecommendationScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background

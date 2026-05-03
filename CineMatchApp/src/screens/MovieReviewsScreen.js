@@ -41,7 +41,7 @@ const MovieReviewsScreen = ({ route, navigation }) => {
   const { movieId, movieTitle, tmdbId, movieData } = route.params;
 
   // Context and hooks
-  const { colors } = useTheme();
+  const { colors, resolvedTheme } = useTheme();
   const authContext = useAuth();
   const { user } = authContext;
   
@@ -90,8 +90,8 @@ const MovieReviewsScreen = ({ route, navigation }) => {
 
   // Effects and animations
   useEffect(() => {
-    // Set status bar for dark theme
-    StatusBar.setBarStyle('light-content');
+    // Set status bar according to theme
+    StatusBar.setBarStyle(resolvedTheme === 'light' ? 'dark-content' : 'light-content');
     
         
     if (tmdbId && movieData) {
@@ -595,14 +595,14 @@ const MovieReviewsScreen = ({ route, navigation }) => {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+        <StatusBar barStyle={resolvedTheme === 'light' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
         <LinearGradient
-          colors={['#0a0a0a', '#1a1a1a', '#0f0f0f']}
-          style={styles.gradient}
-        >
+            colors={[colors.gradient.heroStart, colors.gradient.start, colors.gradient.heroEnd]}
+            style={styles.gradient}
+          >
           <View style={styles.header}>
             <TouchableOpacity onPress={goBack} style={styles.backButton}>
-              <Icon name="chevron-left" size={20} color="#FFD700" />
+              <Icon name="chevron-left" size={20} color={colors.primary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>{movieTitle}</Text>
             <View style={styles.placeholder} />
@@ -619,9 +619,9 @@ const MovieReviewsScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+      <StatusBar barStyle={resolvedTheme === 'light' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
       <LinearGradient
-        colors={['#0a0a0a', '#1a1a1a', '#0f0f0f']}
+        colors={[colors.gradient.heroStart, colors.gradient.start, colors.gradient.heroEnd]}
         style={styles.gradient}
       >
         {/* Header */}
@@ -656,7 +656,7 @@ const MovieReviewsScreen = ({ route, navigation }) => {
                 />
               ) : (
                 <View style={styles.moviePosterPlaceholder}>
-                  <Icon name="film" size={32} color="#FFD700" />
+                  <Icon name="film" size={32} color={colors.primary} />
                 </View>
               )}
               <View style={styles.movieDetails}>
@@ -698,7 +698,7 @@ const MovieReviewsScreen = ({ route, navigation }) => {
               <TextInput
                 style={styles.inlineReviewInput}
                 placeholder="Escribe tu reseña..."
-                placeholderTextColor="#666"
+                placeholderTextColor={colors.textMuted}
                 multiline
                 value={reviewText}
                 onChangeText={setReviewText}
@@ -721,7 +721,7 @@ const MovieReviewsScreen = ({ route, navigation }) => {
                 >
                   {submittingReview ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Icon name="paper-plane" size={14} color="#0a0a0a" />
+                      <Icon name="paper-plane" size={14} color={colors.textDark} />
                       <Text style={styles.submitInlineButtonText}>
                         {replyingTo ? 'Responder' : 'Publicar'}
                       </Text>
@@ -802,7 +802,7 @@ const MovieReviewsScreen = ({ route, navigation }) => {
 const createStyles = (colors) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: colors.background,
   },
   gradient: {
     flex: 1,
@@ -821,7 +821,7 @@ const createStyles = (colors) => StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#FFD700',
+    color: colors.primary,
     textAlign: 'center',
     flex: 1,
   },
@@ -836,7 +836,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textMuted,
     fontWeight: '600',
   },
   movieInfoContainer: {
@@ -847,11 +847,11 @@ const createStyles = (colors) => StyleSheet.create({
     gap: 16,
   },
   replyingToContainer: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    backgroundColor: `${colors.primary}18`,
     padding: 12,
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#FFD700',
+    borderLeftColor: colors.primary,
   },
   replyingToHeader: {
     flexDirection: 'row',
@@ -861,25 +861,25 @@ const createStyles = (colors) => StyleSheet.create({
   },
   replyingToLabel: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textMuted,
     fontWeight: '600',
   },
   replyingToText: {
     fontSize: 13,
-    color: '#FFFFFF',
+    color: colors.text,
     fontWeight: '500',
     lineHeight: 16,
   },
   inlineReviewContainer: {
-    backgroundColor: 'rgba(26, 26, 26, 0.8)',
-    borderColor: 'rgba(255, 215, 0, 0.3)',
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 12,
     padding: 16,
   },
   inlineReviewInput: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: colors.text,
     minHeight: 80,
     textAlignVertical: 'top',
     marginBottom: 12,
@@ -890,7 +890,7 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
   },
   submitInlineButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -898,7 +898,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    shadowColor: '#FFD700',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -912,7 +912,7 @@ const createStyles = (colors) => StyleSheet.create({
   submitInlineButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0a0a0a',
+    color: colors.textDark,
   },
   movieInfo: {
     flexDirection: 'row',
@@ -924,13 +924,13 @@ const createStyles = (colors) => StyleSheet.create({
     width: 60,
     height: 90,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.overlayLight,
   },
   moviePosterPlaceholder: {
     width: 60,
     height: 90,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: `${colors.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -940,12 +940,12 @@ const createStyles = (colors) => StyleSheet.create({
   movieTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFD700',
+    color: colors.primary,
     marginBottom: 4,
   },
   reviewCount: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted,
     fontWeight: '600',
   },
   addReviewButton: {
@@ -953,10 +953,10 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 12,
-    shadowColor: '#FFD700',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -965,7 +965,7 @@ const createStyles = (colors) => StyleSheet.create({
   addReviewButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0a0a0a',
+    color: colors.textDark,
   },
   reviewsContainer: {
     flex: 1,
@@ -982,12 +982,12 @@ const createStyles = (colors) => StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#999',
+    color: colors.textMuted,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   loadingMoreContainer: {
@@ -999,7 +999,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   loadingMoreText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textMuted,
     fontWeight: '600',
   },
   reviewModalContainer: {
@@ -1016,57 +1016,57 @@ const createStyles = (colors) => StyleSheet.create({
   reviewModalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFD700',
+    color: colors.primary,
     textAlign: 'center',
     flex: 1,
   },
   modalReplyingToContainer: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    backgroundColor: `${colors.primary}18`,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
     borderLeftWidth: 3,
-    borderLeftColor: '#FFD700',
+    borderLeftColor: colors.primary,
   },
   modalReplyingToLabel: {
     fontSize: 11,
-    color: '#999',
+    color: colors.textMuted,
     fontWeight: '600',
     marginBottom: 4,
   },
   replyingToText: {
     fontSize: 13,
-    color: '#FFFFFF',
+    color: colors.text,
     fontWeight: '500',
     lineHeight: 16,
   },
   reviewTextInput: {
-    backgroundColor: 'rgba(26, 26, 26, 0.8)',
-    borderColor: 'rgba(255, 215, 0, 0.3)',
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: colors.text,
     minHeight: 120,
     textAlignVertical: 'top',
     marginBottom: 8,
   },
   characterCount: {
     fontSize: 11,
-    color: '#999',
+    color: colors.textMuted,
     textAlign: 'right',
     marginBottom: 20,
   },
   submitButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: '#FFD700',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1078,7 +1078,7 @@ const createStyles = (colors) => StyleSheet.create({
   submitButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0a0a0a',
+    color: colors.textDark,
   },
 });
 

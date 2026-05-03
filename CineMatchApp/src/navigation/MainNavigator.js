@@ -121,19 +121,22 @@ const MainNavigator = ({ navigation: parentNavigation }) => {
           borderTopRightRadius: 32,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 94 : (78 + Math.max(insets.bottom, 0)),
-          paddingBottom: Platform.OS === 'ios' ? 24 : Math.max(insets.bottom, 12),
+          // Use safe-area insets so the tab bar always fits the device bottom area
+          height: (Platform.OS === 'ios' ? 94 : 78) + Math.max(insets.bottom, 0),
+          paddingBottom: Math.max(insets.bottom, 12),
           paddingTop: 10,
-          paddingHorizontal: 12,
-          shadowColor: colors.textDark,
+          paddingHorizontal: 8,
+          shadowColor: colors.shadow?.lg || colors.textDark,
           shadowOffset: { width: 0, height: -8 },
           shadowOpacity: 0.34,
           shadowRadius: 22,
           elevation: 16,
           position: 'absolute',
-          bottom: Platform.OS === 'ios' ? 8 : 6,
-          left: 14,
-          right: 14,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          marginHorizontal: 0,
+          overflow: 'visible',
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
@@ -145,7 +148,7 @@ const MainNavigator = ({ navigation: parentNavigation }) => {
           marginTop: 5,
         },
         tabBarItemStyle: {
-          paddingVertical: 4,
+          paddingVertical: 8,
           borderRadius: 16,
         },
       }}
@@ -272,8 +275,8 @@ const MainNavigator = ({ navigation: parentNavigation }) => {
 
 const createStyles = (colors) => StyleSheet.create({
   iconContainer: {
-    width: 68,
-    height: 44,
+    width: 64,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
@@ -314,8 +317,11 @@ const createStyles = (colors) => StyleSheet.create({
   },
   activeIndicator: {
     position: 'absolute',
-    bottom: -1,
-    width: 24,
+    // move indicator below the label to avoid overlapping icon/text
+    bottom: -22,
+    left: '50%',
+    marginLeft: -18,
+    width: 36,
     height: 4,
     backgroundColor: colors.primary,
     borderRadius: 2,
@@ -323,7 +329,7 @@ const createStyles = (colors) => StyleSheet.create({
   tabLabel: {
     fontSize: 12,
     letterSpacing: 0.3,
-    marginTop: 0,
+    marginTop: 6,
     fontWeight: '600',
   },
   tabLabelActive: {

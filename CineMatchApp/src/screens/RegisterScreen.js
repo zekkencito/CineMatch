@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -30,9 +30,9 @@ if (false && Platform.OS !== 'web') {
 }
 import Slider from '@react-native-community/slider';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import CustomAlert from '../components/CustomAlert';
 import useCustomAlert from '../hooks/useCustomAlert';
-import colors from '../constants/colors';
 import typography from '../constants/typography';
 import spacing from '../constants/spacing';
 import LocationPicker from '../components/LocationPicker';
@@ -40,6 +40,8 @@ import LocationPicker from '../components/LocationPicker';
 const { height, width } = Dimensions.get('window');
 
 const RegisterScreen = ({ navigation }) => {
+  const { colors, resolvedTheme } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   // State management
   const [formData, setFormData] = useState({
     name: '',
@@ -76,7 +78,7 @@ const RegisterScreen = ({ navigation }) => {
   // Animation setup
   useEffect(() => {
     // Set status bar for dark theme
-    StatusBar.setBarStyle('light-content');
+    StatusBar.setBarStyle(resolvedTheme === 'light' ? 'dark-content' : 'light-content');
     
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -299,7 +301,7 @@ const RegisterScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+      <StatusBar barStyle={resolvedTheme === 'light' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -632,11 +634,11 @@ const RegisterScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   // Layout and container styles
   safeArea: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: colors.background,
   },
   gradient: {
     flex: 1,
@@ -646,7 +648,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,

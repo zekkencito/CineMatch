@@ -32,10 +32,12 @@ const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const MovieForumScreen = ({ navigation }) => {
   // Context and hooks
-  const { colors } = useTheme();
+  const { colors, resolvedTheme } = useTheme();
   const { user } = useAuth();
   const { alertConfig, showSuccess, showError, showWarning, showInfo, showConfirm, hideAlert } = useCustomAlert();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const isLightTheme = resolvedTheme === 'light';
+  const forumGradient = [colors.gradient.heroStart, colors.gradient.start, colors.gradient.heroEnd];
 
   // State management
   const [movies, setMovies] = useState([]);
@@ -937,14 +939,14 @@ const MovieForumScreen = ({ navigation }) => {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+        <StatusBar barStyle={isLightTheme ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
         <LinearGradient
-          colors={['#0a0a0a', '#1a1a1a', '#0f0f0f']}
+          colors={forumGradient}
           style={styles.gradient}
         >
           <View style={styles.loadingContainer}>
             <View style={styles.loadingIcon}>
-              <Icon name="film" size={48} color="#FFD700" />
+              <Icon name="film" size={48} color={colors.primary} />
             </View>
             <Text style={styles.loadingTitle}>Cargando películas...</Text>
             <Text style={styles.loadingSubtitle}>Prepárate para descubrir reseñas de cine</Text>
@@ -958,14 +960,14 @@ const MovieForumScreen = ({ navigation }) => {
   if (movies.length === 0 && !loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+        <StatusBar barStyle={isLightTheme ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
         <LinearGradient
-          colors={['#0a0a0a', '#1a1a1a', '#0f0f0f']}
+          colors={forumGradient}
           style={styles.gradient}
         >
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconContainer}>
-              <Icon name="film" size={64} color="#FFD700" />
+              <Icon name="film" size={64} color={colors.primary} />
             </View>
             <Text style={styles.emptyTitle}>No se encontraron películas</Text>
             <Text style={styles.emptySubtitle}>
@@ -986,9 +988,9 @@ const MovieForumScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+      <StatusBar barStyle={isLightTheme ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
       <LinearGradient
-        colors={['#0a0a0a', '#1a1a1a', '#0f0f0f']}
+        colors={forumGradient}
         style={styles.gradient}
       >
         {/* Search and Filters */}
@@ -1019,7 +1021,7 @@ const MovieForumScreen = ({ navigation }) => {
         ]}>
           <View style={styles.headerContent}>
             <View style={styles.headerBadge}>
-              <Icon name="film" size={16} color="#0a0a0a" />
+              <Icon name="film" size={16} color={colors.textDark} />
               <Text style={styles.headerBadgeText}>FORO DE PELÍCULAS</Text>
             </View>
             <Text style={styles.headerTitle}>
@@ -1053,7 +1055,7 @@ const MovieForumScreen = ({ navigation }) => {
             ListFooterComponent={
               isFetchingMore ? (
                 <View style={styles.listFooter}>
-                  <ActivityIndicator size="small" color="#FFD700" />
+                  <ActivityIndicator size="small" color={colors.primary} />
                   <Text style={styles.listFooterText}>Cargando más...</Text>
                 </View>
               ) : null
@@ -1079,7 +1081,7 @@ const createStyles = (colors) => StyleSheet.create({
   // Layout and container styles
   safeArea: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: colors.background,
   },
   gradient: {
     flex: 1,
@@ -1099,7 +1101,7 @@ const createStyles = (colors) => StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    backgroundColor: colors.gradient.accentGlow,
   },
 
   // Header styles
@@ -1116,7 +1118,7 @@ const createStyles = (colors) => StyleSheet.create({
   headerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -1125,22 +1127,22 @@ const createStyles = (colors) => StyleSheet.create({
   headerBadgeText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0a0a0a',
+    color: colors.textDark,
     letterSpacing: 0.8,
   },
   headerTitle: {
     fontSize: 32,
     fontWeight: '900',
-    color: '#FFD700',
+    color: colors.primary,
     marginBottom: 8,
     letterSpacing: 1,
-    textShadowColor: 'rgba(255, 215, 0, 0.3)',
+    textShadowColor: colors.gradient.accentGlow,
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -1163,7 +1165,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   listFooterText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
 
@@ -1177,24 +1179,24 @@ const createStyles = (colors) => StyleSheet.create({
   loadingIcon: {
     width: 100,
     height: 100,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: colors.gradient.accentGlow,
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
+    borderColor: colors.primary,
   },
   loadingTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#FFD700',
+    color: colors.primary,
     marginBottom: 8,
     textAlign: 'center',
   },
   loadingSubtitle: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -1209,35 +1211,35 @@ const createStyles = (colors) => StyleSheet.create({
   emptyIconContainer: {
     width: 120,
     height: 120,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: colors.gradient.accentGlow,
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
+    borderColor: colors.primary,
   },
   emptyTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#FFD700',
+    color: colors.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
   },
   refreshButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#FFD700',
+    shadowColor: colors.gradient.accentGlow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1246,7 +1248,7 @@ const createStyles = (colors) => StyleSheet.create({
   refreshButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0a0a0a',
+    color: colors.textDark,
     letterSpacing: 0.5,
   },
 
