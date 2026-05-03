@@ -84,6 +84,11 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/social-login', [AuthController::class, 'socialLogin']);
 
+// Rutas de recuperación de contraseña (públicas - sin autenticación)
+Route::post('/password-reset-request', [AuthController::class, 'requestPasswordReset']);
+Route::get('/password-reset-verify', [AuthController::class, 'verifyPasswordResetToken']);
+Route::post('/password-reset', [AuthController::class, 'resetPassword']);
+
 // Rutas de limpieza de caché (accesible por URL) - FUERA del middleware auth
 Route::get('/clear-cache', function() {
     try {

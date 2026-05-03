@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Location;
 use App\Models\Subscription;
+use App\Mail\PasswordResetMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -325,5 +328,153 @@ class AuthController extends Controller
             'token' => $token,
             'is_new_user' => $user->wasRecentlyCreated,
         ]);
+    }
+
+    /**
+     * Solicitar recuperación de contraseña
+     * POST /api/password-reset-request
+     * Body: { "email": "user@email.com" }
+     */
+    public function requestPasswordReset(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            // Por seguridad, no revelar si el email existe o no
+            return response()->json([
+                'success' => true,
+                'message' => 'Si el email existe en nuestro sistema, recibirás un enlace de recuperación'
+            ]);
+        }
+
+        try {
+            // Generar token único
+            $resetToken = Str::random(60);
+            
+            // Guardar token en base de datos (válido por 1 hora)
+            $user->update([
+                'password_reset_token' => $resetToken,
+                'password_reset_expires_at' => now()->addHour(),
+            ]);
+
+            // Enviar email con el token
+            Mail::to($user->email)->send(new PasswordResetMail($user->name, $resetToken));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Se ha enviado un enlace de recuperación a tu correo electrónico'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al enviar email de recuperación: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al procesar la solicitud. Intenta más tarde.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Verificar que el token es válido
+     * GET /api/password-reset-verify?token=xxx
+     */
+    public function verifyPasswordResetToken(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = User::where('password_reset_token', $request->token)
+            ->where('password_reset_expires_at', '>', now())
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token inválido o expirado'
+            ], 401);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Token válido',
+            'email' => $user->email // Para que el frontend sepa qué usuario está reseteando
+        ]);
+    }
+
+    /**
+     * Cambiar contraseña usando el token
+     * POST /api/password-reset
+     * Body: { "token": "xxx", "password": "newpassword", "password_confirmation": "newpassword" }
+     */
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Verificar que el token es válido y no ha expirado
+        $user = User::where('password_reset_token', $request->token)
+            ->where('password_reset_expires_at', '>', now())
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token inválido o expirado'
+            ], 401);
+        }
+
+        try {
+            // Actualizar contraseña
+            $user->update([
+                'password' => Hash::make($request->password),
+                'password_reset_token' => null,
+                'password_reset_expires_at' => null,
+            ]);
+
+            // Invalidar todos los tokens anteriores del usuario para forzar re-login
+            $user->tokens()->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Contraseña actualizada exitosamente. Por favor, inicia sesión con tu nueva contraseña.'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al resetear contraseña: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar la contraseña'
+            ], 500);
+        }
     }
 }
