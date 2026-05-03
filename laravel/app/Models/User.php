@@ -28,6 +28,8 @@ class User extends Authenticatable
         'last_active_date',
         'equipped_frame',
         'total_activities',
+        'password_reset_token',
+        'password_reset_expires_at',
     ];
 
     /**

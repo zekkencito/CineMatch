@@ -1,22 +1,4 @@
-/**
- * Pantalla de Olvide Contraseña
- * 
- * Archivo: src/screens/ForgotPasswordScreen.js
- * Lugar: CineMatchApp/src/screens/
- * 
- * Uso:
- * import ForgotPasswordScreen from '@/screens/ForgotPasswordScreen';
- * 
- * export default function App() {
- *   return (
- *     <NavigationContainer>
- *       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
- *     </NavigationContainer>
- *   );
- * }
- */
-
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -27,13 +9,39 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  StyleSheet,
+  Animated,
+  Dimensions,
 } from 'react-native';
-import { requestPasswordReset } from '@/services/authService';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import colors from '../constants/colors';
+import spacing from '../constants/spacing';
+import api from '../config/api';
+
+const { height } = Dimensions.get('window');
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const handleRequestReset = async () => {
     if (!email.trim()) {
@@ -41,7 +49,6 @@ export default function ForgotPasswordScreen({ navigation }) {
       return;
     }
 
-    // Validación básica de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert('Error', 'Por favor ingresa un correo válido');
@@ -49,25 +56,28 @@ export default function ForgotPasswordScreen({ navigation }) {
     }
 
     setLoading(true);
-
     try {
-      const response = await requestPasswordReset(email);
+      const response = await api.post('/password-reset-request', { email });
 
-      if (response.success) {
-        setSent(true);
+      if (response.data.success) {
         Alert.alert(
           'Correo Enviado',
-          'Si tu correo está registrado en CineMatch, recibirás un enlace para recuperar tu contraseña en los próximos minutos.',
+          'Si tu correo está registrado en CineMatch, recibirás un código para cambiar tu contraseña en los próximos minutos.',
           [
             {
-              text: 'Volver al Login',
-              onPress: () => navigation.navigate('Login'),
+              text: 'Continuar',
+              onPress: () => {
+                navigation.navigate('ResetPassword', { email });
+              },
             },
           ]
         );
       }
     } catch (error) {
-      Alert.alert('Error', error.message || 'No pudimos procesar tu solicitud');
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'No pudimos procesar tu solicitud'
+      );
     } finally {
       setLoading(false);
     }
@@ -76,92 +86,230 @@ export default function ForgotPasswordScreen({ navigation }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white"
+      style={styles.container}
     >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
+      <LinearGradient
+        colors={[colors.gradient.heroStart, colors.gradient.start, colors.gradient.heroEnd]}
+        style={styles.gradient}
       >
-        <View className="flex-1 p-6 justify-center">
-          {/* Header */}
-          <View className="mb-8">
-            <Text className="text-3xl font-bold text-gray-900 mb-2">
-              🔐 Recuperar Contraseña
-            </Text>
-            <Text className="text-gray-600 text-base leading-6">
-              Ingresa tu correo electrónico y te enviaremos un enlace para
-              cambiar tu contraseña.
-            </Text>
-          </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View
+            style={[
+              styles.content,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <View style={styles.bgOrbTop} />
+            <View style={styles.bgOrbBottom} />
 
-          {/* Form */}
-          <View>
-            {/* Email Input */}
-            <View className="mb-4">
-              <Text className="text-gray-700 font-semibold mb-2">
-                Correo Electrónico
+            {/* Header */}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="chevron-back" size={28} color={colors.textLight} />
+            </TouchableOpacity>
+
+            <View style={styles.headerContainer}>
+              <View style={styles.iconBox}>
+                <Ionicons name="mail-outline" size={48} color={colors.primary} />
+              </View>
+              <Text style={styles.title}>Recuperar Contraseña</Text>
+              <Text style={styles.subtitle}>
+                Ingresa tu correo electrónico y te enviaremos un código para cambiar tu contraseña
               </Text>
-              <TextInput
-                placeholder="usuario@email.com"
-                placeholderTextColor="#9CA3AF"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                editable={!loading}
-                autoCapitalize="none"
-                className={`border-2 border-gray-300 rounded-lg p-4 text-base ${
-                  loading ? 'opacity-50' : ''
-                }`}
-              />
             </View>
 
-            {/* Submit Button */}
-            <TouchableOpacity
-              onPress={handleRequestReset}
-              disabled={loading || !email.trim()}
-              className={`p-4 rounded-lg flex-row items-center justify-center ${
-                loading || !email.trim()
-                  ? 'bg-gray-300'
-                  : 'bg-gradient-to-r from-purple-600 to-indigo-600'
-              }`}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-white text-base font-semibold">
-                  Enviar Enlace
+            {/* Form */}
+            <View style={styles.form}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="tucorreo@email.com"
+                  placeholderTextColor={colors.textSecondary}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  returnKeyType="done"
+                  onSubmitEditing={handleRequestReset}
+                  editable={!loading}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.sendButton, loading && styles.sendButtonDisabled]}
+                onPress={handleRequestReset}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.textDark} size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.sendButtonText}>Enviar Código</Text>
+                    <Ionicons name="send" size={18} color={colors.textDark} style={{ marginLeft: 8 }} />
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <Text style={styles.helperText}>
+                No recibirás spam, solo un código para recuperar tu cuenta.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.backToLoginButton}
+                onPress={() => navigation.navigate('Login')}
+                disabled={loading}
+              >
+                <Text style={styles.backToLoginText}>
+                  ← Volver al Login
                 </Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Help Text */}
-            <Text className="text-gray-600 text-sm text-center mt-4">
-              Por razones de seguridad, solo mostraremos un enlace si el correo
-              está registrado.
-            </Text>
-          </View>
-
-          {/* Footer */}
-          <View className="mt-8 pt-8 border-t border-gray-200">
-            <Text className="text-gray-600 text-center mb-3">
-              ¿Ya tienes tu enlace?
-            </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('ResetPassword')}>
-              <Text className="text-purple-600 text-center font-semibold text-base">
-                Ir a cambiar contraseña
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View className="mt-4">
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text className="text-gray-600 text-center">
-                ← Volver al login
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </ScrollView>
+      </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  gradient: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 24 : 44,
+  },
+  content: {
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    minHeight: height,
+  },
+  bgOrbTop: {
+    position: 'absolute',
+    top: -120,
+    right: -70,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: colors.gradient.accentGlow,
+  },
+  bgOrbBottom: {
+    position: 'absolute',
+    bottom: -150,
+    left: -100,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 10,
+    padding: 8,
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+    marginTop: 20,
+  },
+  iconBox: {
+    width: 80,
+    height: 80,
+    backgroundColor: 'rgba(245,197,24,0.1)',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.textLight,
+    marginBottom: 12,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  form: {
+    marginTop: 20,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textLight,
+    marginBottom: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: colors.textLight,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  sendButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  sendButtonDisabled: {
+    opacity: 0.6,
+  },
+  sendButtonText: {
+    color: colors.textDark,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  helperText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 16,
+    lineHeight: 19,
+  },
+  backToLoginButton: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginTop: 20,
+  },
+  backToLoginText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});

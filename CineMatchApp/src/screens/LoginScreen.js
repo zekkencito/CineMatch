@@ -251,6 +251,13 @@ const LoginScreen = ({ navigation }) => {
             </View>
 
             <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword')}
+              style={styles.forgotPasswordButton}
+            >
+              <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[styles.loginButton, loading && styles.loginButtonDisabled]}
               onPress={handleLogin}
               disabled={loading}
@@ -436,6 +443,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: -2,
+  },
+  forgotPasswordButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 12,
+    marginBottom: 18,
+  },
+  forgotPasswordText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   registerButton: {
     backgroundColor: 'rgba(245,197,24,0.07)',
