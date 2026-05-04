@@ -109,7 +109,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
           [
             {
               text: 'Ir al Login',
-              onPress: () => navigation.navigate('Login'),
+              onPress: () => navigation.navigate('Inicio de Sesión'),
             },
           ]
         );
@@ -369,7 +369,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
 
               <TouchableOpacity
                 style={styles.backToLoginButton}
-                onPress={() => navigation.navigate('Login')}
+                onPress={() => navigation.navigate('Inicio de Sesión')}
                 disabled={loading}
               >
                 <Text style={styles.backToLoginText}>

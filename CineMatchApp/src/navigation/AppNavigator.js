@@ -99,8 +99,18 @@ const AppNavigator = () => {
     );
   }
 
+  // Configuración de deep linking para reset-password
+  const linking = {
+    prefixes: ['cinematch://', 'https://cinematch.app'],
+    config: {
+      screens: {
+        ResetPassword: 'reset-password',
+      },
+    },
+  };
+
   return (
-    <NavigationContainer ref={navigationRef} theme={navigationTheme}>
+    <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking} fallback={null}>
       {isAuthenticated ? (
         <>
         <Stack.Navigator screenOptions={{ headerShown: false }}>

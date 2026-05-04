@@ -24,9 +24,6 @@ class PasswordResetMail extends Mailable
     {
         $this->userName = $userName;
         $this->resetToken = $resetToken;
-        // URL donde el frontend procesará el reset
-        // Ajusta según tu dominio del frontend
-        $this->resetUrl = env('FRONTEND_URL', 'http://localhost:3000') . '/reset-password?token=' . $resetToken;
     }
 
     /**

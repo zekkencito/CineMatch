@@ -124,21 +124,11 @@
             
             <div class="message">
                 Recibimos una solicitud para recuperar la contraseña de tu cuenta en CineMatch. 
-                Si fuiste tú, haz clic en el botón de abajo para establecer una nueva contraseña.
-            </div>
-            
-            <div class="button-container">
-                <a href="{{ $resetUrl }}" class="reset-button">
-                    Recuperar contraseña
-                </a>
-            </div>
-            
-            <div class="message" style="text-align: center; font-size: 13px; color: #999;">
-                O copia este código en tu app:
+                Usa el código de abajo en tu app para cambiar tu contraseña.
             </div>
             
             <div class="token-section">
-                <div class="token-label">Código de recuperación</div>
+                <div class="token-label">Código de recuperación (Válido por 1 hora)</div>
                 <div class="token-value">{{ $resetToken }}</div>
             </div>
             

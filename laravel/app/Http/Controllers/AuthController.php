@@ -359,8 +359,8 @@ class AuthController extends Controller
         }
 
         try {
-            // Generar token único
-            $resetToken = Str::random(60);
+            // Generar token de 6 dígitos
+            $resetToken = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
             
             // Guardar token en base de datos (válido por 1 hora)
             $user->update([
