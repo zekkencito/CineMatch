@@ -124,13 +124,15 @@ const SubscriptionPlans = () => {
   };
 
   const menuItems = [
-    { id: 1, label: 'Dashboard', path: '/' },
+    { id: 1, label: 'Dashboard', path: '/dashboard' },
     { id: 3, label: 'Usuarios', path: '/users' },
     { id: 4, label: 'Suscripciones', path: '/subscriptions' },
+    { id: 5, label: 'Correos', path: '/emails' },
   ];
 
   const handleLogout = () => {
-    window.location.href = '/login'
+    localStorage.removeItem('admin_token')
+    window.location.hash = '#/login'
   };
 
   return (

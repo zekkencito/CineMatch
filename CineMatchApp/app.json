@@ -79,7 +79,17 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.cinematch.app"
+      "bundleIdentifier": "com.cinematch.app",
+      "infoPlist": {
+        "SKAdNetworkItems": [
+          {
+            "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
+          }
+        ]
+      }
     },
     "web": {
       "favicon": "./assets/logo.png"
@@ -89,7 +99,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "613cc5e8-d11c-4aec-9a58-c6124aeb4048"
+        "projectId": "f9fb9db5-78d9-4b0a-a060-50c8875f18e2"
       }
     }
   }

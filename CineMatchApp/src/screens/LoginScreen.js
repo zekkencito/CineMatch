@@ -17,6 +17,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import colors from '../constants/colors';
 import typography from '../constants/typography';
 import spacing from '../constants/spacing';
@@ -31,9 +32,9 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  // const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   // const [facebookLoading, setFacebookLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
 
   // Referencias para navegación entre inputs
   const passwordInputRef = useRef(null);
@@ -51,13 +52,13 @@ const LoginScreen = ({ navigation }) => {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
-  // Comentado para Expo Go - Google Sign-in requiere módulos nativos
-  // useEffect(() => {
-  //   GoogleSignin.configure({
-  //     webClientId: '815909950118-ub202cfiv226mgf25t803lhgquclpcjv.apps.googleusercontent.com',
-  //     offlineAccess: true,
-  //   });
-  // }, []);
+  // Google Sign-in configuration
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: '815909950118-ub202cfiv226mgf25t803lhgquclpcjv.apps.googleusercontent.com',
+      offlineAccess: true,
+    });
+  }, []);
 
   useEffect(() => {
     Animated.parallel([
@@ -97,44 +98,43 @@ const LoginScreen = ({ navigation }) => {
       setLoading(false);
     }
   };
-// Comentado para Expo Go - Google Sign-in requiere módulos nativos
-  // const handleGoogleSignIn = async () => {
-  //   try {
-  //     setGoogleLoading(true);
-  //     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-  //     const signInResult = await GoogleSignin.signIn();
+  const handleGoogleSignIn = async () => {
+    try {
+      setGoogleLoading(true);
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const signInResult = await GoogleSignin.signIn();
 
-  //     const idToken = signInResult?.data?.idToken || signInResult?.idToken;
+      const idToken = signInResult?.data?.idToken || signInResult?.idToken;
 
-  //     if (!idToken) {
-  //       throw new Error('No se obtuvo el token de Google');
-  //     }
+      if (!idToken) {
+        throw new Error('No se obtuvo el token de Google');
+      }
 
-  //     const userInfo = signInResult?.data?.user || signInResult?.user || {};
+      const userInfo = signInResult?.data?.user || signInResult?.user || {};
 
-  //     await loginWithGoogle({
-  //       idToken,
-  //       name: userInfo.name,
-  //       email: userInfo.email,
-  //       photo: userInfo.photo,
-  //     });
-  //   } catch (error) {
-  //     if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-  //       // Usuario canceló
-  //     } else if (error.code === statusCodes.IN_PROGRESS) {
-  //       // Ya en progreso
-  //     } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-  //       Alert.alert('Error', 'Google Play Services no está disponible en este dispositivo.');
-  //     } else {
-  //       Alert.alert(
-  //         'Error al iniciar con Google',
-  //         error?.message || 'Ocurrió un error. Inténtalo de nuevo.'
-  //       );
-  //     }
-  //   } finally {
-  //     setGoogleLoading(false);
-  //   }
-  // };
+      await loginWithGoogle({
+        idToken,
+        name: userInfo.name,
+        email: userInfo.email,
+        photo: userInfo.photo,
+      });
+    } catch (error) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // Usuario canceló
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // Ya en progreso
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Error', 'Google Play Services no está disponible en este dispositivo.');
+      } else {
+        Alert.alert(
+          'Error al iniciar con Google',
+          error?.message || 'Ocurrió un error. Inténtalo de nuevo.'
+        );
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   // Comentado para Expo Go - Facebook Sign-in requiere módulos nativos
   // const handleFacebookSignIn = async () => {
@@ -270,6 +270,19 @@ const LoginScreen = ({ navigation }) => {
                   <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
                   <Text style={styles.loginButtonIcon}>→</Text>
                 </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.googleButton, googleLoading && styles.loginButtonDisabled]}
+              onPress={handleGoogleSignIn}
+              disabled={googleLoading}
+              activeOpacity={0.8}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color={colors.textDark} size="small" />
+              ) : (
+                <Text style={styles.googleButtonText}>Iniciar con Google</Text>
               )}
             </TouchableOpacity>
 
@@ -468,6 +481,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  googleButton: {
+    backgroundColor: '#ffffff',
+    borderRadius: colors.radius.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  googleButtonText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
   },
   footer: {
     marginTop: 24,

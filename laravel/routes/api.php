@@ -84,6 +84,9 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/social-login', [AuthController::class, 'socialLogin']);
 
+// Rutas de administración - Login (público)
+Route::post('/admin/login', [AdminController::class, 'login']);
+
 // Rutas de recuperación de contraseña (públicas - sin autenticación)
 Route::post('/password-reset-request', [AuthController::class, 'requestPasswordReset']);
 Route::get('/password-reset-verify', [AuthController::class, 'verifyPasswordResetToken']);
@@ -266,6 +269,38 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/movie-forum/reviews', [MovieForumController::class, 'createReview']);
     Route::put('/movie-forum/reviews/{id}', [MovieForumController::class, 'updateReview']);
     Route::delete('/movie-forum/reviews/{id}', [MovieForumController::class, 'deleteReview']);
+    
+    // Admin - Rutas protegidas
+    Route::middleware('admin')->group(function () {
+        // Autenticación Admin
+        Route::post('/admin/logout', [AdminController::class, 'logout']);
+        
+        // Dashboard
+        Route::get('/admin/dashboard/stats', [AdminController::class, 'getDashboardStats']);
+        Route::get('/admin/dashboard/charts', [AdminController::class, 'getDashboardCharts']);
+        
+        // Usuarios (CRUD)
+        Route::get('/admin/users', [AdminController::class, 'getUsers']);
+        Route::get('/admin/users/{id}', [AdminController::class, 'getUser']);
+        Route::post('/admin/users', [AdminController::class, 'createUser']);
+        Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
+        Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
+        Route::get('/admin/users/statistics/summary', [AdminController::class, 'getUserStatistics']);
+        
+        // Suscripciones
+        Route::get('/admin/subscription-plans', [AdminController::class, 'getSubscriptionPlans']);
+        Route::get('/admin/subscription-plans/{id}', [AdminController::class, 'getSubscriptionPlan']);
+        Route::post('/admin/subscription-plans', [AdminController::class, 'createSubscriptionPlan']);
+        Route::put('/admin/subscription-plans/{id}', [AdminController::class, 'updateSubscriptionPlan']);
+        Route::delete('/admin/subscription-plans/{id}', [AdminController::class, 'deleteSubscriptionPlan']);
+        
+        // Correos
+        Route::post('/admin/email/send', [AdminController::class, 'sendEmailToUser']);
+        Route::post('/admin/email/bulk', [AdminController::class, 'sendBulkEmail']);
+        Route::post('/admin/email/premium', [AdminController::class, 'sendEmailToPremiumUsers']);
+        Route::post('/admin/email/all', [AdminController::class, 'sendEmailToAllUsers']);
+    });
+    
     Route::post('/movie-forum/reviews/{id}/react', [MovieForumController::class, 'reactToReview']);
     Route::get('/movie-forum/reviews/{id}/replies', [MovieForumController::class, 'getReviewReplies']);
     Route::post('/movie-forum/reviews/{id}/replies', [MovieForumController::class, 'createReply']);

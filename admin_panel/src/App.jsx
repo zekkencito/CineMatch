@@ -1,18 +1,20 @@
 import './App.css'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Dashboard from './components/Dashboard'
 import SubscriptionPlans from './components/SubscriptionPlans'
 import Users from './components/Users'
+import Email from './components/Email'
 import Login from './components/Login'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
   return (
-    <Router basename="/">
+    <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route 
-          path="/" 
+          path="/dashboard" 
           element={
             <ProtectedRoute>
               <Dashboard />
@@ -35,7 +37,15 @@ export default function App() {
             </ProtectedRoute>
           } 
         />
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route 
+          path="/emails" 
+          element={
+            <ProtectedRoute>
+              <Email />
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

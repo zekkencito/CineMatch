@@ -43,7 +43,7 @@ class ApiService {
         if (response.status === 401) {
           // Token expirado o no autorizado
           localStorage.removeItem('admin_token');
-          window.location.href = '/admin/login';
+          window.location.hash = '#/login';
         }
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
@@ -183,6 +183,49 @@ class ApiService {
   // ============ MENSAJES ============
   async getMessagesStatistics() {
     return this.request('/admin/messages/statistics');
+  }
+
+  // ============ CORREOS ============
+  async sendEmailToUser(userId, subject, message) {
+    return this.request('/admin/email/send', {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: userId,
+        subject,
+        message,
+      }),
+    });
+  }
+
+  async sendBulkEmail(userIds, subject, message) {
+    return this.request('/admin/email/bulk', {
+      method: 'POST',
+      body: JSON.stringify({
+        user_ids: userIds,
+        subject,
+        message,
+      }),
+    });
+  }
+
+  async sendEmailToPremiumUsers(subject, message) {
+    return this.request('/admin/email/premium', {
+      method: 'POST',
+      body: JSON.stringify({
+        subject,
+        message,
+      }),
+    });
+  }
+
+  async sendEmailToAllUsers(subject, message) {
+    return this.request('/admin/email/all', {
+      method: 'POST',
+      body: JSON.stringify({
+        subject,
+        message,
+      }),
+    });
   }
 }
 

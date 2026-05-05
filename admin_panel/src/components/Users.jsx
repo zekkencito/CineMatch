@@ -34,9 +34,10 @@ export default function Users() {
   }, [])
 
   const menuItems = [
-    { id: 1, label: 'Dashboard', icon: 'Film', path: '/' },
+    { id: 1, label: 'Dashboard', icon: 'Film', path: '/dashboard' },
     { id: 3, label: 'Usuarios', icon: 'Heart', path: '/users', active: true },
     { id: 4, label: 'Suscripciones', icon: 'CreditCard', path: '/subscriptions' },
+    { id: 5, label: 'Correos', icon: 'Mail', path: '/emails' },
   ]
 
   // Cargar usuarios al montar el componente
@@ -141,7 +142,8 @@ export default function Users() {
   }
 
   const handleLogout = () => {
-    window.location.href = '/login'
+    localStorage.removeItem('admin_token')
+    window.location.hash = '#/login'
   }
 
   return (
