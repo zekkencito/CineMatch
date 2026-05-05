@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\SubscriptionPlan;
 use App\Models\Subscription;
+use App\Mail\AdminMessageMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 
 class AdminController extends Controller
@@ -94,7 +96,7 @@ class AdminController extends Controller
 
             // Usuarios más activos (por likes enviados)
             $topUsers = User::selectRaw('users.name, COUNT(likes.id) as matches')
-                ->leftJoin('likes', 'users.id', '=', 'likes.liker_id')
+                ->leftJoin('likes', 'users.id', '=', 'likes.from_user_id')
                 ->groupBy('users.id', 'users.name')
                 ->orderByDesc('matches')
                 ->limit(3)
@@ -308,8 +310,8 @@ class AdminController extends Controller
     {
         return DB::table('matches')
             ->join('users', function($join) {
-                $join->on('matches.user1_id', '=', 'users.id')
-                     ->orOn('matches.user2_id', '=', 'users.id');
+                $join->on('matches.user_one_id', '=', 'users.id')
+                     ->orOn('matches.user_two_id', '=', 'users.id');
             })
             ->selectRaw('users.name, COUNT(*) as matches')
             ->groupBy('users.id', 'users.name')
@@ -348,7 +350,7 @@ class AdminController extends Controller
         // Agregar subquery de matches
         $query->addSelect(DB::raw('COALESCE((
             SELECT COUNT(*) FROM `matches` 
-            WHERE (`matches`.`user1_id` = `users`.`id` OR `matches`.`user2_id` = `users`.`id`)
+            WHERE (`matches`.`user_one_id` = `users`.`id` OR `matches`.`user_two_id` = `users`.`id`)
         ), 0) as match_count'));
 
         // Agregar subquery para obtener el plan de suscripción
@@ -387,8 +389,8 @@ class AdminController extends Controller
 
         // Count matches
         $matchCount = DB::table('matches')
-            ->where('user1_id', $id)
-            ->orWhere('user2_id', $id)
+            ->where('user_one_id', $id)
+            ->orWhere('user_two_id', $id)
             ->count();
 
         return response()->json([
@@ -518,7 +520,7 @@ class AdminController extends Controller
     public function updateSubscriptionPlan(Request $request, $id)
     {
         $plan = SubscriptionPlan::findOrFail($id);
-
+        
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255|unique:subscription_plans,name,' . $id,
             'price' => 'sometimes|numeric|min:0',
@@ -531,6 +533,197 @@ class AdminController extends Controller
         $plan->update($validated);
 
         return response()->json(['message' => 'Plan updated successfully', 'plan' => $plan]);
+    }
+
+    // ============ CORREOS ============
+
+    /**
+     * Enviar correo a un usuario específico
+     */
+    public function sendEmailToUser(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'subject' => 'required|string|max:255',
+            'message' => 'required|string|min:10',
+        ]);
+
+        try {
+            $user = User::findOrFail($validated['user_id']);
+
+            // Enviar correo usando AdminMessageMail
+            Mail::to($user->email)->send(new AdminMessageMail(
+                $user->name,
+                $user->email,
+                $validated['subject'],
+                $validated['message']
+            ));
+
+            return response()->json([
+                'message' => 'Correo enviado exitosamente a ' . $user->email,
+                'user' => [
+                    'id' => $user->id,
+                    'email' => $user->email,
+                    'name' => $user->name,
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error('Error sending email: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error al enviar el correo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Enviar correo masivo a múltiples usuarios
+     */
+    public function sendBulkEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'exists:users,id',
+            'subject' => 'required|string|max:255',
+            'message' => 'required|string|min:10',
+        ]);
+
+        try {
+            $users = User::whereIn('id', $validated['user_ids'])->get();
+            $failedUsers = [];
+            $successCount = 0;
+
+            foreach ($users as $user) {
+                try {
+                    Mail::to($user->email)->send(new AdminMessageMail(
+                        $user->name,
+                        $user->email,
+                        $validated['subject'],
+                        $validated['message']
+                    ));
+                    $successCount++;
+                } catch (\Exception $e) {
+                    \Log::error('Error sending email to ' . $user->email . ': ' . $e->getMessage());
+                    $failedUsers[] = [
+                        'id' => $user->id,
+                        'email' => $user->email,
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+
+            return response()->json([
+                'message' => 'Correos enviados',
+                'success_count' => $successCount,
+                'failed_count' => count($failedUsers),
+                'failed_users' => $failedUsers
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error('Error in bulk email: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error al enviar correos masivos: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Enviar correo a todos los usuarios premium
+     */
+    public function sendEmailToPremiumUsers(Request $request)
+    {
+        $validated = $request->validate([
+            'subject' => 'required|string|max:255',
+            'message' => 'required|string|min:10',
+        ]);
+
+        try {
+            $premiumUsers = User::whereHas('subscription', function($query) {
+                $query->where('plan', 'premium')->where('is_active', true);
+            })->get();
+
+            $failedUsers = [];
+            $successCount = 0;
+
+            foreach ($premiumUsers as $user) {
+                try {
+                    Mail::to($user->email)->send(new AdminMessageMail(
+                        $user->name,
+                        $user->email,
+                        $validated['subject'],
+                        $validated['message']
+                    ));
+                    $successCount++;
+                } catch (\Exception $e) {
+                    \Log::error('Error sending email to ' . $user->email . ': ' . $e->getMessage());
+                    $failedUsers[] = [
+                        'id' => $user->id,
+                        'email' => $user->email,
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+
+            return response()->json([
+                'message' => 'Correos enviados a usuarios premium',
+                'total_premium_users' => $premiumUsers->count(),
+                'success_count' => $successCount,
+                'failed_count' => count($failedUsers),
+                'failed_users' => $failedUsers
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error('Error sending email to premium users: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error al enviar correos a usuarios premium: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Enviar correo a todos los usuarios
+     */
+    public function sendEmailToAllUsers(Request $request)
+    {
+        $validated = $request->validate([
+            'subject' => 'required|string|max:255',
+            'message' => 'required|string|min:10',
+        ]);
+
+        try {
+            $allUsers = User::all();
+            $failedUsers = [];
+            $successCount = 0;
+
+            foreach ($allUsers as $user) {
+                try {
+                    Mail::to($user->email)->send(new AdminMessageMail(
+                        $user->name,
+                        $user->email,
+                        $validated['subject'],
+                        $validated['message']
+                    ));
+                    $successCount++;
+                } catch (\Exception $e) {
+                    \Log::error('Error sending email to ' . $user->email . ': ' . $e->getMessage());
+                    $failedUsers[] = [
+                        'id' => $user->id,
+                        'email' => $user->email,
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+
+            return response()->json([
+                'message' => 'Correos enviados a todos los usuarios',
+                'total_users' => $allUsers->count(),
+                'success_count' => $successCount,
+                'failed_count' => count($failedUsers),
+                'failed_users' => $failedUsers
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error('Error sending email to all users: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error al enviar correos a todos los usuarios: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Lock, Mail, AlertCircle } from 'lucide-react'
 import './Login.css'
 import api from '../services/api'
 
 export default function Login() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -17,7 +19,7 @@ export default function Login() {
     try {
       const data = await api.login(email, password)
       if (data.token) {
-        window.location.href = '/admin/'
+        navigate('/dashboard', { replace: true })
       }
     } catch (err) {
       setError('Credenciales inválidas o servidor no disponible')

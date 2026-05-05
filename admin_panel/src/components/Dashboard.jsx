@@ -24,6 +24,7 @@ import {
   Star,
   Gift,
   DollarSign,
+  Mail,
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -122,13 +123,15 @@ const Dashboard = () => {
     : [];
 
   const menuItems = [
-    { id: 1, label: 'Dashboard', icon: Film, active: true, path: '/' },
+    { id: 1, label: 'Dashboard', icon: Film, active: true, path: '/dashboard' },
     { id: 3, label: 'Usuarios', icon: Heart, path: '/users' },
     { id: 4, label: 'Suscripciones', icon: CreditCard, path: '/subscriptions' },
+    { id: 5, label: 'Correos', icon: Mail, path: '/emails' },
   ];
 
   const handleLogout = () => {
-    window.location.href = '/login'
+    localStorage.removeItem('admin_token')
+    window.location.hash = '#/login'
   }
 
   return (
