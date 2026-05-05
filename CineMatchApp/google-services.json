@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "815909950118-srf12s8fv5slls96l29uvup9q9na7mho.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cinematch.app",
+            "certificate_hash": "ea1c9bfa7485e9c652b492d27efe728cc42d810d"
+          }
+        },
+        {
           "client_id": "815909950118-ub202cfiv226mgf25t803lhgquclpcjv.apps.googleusercontent.com",
           "client_type": 3
         }
