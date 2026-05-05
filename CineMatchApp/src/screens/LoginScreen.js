@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   googleButtonText: {
-    color: colors.text,
+    color: '#000000',
     fontSize: 15,
     fontWeight: '700',
   },
