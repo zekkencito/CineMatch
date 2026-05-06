@@ -27,6 +27,7 @@ import Card from '../components/Card';
 
 const { height } = Dimensions.get('window');
 
+
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -191,113 +192,113 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.bgOrbTop} />
             <View style={styles.bgOrbBottom} />
 
-          {/* Logo Area */}
-          <View style={styles.logoContainer}>
-            <View style={styles.logoBox}>
-              <Image
-                source={require('../../assets/logo.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-            <Text style={styles.logo}>CineMatch</Text>
-            <Text style={styles.subtitle}>Encuentra a tus Amigos de Butaca</Text>
-          </View>
-
-          {/* Form */}
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="tucorreo@email.com"
-                placeholderTextColor={colors.textSecondary}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                returnKeyType="next"
-                onSubmitEditing={focusPasswordInput}
-                blurOnSubmit={false}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Contraseña</Text>
-              <View>
-                <TextInput
-                  ref={passwordInputRef}
-                  style={[styles.input, { paddingRight: 50 }]}
-                  placeholder="••••••••"
-                  placeholderTextColor={colors.textSecondary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  returnKeyType="done"
-                  onFocus={() => {
-                    setTimeout(() => {
-                      scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }, 120);
-                  }}
-                  onSubmitEditing={handleLogin}
+            {/* Logo Area */}
+            <View style={styles.logoContainer}>
+              <View style={styles.logoBox}>
+                <Image
+                  source={require('../../assets/logo.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
                 />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword((prev) => !prev)}
-                >
-                  <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color={colors.textSecondary} />
-                </TouchableOpacity>
               </View>
+              <Text style={styles.logo}>CineMatch</Text>
+              <Text style={styles.subtitle}>Encuentra a tus Amigos de Butaca</Text>
             </View>
 
-            <TouchableOpacity
-              onPress={() => navigation.navigate('ForgotPassword')}
-              style={styles.forgotPasswordButton}
-            >
-              <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
-            </TouchableOpacity>
+            {/* Form */}
+            <View style={styles.form}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="tucorreo@email.com"
+                  placeholderTextColor={colors.textSecondary}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  returnKeyType="next"
+                  onSubmitEditing={focusPasswordInput}
+                  blurOnSubmit={false}
+                />
+              </View>
 
-            <TouchableOpacity
-              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.textDark} size="small" />
-              ) : (
-                <>
-                  <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
-                  <Text style={styles.loginButtonIcon}>→</Text>
-                </>
-              )}
-            </TouchableOpacity>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Contraseña</Text>
+                <View>
+                  <TextInput
+                    ref={passwordInputRef}
+                    style={[styles.input, { paddingRight: 50 }]}
+                    placeholder="••••••••"
+                    placeholderTextColor={colors.textSecondary}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    returnKeyType="done"
+                    onFocus={() => {
+                      setTimeout(() => {
+                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                      }, 120);
+                    }}
+                    onSubmitEditing={handleLogin}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword((prev) => !prev)}
+                  >
+                    <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-            <TouchableOpacity
-              style={[styles.googleButton, googleLoading && styles.loginButtonDisabled]}
-              onPress={handleGoogleSignIn}
-              disabled={googleLoading}
-              activeOpacity={0.8}
-            >
-              {googleLoading ? (
-                <ActivityIndicator color={colors.textDark} size="small" />
-              ) : (
-                <Text style={styles.googleButtonText}>Iniciar con Google</Text>
-              )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ForgotPassword')}
+                style={styles.forgotPasswordButton}
+              >
+                <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+              </TouchableOpacity>
 
-            <Text style={styles.helperText}>Accede con correo y contraseña para continuar.</Text>
+              <TouchableOpacity
+                style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+                onPress={handleLogin}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.textDark} size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+                    <Text style={styles.loginButtonIcon}>→</Text>
+                  </>
+                )}
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.registerButton}
-              onPress={() => navigation.navigate('Registro')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.registerButtonText}>
-                Crear Nueva Cuenta
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[styles.googleButton, googleLoading && styles.loginButtonDisabled]}
+                onPress={handleGoogleSignIn}
+                disabled={googleLoading}
+                activeOpacity={0.8}
+              >
+                {googleLoading ? (
+                  <ActivityIndicator color={colors.textDark} size="small" />
+                ) : (
+                  <Text style={styles.googleButtonText}>Iniciar con Google</Text>
+                )}
+              </TouchableOpacity>
+
+              <Text style={styles.helperText}>Accede con correo y contraseña para continuar.</Text>
+
+              <TouchableOpacity
+                style={styles.registerButton}
+                onPress={() => navigation.navigate('Registro')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.registerButtonText}>
+                  Crear Nueva Cuenta
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             {/* Footer */}
             <View style={styles.footer}>
