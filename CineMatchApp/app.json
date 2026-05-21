@@ -7,7 +7,7 @@
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
     "scheme": "cinematch",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
@@ -40,7 +40,8 @@
           "autoLogAppEventsEnabled": false,
           "isAutoInitEnabled": true
         }
-      ]
+      ],
+      "expo-font"
     ],
     "android": {
       "package": "com.cinematch.app",
