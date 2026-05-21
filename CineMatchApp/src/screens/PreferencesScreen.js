@@ -27,6 +27,7 @@ if (false && Platform.OS !== 'web') {
 import * as Location from 'expo-location';
 import colors from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import tmdbMovieService from '../services/tmdbMovieService';
 import preferenceService from '../services/preferenceService';
 import { subscriptionService } from '../services/subscriptionService';
@@ -35,8 +36,10 @@ import CustomAlert from '../components/CustomAlert';
 
 const PreferencesScreen = ({ navigation, route }) => {
   const { colors: themeColors } = useTheme();
+  const { clearPendingPreferencesOnboarding } = useAuth();
   const isInitialSetup = route?.params?.isInitialSetup || false;
   const fromSocialLogin = route?.params?.fromSocialLogin || false;
+  const fromRegistration = route?.params?.fromRegistration || false;
 
   const showAlert = (title, message, type = 'info', buttons = null) => {
     setAlertConfig({
@@ -357,6 +360,28 @@ const PreferencesScreen = ({ navigation, route }) => {
   // Guardar preferencias
   const savePreferences = async () => {
     // Validaciones
+    // Si estamos en el flujo de configuración inicial (registro/tutorial/social),
+    // requerimos que el usuario complete TODAS las secciones: Géneros, Directores,
+    // Películas y Ubicación. Esto evita que el usuario guarde parcialmente y
+    // salga sin haber completado su perfil inicial.
+    if (isInitialSetup || fromRegistration || fromSocialLogin) {
+      const missingParts = [];
+      if (selectedGenres.length === 0) missingParts.push('Géneros');
+      if (selectedDirectors.length === 0) missingParts.push('Directores');
+      if (watchedMovies.length === 0) missingParts.push('Películas');
+      if (!userLocation || !userLocation.latitude || !userLocation.longitude) missingParts.push('Ubicación');
+
+      if (missingParts.length > 0) {
+        showAlert(
+          'Completa tus preferencias',
+          `Para continuar debes completar: ${missingParts.join(', ')}`,
+          'error'
+        );
+        return;
+      }
+    }
+
+    // Validaciones por defecto (mantener comportamiento previo fuera del setup)
     if (selectedGenres.length === 0) {
       showAlert('Error', 'Selecciona al menos 1 género', 'error');
       return;
@@ -409,6 +434,9 @@ const PreferencesScreen = ({ navigation, route }) => {
           onPress: () => {
             setAlertVisible(false);
             if (fromSocialLogin) {
+              navigation.navigate('MainTabs');
+            } else if (fromRegistration) {
+              clearPendingPreferencesOnboarding();
               navigation.navigate('MainTabs');
             } else if (isInitialSetup) {
               navigation.navigate('MainTabs');
@@ -915,17 +943,17 @@ const PreferencesScreen = ({ navigation, route }) => {
         >
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => fromSocialLogin ? navigation.navigate('MainTabs') : navigation.goBack()}
+            onPress={() => (fromSocialLogin || fromRegistration) ? navigation.navigate('MainTabs') : navigation.goBack()}
           >
             <Text style={styles.backButtonText}>← Volver</Text>
           </TouchableOpacity>
 
 
           <Text style={styles.headerTitle}>
-            {isInitialSetup ? 'Configura tus preferencias' : 'Mis Preferencias'}
+            {isInitialSetup || fromRegistration ? 'Configura tus preferencias' : 'Mis Preferencias'}
           </Text>
           <Text style={styles.headerSubtitle}>
-            {isInitialSetup
+            {isInitialSetup || fromRegistration
               ? 'Para encontrar mejores Amigos de Butaca'
               : 'Edita tus gustos de películas'}
           </Text>

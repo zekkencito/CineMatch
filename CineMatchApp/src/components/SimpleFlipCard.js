@@ -53,10 +53,10 @@ const SimpleFlipCard = ({
   const appGradientColors = [colors.card, colors.surface];
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  // Reiniciar estado de rascado cuando cambia la película
+  // Reiniciar estado de presiones cuando cambia la película
   useEffect(() => {
     if (movie && movie.id) {
-      console.log('Nueva película detectada, reiniciando estado de rascado:', movie.title);
+      console.log('Nueva película detectada, reiniciando estado de presiones:', movie.title);
       setIsRevealed(false);
       setScratchCount(0);
       setIsScratching(false);
@@ -163,15 +163,15 @@ const SimpleFlipCard = ({
       })
     ]).start();
     
-    console.log('Rascando - Count:', newCount);
+    console.log('Presionando - Count:', newCount);
     
     setTimeout(() => {
       setIsScratching(false);
     }, 200);
     
-    // Revelar después de 5 "rascados"
+    // Revelar después de 5 presiones
     if (newCount >= 5) {
-      console.log('Revelando película - 5 rascados completados');
+      console.log('Revelando película - 5 presiones completadas');
       handleReveal();
     }
   };
@@ -388,7 +388,7 @@ const SimpleFlipCard = ({
                         color={colors.text} 
                       />
                       <Text style={styles.scratchText}>
-                        {isScratching ? '¡Sigue raspando!' : 'Rasca para revelar'}
+                        {isScratching ? '¡Sigue presionando!' : 'Presiona para revelar'}
                       </Text>
                       <Text style={styles.scratchSubtext}>
                         Toca {5 - scratchCount} veces más para descubrir

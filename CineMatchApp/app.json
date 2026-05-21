@@ -7,7 +7,7 @@
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
     "scheme": "cinematch",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
@@ -101,6 +101,7 @@
       "eas": {
         "projectId": "f9fb9db5-78d9-4b0a-a060-50c8875f18e2"
       }
-    }
+    },
+    "owner": "pamelatarelo"
   }
 }

@@ -19,7 +19,7 @@ import { ActivityIndicator, View } from 'react-native';
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
-  const { isAuthenticated, loading, pendingSocialOnboarding } = useAuth();
+  const { isAuthenticated, loading, pendingSocialOnboarding, pendingPreferencesOnboarding } = useAuth();
   const { colors } = useTheme();
   const [showTutorial, setShowTutorial] = useState(false);
   const navigationRef = useRef(null);
@@ -38,8 +38,8 @@ const AppNavigator = () => {
 
   // Verificar si el tutorial debe mostrarse (solo cuentas nuevas)
   const checkTutorial = async () => {
-    // No mostrar tutorial si hay onboarding social pendiente
-    if (pendingSocialOnboarding) return;
+    // No mostrar tutorial si hay onboarding social o preferencias pendiente
+    if (pendingSocialOnboarding || pendingPreferencesOnboarding) return;
     const completed = await tutorialService.isCompleted();
     if (!completed) {
       setShowTutorial(true);
@@ -59,6 +59,13 @@ const AppNavigator = () => {
     }
   }, [pendingSocialOnboarding]);
 
+  // Cuando termina el onboarding de preferencias, revisar si hay tutorial pendiente
+  useEffect(() => {
+    if (isAuthenticated && !pendingPreferencesOnboarding) {
+      checkTutorial();
+    }
+  }, [pendingPreferencesOnboarding]);
+
   // Navegar a Preferencias cuando hay onboarding social pendiente
   useEffect(() => {
     if (isAuthenticated && pendingSocialOnboarding) {
@@ -68,6 +75,16 @@ const AppNavigator = () => {
       return () => clearTimeout(timer);
     }
   }, [isAuthenticated, pendingSocialOnboarding]);
+
+  // Navegar a Preferencias cuando hay onboarding de preferencias pendiente (registro normal)
+  useEffect(() => {
+    if (isAuthenticated && pendingPreferencesOnboarding) {
+      const timer = setTimeout(() => {
+        navigationRef.current?.navigate('Preferencias', { fromRegistration: true });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, pendingPreferencesOnboarding]);
 
   // Callback estable para navegar entre tabs
   const navigateToTab = useCallback((screenName) => {

@@ -118,9 +118,9 @@ const FlipCardReveal = ({
     setScratchCount(newCount);
     setIsScratching(true);
     
-    console.log('Rascando - Count:', newCount);
+    console.log('Presionando - Count:', newCount);
     
-    // Animación de scratch
+    // Animación de presion
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 0.95,
@@ -136,9 +136,9 @@ const FlipCardReveal = ({
       setIsScratching(false);
     });
     
-    // Revelar después de 5 "rascados"
+    // Revelar después de 5 presiones
     if (newCount >= 5) {
-      console.log('Revelando película - 5 rascados completados');
+      console.log('Revelando película - 5 presiones completadas');
       handleReveal();
     }
   };
@@ -327,7 +327,7 @@ const FlipCardReveal = ({
                         color={colors.text} 
                       />
                       <Text style={styles.scratchText}>
-                        {isScratching ? '¡Sigue raspando!' : 'Rasca para revelar'}
+                        {isScratching ? '¡Sigue presionando!' : 'Presiona para revelar'}
                       </Text>
                       <Text style={styles.scratchSubtext}>
                         Toca {5 - scratchCount} veces más para descubrir

@@ -58,25 +58,23 @@ const DailyRecommendationCard = ({
 
   const gradientColors = moodGradients[movie?.mood] || moodGradients.default;
 
-  // PanResponder para el efecto de "rascar"
+  // PanResponder para el efecto de revelar
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
       console.log('onMoveShouldSetPanResponder:', !isRevealed, gestureState);
       return !isRevealed;
     },
     onPanResponderGrant: (evt, gestureState) => {
-      console.log('onPanResponderGrant - Iniciando rascado');
+      console.log('onPanResponderGrant - Iniciando revelado');
       setIsScratching(true);
     },
     onPanResponderMove: (evt, gestureState) => {
       console.log('onPanResponderMove:', gestureState.dx, gestureState.dy);
       if (!isRevealed) {
-        // Calcular progreso del rascado
         const progress = Math.min((Math.abs(gestureState.dx) + Math.abs(gestureState.dy)) / 200, 1);
-        console.log('Progreso de rascado:', progress);
+        console.log('Progreso de revelado:', progress);
         setScratchProgress(Math.max(scratchProgress, progress));
         
-        // Animar el efecto de rascado
         scratchArea.setValue({
           x: gestureState.dx,
           y: gestureState.dy
@@ -87,7 +85,6 @@ const DailyRecommendationCard = ({
       console.log('onPanResponderRelease - Progreso final:', scratchProgress);
       setIsScratching(false);
       
-      // Revelar automáticamente si se ha raspado suficiente
       if (scratchProgress > 0.6) {
         console.log('Revelando película - Progreso suficiente');
         handleReveal();
@@ -206,10 +203,10 @@ const DailyRecommendationCard = ({
                   <View style={styles.scratchContent}>
                     <Ionicons name="gift" size={60} color={colors.text} />
                     <Text style={styles.scratchText}>
-                      {isScratching ? '¡Sigue raspando!' : 'Rasca para revelar'}
+                      {isScratching ? '¡Sigue presionando!' : 'Presiona 3 veces para revelar'}
                     </Text>
                     <Text style={styles.scratchSubtext}>
-                      Desliza tu dedo para descubrir tu película
+                      Toca la tarjeta para descubrir tu película
                     </Text>
                     <TouchableOpacity 
                       style={styles.revealButton}

@@ -296,10 +296,10 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.streakCard}>
           <View style={styles.streakHeader}>
             <Text style={styles.streakTitle}>Racha de cine</Text>
-            <Text style={styles.streakValue}>🔥 {gamification?.currentStreak || 0} dias</Text>
+            <Text style={styles.streakValue}>🔥 {gamification?.currentStreak || 0} días</Text>
           </View>
           <Text style={styles.streakSubtext}>
-            Mejor racha: {gamification?.bestStreak || 0} dias
+            Mejor racha: {gamification?.bestStreak || 0} días
           </Text>
           <Text style={styles.streakSubtext}>
             Fondo activo: {selectedBackgroundData?.name || 'Predeterminado'}

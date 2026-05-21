@@ -53,6 +53,7 @@ const HomeScreen = ({ navigation }) => {
   // Refs
   const swiperRef = useRef(null);
   const currentCardIndexRef = useRef(0);
+  const isFetchingMoreRef = useRef(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -226,6 +227,11 @@ const HomeScreen = ({ navigation }) => {
         setFinished(false);
         currentCardIndexRef.current = 0;
       } else {
+        if (isFetchingMoreRef.current) {
+          return;
+        }
+
+        isFetchingMoreRef.current = true;
         setIsFetchingMore(true);
       }
 
@@ -260,6 +266,7 @@ const HomeScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
       setIsFetchingMore(false);
+      isFetchingMoreRef.current = false;
     }
   };
 
@@ -295,12 +302,16 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleSwipedAll = () => {
+    if (isFetchingMoreRef.current) {
+      return;
+    }
+
     showInfo(
       "🎬 ¡Ya no hay más!",
       "Ya viste a todos los usuarios disponibles en tu área. Puedes recargar para buscar nuevos.",
       [
         { text: 'OK', style: 'cancel' },
-        { text: 'Recargar', onPress: () => loadUsers(true) }
+        { text: 'Recargar', onPress: () => loadUsers({ reset: true }) }
       ]
     );
   };
@@ -607,14 +618,14 @@ marginLeft: 30,
               {/* Generos favoritos del usuario */}
               {(selectedUser?.favorite_genres && selectedUser.favorite_genres.length > 0) ? (
                 <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Generos favoritos</Text>
+                  <Text style={styles.modalSectionTitle}>Géneros favoritos</Text>
                   <View style={styles.modalTagsRow}>
                     {selectedUser.favorite_genres
                       .filter(g => g != null)
                       .map((genre, index) => {
                         const name = typeof genre === 'object' && genre.name
                           ? genre.name
-                          : (typeof genre === 'string' ? genre : 'Genero');
+                          : (typeof genre === 'string' ? genre : 'Género');
                         return (
                           <View key={'mg-' + index} style={styles.modalTag}>
                             <Text style={styles.modalTagText}>{name}</Text>

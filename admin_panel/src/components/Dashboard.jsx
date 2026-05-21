@@ -36,8 +36,8 @@ const Dashboard = () => {
   const [chartsData, setChartsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [revenuePeriod, setRevenuePeriod] = useState('monthly'); // 'daily', 'weekly', 'monthly'
-  const [usersPeriod, setUsersPeriod] = useState('monthly'); // 'daily', 'weekly', 'monthly'
+  const [revenuePeriod, setRevenuePeriod] = useState('monthly');
+  const [usersPeriod, setUsersPeriod] = useState('monthly');
 
   useEffect(() => {
     loadDashboardData();
@@ -47,16 +47,12 @@ const Dashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('📊 Cargando datos del dashboard...');
-      
+
       const [statsData, chartsDataResult] = await Promise.all([
         api.getDashboardStats(),
         api.getDashboardCharts()
       ]);
-      
-      console.log('📈 Stats recibidos:', statsData);
-      console.log('📉 Charts recibidos:', chartsDataResult);
-      
+
       setDashboardStats(statsData);
       setChartsData(chartsDataResult);
     } catch (err) {
@@ -67,7 +63,6 @@ const Dashboard = () => {
     }
   };
 
-  // Datos por defecto mientras cargan
   const revenueData = chartsData ? (() => {
     if (revenuePeriod === 'daily' && chartsData?.revenuePerDay?.length > 0) {
       return chartsData.revenuePerDay.map(m => ({ month: m.name, revenue: m.revenue, subscriptions: 100 }));
@@ -149,7 +144,6 @@ const Dashboard = () => {
           onLogout={handleLogout} 
         />
 
-        {/* Page Header */}
         <div className="page-header">
           <div>
             <h1>Dashboard</h1>
@@ -160,7 +154,6 @@ const Dashboard = () => {
         {loading && <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>Cargando datos...</div>}
         {error && <div style={{ padding: '20px', textAlign: 'center', color: '#999', fontSize: '12px' }}>{error}</div>}
 
-        {/* Stats Cards */}
         <div className="stats-cards">
           {statsCards.map((card) => (
             <div key={card.id} className="stat-card">
@@ -181,11 +174,8 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Content Grid */}
         <div className="content-grid">
-          {/* Left Column */}
           <div className="left-column">
-            {/* Revenue Chart */}
             <div className="card">
               <div className="card-header">
                 <h2>Ingresos y Suscripciones</h2>
@@ -239,7 +229,6 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Users Chart */}
             <div className="card">
               <div className="card-header">
                 <h2>Usuarios Nuevos vs Activos</h2>
@@ -294,9 +283,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Right Column */}
           <div className="right-column">
-            {/* User Insights */}
             <div className="card">
               <div className="card-header">
                 <h3>Usuarios Principales</h3>
@@ -323,7 +310,6 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Top Movies */}
             <div className="card">
               <div className="card-header">
                 <h2>Películas Populares</h2>

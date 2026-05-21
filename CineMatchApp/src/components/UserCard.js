@@ -117,10 +117,10 @@ const UserCard = ({ user }) => {
             </View>
           ) : null}
 
-          {/* Indicador para ver mas detalles (generos, directores y peliculas) */}
+          {/* Indicador para ver más detalles (géneros, directores y películas) */}
           <View style={styles.tapHintContainer}>
             <Text style={styles.tapHintText}>
-              Toca la tarjeta para ver mas detalles
+              Toca la tarjeta para ver más detalles
             </Text>
           </View>
         </ScrollView>

@@ -19,9 +19,7 @@ export default function Users() {
   })
   const [loading, setLoading] = useState(true)
 
-  // Toast notification state
   const [toast, setToast] = useState(null)
-  // Confirm modal state
   const [confirmModal, setConfirmModal] = useState(null)
 
   const showToast = useCallback((message, type = 'success') => {
@@ -40,16 +38,14 @@ export default function Users() {
     { id: 5, label: 'Correos', icon: 'Mail', path: '/emails' },
   ]
 
-  // Cargar usuarios al montar el componente
   useEffect(() => {
     fetchUsers()
   }, [])
 
-  // Buscar usuarios cuando cambia el término de búsqueda (con debounce)
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchUsers()
-    }, 300) // Esperar 300ms después de que se deje de escribir
+    }, 300)
 
     return () => clearTimeout(timer)
   }, [searchTerm])
@@ -58,7 +54,6 @@ export default function Users() {
     try {
       setLoading(true)
       const data = await api.getUsers(1, 100, searchTerm)
-      // Extraer usuarios del objeto data.data si viene con paginación
       const usersList = Array.isArray(data) ? data : (data.data || [])
       setUsers(usersList)
     } catch (error) {
@@ -69,7 +64,6 @@ export default function Users() {
     }
   }
 
-  // Ya no necesitamos filtrar en cliente porque viene filtrado del servidor
   const filteredUsers = users
 
   const handleAddUser = () => {
@@ -161,7 +155,6 @@ export default function Users() {
           onLogout={handleLogout} 
         />
 
-        {/* Page Header */}
         <div className="page-header">
           <div>
             <h2>Gestión de Usuarios</h2>
@@ -173,7 +166,6 @@ export default function Users() {
           </button>
         </div>
 
-      {/* Search */}
       <div className="users-search">
         <Search size={20} className="search-icon" />
         <input
@@ -245,7 +237,6 @@ export default function Users() {
         </div>
       )}
 
-      {/* Modal para editar/agregar usuario */}
       {isModalOpen && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -322,7 +313,6 @@ export default function Users() {
         </div>
       )}
 
-      {/* Toast Notification */}
       {toast && (
         <div className={`toast toast-${toast.type}`}>
           <div className="toast-icon">
@@ -338,7 +328,6 @@ export default function Users() {
         </div>
       )}
 
-      {/* Confirm Modal */}
       {confirmModal && (
         <div className="confirm-overlay" onClick={() => setConfirmModal(null)}>
           <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>

@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             GenreSeeder::class,
             MovieSeeder::class,
             UserSeeder::class,
+            DemoUsersSeeder::class,
             MovieForumReviewSeeder::class,
         ]);
 

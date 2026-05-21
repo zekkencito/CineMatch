@@ -52,7 +52,7 @@ const STEPS = [
         icon: faFilm,
         title: 'Pantalla de Palomeros',
         description:
-            'Esta es la pantalla principal. Aqui aparecen las tarjetas de otros usuarios. Puedes deslizar cada tarjeta hacia la derecha para aceptar o hacia la izquierda para rechazar.',
+            'Esta es la pantalla principal. Aquí aparecen las tarjetas de otros usuarios. Puedes deslizar cada tarjeta hacia la derecha para aceptar o hacia la izquierda para rechazar.',
         cardPosition: 'top',
         arrowDirection: 'down',
     },
@@ -60,9 +60,9 @@ const STEPS = [
         screen: 'Amigos Palomeros',
         icon: faXmark,
         iconColor: colors.primary,
-        title: 'Boton de rechazar',
+        title: 'Botón de rechazar',
         description:
-            'El boton con la X sirve para rechazar un perfil. Es igual que deslizar la tarjeta hacia la izquierda. El otro usuario no sera notificado.',
+            'El botón con la X sirve para rechazar un perfil. Es igual que deslizar la tarjeta hacia la izquierda. El otro usuario no será notificado.',
         cardPosition: 'top',
         arrowDirection: 'down',
     },
@@ -70,9 +70,9 @@ const STEPS = [
         screen: 'Amigos Palomeros',
         icon: faFaceSmile,
         iconColor: '#2ECC71',
-        title: 'Boton de aceptar',
+        title: 'Botón de aceptar',
         description:
-            'El boton con la carita sirve para aceptar un perfil. Es igual que deslizar la tarjeta hacia la derecha. Si ambos se aceptan, se genera un match y podran chatear.',
+            'El botón con la carita sirve para aceptar un perfil. Es igual que deslizar la tarjeta hacia la derecha. Si ambos se aceptan, se genera un match y podrán chatear.',
         cardPosition: 'top',
         arrowDirection: 'down',
     },
@@ -82,7 +82,7 @@ const STEPS = [
         iconColor: '#ffd700',
         title: 'Deshacer swipe',
         description:
-            'El boton dorado del centro permite deshacer tu ultimo swipe si te equivocaste. Esta funcion es exclusiva para usuarios con suscripcion premium.',
+            'El botón dorado del centro permite deshacer tu último swipe si te equivocaste. Esta función es exclusiva para usuarios con suscripción premium.',
         cardPosition: 'top',
         arrowDirection: 'down',
     },
@@ -91,7 +91,7 @@ const STEPS = [
         icon: faComment,
         title: 'Amigos de Butaca',
         description:
-            'En esta pestana encontraras la lista de personas con las que hiciste match. Puedes abrir una conversacion y chatear sobre peliculas, series y recomendaciones.',
+            'En esta pestaña encontrarás la lista de personas con las que hiciste match. Puedes abrir una conversación y chatear sobre películas, series y recomendaciones.',
         cardPosition: 'bottom',
         arrowDirection: null,
     },
@@ -100,7 +100,7 @@ const STEPS = [
         icon: faCamera,
         title: 'Tu foto de perfil',
         description:
-            'Para cambiar tu foto de perfil, toca directamente sobre tu imagen en la parte superior de esta pantalla. Se abrira la galeria de tu telefono para seleccionar una nueva foto.',
+            'Para cambiar tu foto de perfil, toca directamente sobre tu imagen en la parte superior de esta pantalla. Se abrirá la galería de tu teléfono para seleccionar una nueva foto.',
         cardPosition: 'bottom',
         arrowDirection: 'up',
     },
@@ -109,16 +109,16 @@ const STEPS = [
         icon: faPen,
         title: 'Editar perfil',
         description:
-            'Desde la opcion "Editar Perfil" puedes modificar tu nombre, edad y biografia. Esta informacion es visible para otros usuarios en las tarjetas.',
+            'Desde la opción "Editar Perfil" puedes modificar tu nombre, edad y biografía. Esta información es visible para otros usuarios en las tarjetas.',
         cardPosition: 'bottom',
         arrowDirection: null,
     },
     {
         screen: 'Perfil',
         icon: faFilm,
-        title: 'Preferencias de peliculas',
+        title: 'Preferencias de películas',
         description:
-            'Dentro de "Preferencias de Peliculas" encontraras cuatro secciones que te permiten personalizar tu perfil cinematografico. Estas preferencias determinan la compatibilidad con otros usuarios.',
+            'Dentro de "Preferencias de Películas" encontrarás cuatro secciones que te permiten personalizar tu perfil cinematográfico. Estas preferencias determinan la compatibilidad con otros usuarios.',
         cardPosition: 'bottom',
         arrowDirection: null,
     },
@@ -126,9 +126,9 @@ const STEPS = [
         navigate: 'Preferencias',
         preferencesTab: 'genres',
         icon: faMusic,
-        title: 'Seccion: Generos favoritos',
+        title: 'Sección: Géneros favoritos',
         description:
-            'En esta pestana puedes seleccionar tus generos favoritos de peliculas: accion, comedia, drama, ciencia ficcion, terror, entre otros. Toca cada genero para activarlo o desactivarlo.',
+            'En esta pestaña puedes seleccionar tus géneros favoritos de películas: acción, comedia, drama, ciencia ficción, terror, entre otros. Toca cada género para activarlo o desactivarlo.',
         cardPosition: 'bottom',
         arrowDirection: 'up',
     },
@@ -136,9 +136,9 @@ const STEPS = [
         navigate: 'Preferencias',
         preferencesTab: 'directors',
         icon: faVideo,
-        title: 'Seccion: Directores favoritos',
+        title: 'Sección: Directores favoritos',
         description:
-            'En esta pestana puedes buscar y agregar tus directores de cine favoritos. Busca por nombre y agrega los que mas te gusten. Aparecen con su foto de perfil.',
+            'En esta pestaña puedes buscar y agregar tus directores de cine favoritos. Busca por nombre y agrega los que más te gusten. Aparecen con su foto de perfil.',
         cardPosition: 'bottom',
         arrowDirection: 'up',
     },
@@ -146,9 +146,9 @@ const STEPS = [
         navigate: 'Preferencias',
         preferencesTab: 'movies',
         icon: faFilm,
-        title: 'Seccion: Peliculas vistas',
+        title: 'Sección: Películas vistas',
         description:
-            'En esta pestana puedes buscar y agregar peliculas que has visto. El sistema usa esta informacion para encontrar personas con gustos similares y calcular la compatibilidad.',
+            'En esta pestaña puedes buscar y agregar películas que has visto. El sistema usa esta información para encontrar personas con gustos similares y calcular la compatibilidad.',
         cardPosition: 'bottom',
         arrowDirection: 'up',
     },
@@ -156,9 +156,9 @@ const STEPS = [
         navigate: 'Preferencias',
         preferencesTab: 'radius',
         icon: faLocationDot,
-        title: 'Seccion: Radio de busqueda',
+        title: 'Sección: Radio de búsqueda',
         description:
-            'En esta pestana configuras hasta que distancia quieres buscar otros usuarios. Puedes usar el GPS para actualizar tu ubicacion y ajustar el radio con el deslizador.',
+            'En esta pestaña configuras hasta qué distancia quieres buscar otros usuarios. Puedes usar el GPS para actualizar tu ubicación y ajustar el radio con el deslizador.',
         cardPosition: 'bottom',
         arrowDirection: 'up',
     },
@@ -168,7 +168,7 @@ const STEPS = [
         iconColor: '#2ECC71',
         title: 'Listo para comenzar',
         description:
-            'Ya conoces todas las funciones de CineMatch. Desliza las tarjetas o usa los botones para encontrar personas con tus mismos gustos cinematograficos. Mucha suerte.',
+            'Ya conoces todas las funciones de CineMatch. Desliza las tarjetas o usa los botones para encontrar personas con tus mismos gustos cinematográficos. Mucha suerte.',
         cardPosition: 'center',
         arrowDirection: null,
     },
@@ -178,6 +178,15 @@ const OnboardingTutorial = ({ visible, onFinish, navigateToTab, navigateToScreen
     const [currentStep, setCurrentStep] = useState(0);
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
+
+    const goToInitialPreferences = () => {
+        if (navigateToScreen) {
+            navigateToScreen('Preferencias', {
+                isInitialSetup: true,
+                tutorialTab: 'genres',
+            });
+        }
+    };
 
     // Animar la entrada de cada card al cambiar de paso
     useEffect(() => {
@@ -245,12 +254,10 @@ const OnboardingTutorial = ({ visible, onFinish, navigateToTab, navigateToScreen
         if (step.navigate && navigateToScreen) {
             try { navigateToScreen('goBack'); } catch (e) { }
         }
-        // Luego ir al tab principal
-        if (navigateToTab) {
-            setTimeout(() => {
-                try { navigateToTab('Amigos Palomeros'); } catch (e) { }
-            }, step.navigate ? 100 : 0);
-        }
+        // Luego llevar al usuario a la configuración inicial de preferencias
+        setTimeout(() => {
+            goToInitialPreferences();
+        }, step.navigate ? 100 : 0);
         await tutorialService.markCompleted();
         setCurrentStep(0);
         onFinish();
@@ -264,6 +271,7 @@ const OnboardingTutorial = ({ visible, onFinish, navigateToTab, navigateToScreen
         }
         await tutorialService.markCompleted();
         setCurrentStep(0);
+        goToInitialPreferences();
         onFinish();
     };
 

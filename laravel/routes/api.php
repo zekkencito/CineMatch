@@ -21,6 +21,13 @@ use App\Http\Controllers\MovieRatingController;
 |--------------------------------------------------------------------------
 */
 
+// Ruta raíz de la API (para verificar que funciona)
+Route::get('/', function() {
+    return response()->json([
+        'message' => 'API del backend de CineMatch'
+    ]);
+});
+
 // Rutas de limpieza de caché (accesible por URL)
 Route::get('/clear-cache', function() {
     try {

@@ -11,8 +11,10 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pendingSocialOnboarding, setPendingSocialOnboarding] = useState(false);
+  const [pendingPreferencesOnboarding, setPendingPreferencesOnboarding] = useState(false);
 
   const clearPendingSocialOnboarding = () => setPendingSocialOnboarding(false);
+  const clearPendingPreferencesOnboarding = () => setPendingPreferencesOnboarding(false);
 
   useEffect(() => {
     loadUser();
@@ -95,6 +97,9 @@ export const AuthProvider = ({ children }) => {
 
       // Resetear el tutorial para que se muestre al nuevo usuario
       await tutorialService.reset();
+
+      // Marcar onboarding de preferencias pendiente para nuevos usuarios
+      setPendingPreferencesOnboarding(true);
 
       // Registrar para notificaciones push
       notificationService.registerForPushNotificationsAsync();
@@ -225,6 +230,8 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated,
         pendingSocialOnboarding,
         clearPendingSocialOnboarding,
+        pendingPreferencesOnboarding,
+        clearPendingPreferencesOnboarding,
         login,
         loginWithGoogle,
         loginWithFacebook,

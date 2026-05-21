@@ -30,7 +30,7 @@ const ScratchRevealCard = ({
   const [scratchProgress, setScratchProgress] = useState(0);
   const [isScratching, setIsScratching] = useState(false);
   
-  // Referencias para el efecto de rascado
+  // Referencias para el efecto de revelar
   const scratchOpacity = useRef(new Animated.Value(1)).current;
   const scratchScale = useRef(new Animated.Value(1)).current;
 
@@ -83,16 +83,16 @@ const ScratchRevealCard = ({
     
     const { translationX, translationY } = event.nativeEvent;
     
-    // Calcular progreso del rascado basado en el movimiento
+    // Calcular progreso del revelado basado en el movimiento
     const distance = Math.sqrt(translationX ** 2 + translationY ** 2);
     const progress = Math.min(distance / 200, 1);
     
     setScratchProgress(prev => Math.max(prev, progress));
     setIsScratching(true);
     
-    console.log('Rascando en progreso:', progress);
+    console.log('Revelando en progreso:', progress);
     
-    // Revelar automáticamente si se ha raspado suficiente
+    // Revelar automáticamente si se ha revelado suficiente
     if (progress > 0.7) {
       console.log('Progreso suficiente para revelar automáticamente');
       handleReveal();
@@ -209,10 +209,10 @@ const ScratchRevealCard = ({
                           color="white" 
                         />
                         <Text style={styles.scratchText}>
-                          {isScratching ? '¡Sigue raspando!' : 'Rasca para revelar'}
+                          {isScratching ? '¡Sigue deslizando!' : 'Desliza para revelar'}
                         </Text>
                         <Text style={styles.scratchSubtext}>
-                          Desliza tu dedo para descubrir tu película
+                          Mueve tu dedo para descubrir tu película
                         </Text>
                         <View style={styles.progressIndicator}>
                           <View style={[

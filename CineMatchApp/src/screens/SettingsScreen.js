@@ -184,7 +184,7 @@ const SettingsScreen = () => {
                     {background.name}
                   </Text>
                   <Text style={[styles.backgroundMeta, isEquipped && styles.backgroundMetaEquipped]}>
-                    {isEquipped ? 'Equipado' : unlocked ? 'Disponible' : `Dia ${background.unlockDay}`}
+                    {isEquipped ? 'Equipado' : unlocked ? 'Disponible' : `Día ${background.unlockDay}`}
                   </Text>
                   <Text style={styles.backgroundDesc}>{background.description}</Text>
                 </TouchableOpacity>
@@ -194,8 +194,8 @@ const SettingsScreen = () => {
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Coleccion de marcos</Text>
-          <Text style={styles.sectionSubtitle}>Racha actual: {gamification?.currentStreak || 0} dias</Text>
+          <Text style={styles.sectionTitle}>Colección de marcos</Text>
+          <Text style={styles.sectionSubtitle}>Racha actual: {gamification?.currentStreak || 0} días</Text>
           <View style={styles.framesWrap}>
             {frameCatalog.map((frame) => {
               const unlocked = (gamification?.unlockedFrames || []).includes(frame.id);
@@ -216,7 +216,7 @@ const SettingsScreen = () => {
                 >
                   <Text style={[styles.frameName, equipped && styles.frameNameEquipped]}>{frame.name}</Text>
                   <Text style={[styles.frameMeta, equipped && styles.frameMetaEquipped]}>
-                    {equipped ? 'Equipado' : unlocked ? 'Disponible' : `Dia ${frame.unlockDay}`}
+                    {equipped ? 'Equipado' : unlocked ? 'Disponible' : `Día ${frame.unlockDay}`}
                   </Text>
                 </TouchableOpacity>
               );

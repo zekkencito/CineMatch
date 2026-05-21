@@ -77,12 +77,35 @@ const DailyRecommendationScreen = ({ navigation }) => {
   useEffect(() => {
     const interval = setInterval(() => {
       if (dailyStatus?.recommendationTimestamps?.length > 0 && !dailyStatus.isPremium) {
-        const timestamps = dailyStatus.recommendationTimestamps.map(t => new Date(t)).sort((a, b) => a - b);
-        const oldestTimestamp = timestamps[0];
-        const releaseTime = new Date(oldestTimestamp.getTime() + 24 * 60 * 60 * 1000);
         const now = new Date();
-        const diffMs = Math.max(0, releaseTime - now);
-        setTimeUntilNext(diffMs);
+        const timestamps = dailyStatus.recommendationTimestamps
+          .map(t => ({ original: t, date: new Date(t) }))
+          .sort((a, b) => a.date - b.date);
+
+        // Calcular tiempo restante para cada recomendación
+        const recommendationsWithTime = timestamps.map(item => {
+          const releaseTime = new Date(item.date.getTime() + 24 * 60 * 60 * 1000);
+          const diffMs = Math.max(0, releaseTime - now);
+          return {
+            timestamp: item.original,
+            releaseTime: releaseTime,
+            remainingMs: diffMs,
+            isExpired: diffMs === 0
+          };
+        });
+
+        // Encontrar la próxima recomendación que se liberará (la más cercana a expirar)
+        const nextRelease = recommendationsWithTime
+          .filter(r => !r.isExpired)
+          .sort((a, b) => a.remainingMs - b.remainingMs)[0];
+
+        setTimeUntilNext(nextRelease ? nextRelease.remainingMs : null);
+
+        // Si alguna recomendación expiró, recargar el estado para actualizar el contador
+        const expiredCount = recommendationsWithTime.filter(r => r.isExpired).length;
+        if (expiredCount > 0 && dailyStatus.dailyCount > 0) {
+          loadDailyStatus();
+        }
       } else {
         setTimeUntilNext(null);
       }
@@ -189,19 +212,16 @@ const DailyRecommendationScreen = ({ navigation }) => {
         }
       });
     } else {
-      // Para películas locales
-      navigation.navigate('MovieReviews', { 
+      navigation.navigate('MovieReviews', {
         movieId: movie.id,
-        movieTitle: movie.title 
+        movieTitle: movie.title
       });
     }
   };
 
   const handleWatchedMovie = async (movie) => {
     try {
-      // Aquí podrías llamar a una API para marcar como vista
       console.log('Marked as watched:', movie.title);
-      // Opcional: mostrar un mensaje de éxito
       Alert.alert('¡Perfecto!', 'Película marcada como vista');
     } catch (error) {
       console.error('Error marking movie as watched:', error);
@@ -209,37 +229,6 @@ const DailyRecommendationScreen = ({ navigation }) => {
   };
 
   const handleResetRecommendations = async () => {
-    // Comentar para producción - solo para pruebas
-    /*
-    try {
-      Alert.alert(
-        'Reiniciar Contador',
-        '¿Estás seguro de que quieres reiniciar el contador de recomendaciones? (Solo para pruebas)',
-        [
-          {
-            text: 'Cancelar',
-            style: 'cancel'
-          },
-          {
-            text: 'Reiniciar',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                const result = await dailyRecommendationService.resetDailyRecommendations();
-                await loadDailyStatus(); // Recargar el estado
-                Alert.alert('Éxito', result.message || 'Contador de recomendaciones reiniciado');
-              } catch (error) {
-                console.error('Error resetting recommendations:', error);
-                Alert.alert('Error', 'No se pudo reiniciar el contador');
-              }
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('Error in reset flow:', error);
-    }
-    */
     console.log('Botón de reinicio comentado - solo para pruebas');
   };
 
@@ -348,7 +337,7 @@ const DailyRecommendationScreen = ({ navigation }) => {
     if (!dailyStatus) return null;
 
     const isPremium = dailyStatus.isPremium;
-    
+
     if (isPremium) {
       return (
         <View style={styles.statusCard}>
@@ -356,7 +345,7 @@ const DailyRecommendationScreen = ({ navigation }) => {
             <Text style={styles.statusTitle}>🌟 Usuario Premium</Text>
             <Ionicons name="star" size={20} color={colors.primary} />
           </View>
-          
+
           <View style={styles.statusInfo}>
             <Text style={[styles.statusText, { color: colors.primary }]}>
               ✨ Recomendaciones ilimitadas
@@ -376,21 +365,60 @@ const DailyRecommendationScreen = ({ navigation }) => {
 
     // Calcular cuándo se liberará la próxima recomendación
     let nextReleaseText = '';
+    let releaseDetails = '';
     if (timeUntilNext !== null && timeUntilNext > 0) {
       const hours = Math.floor(timeUntilNext / (1000 * 60 * 60));
       const minutes = Math.floor((timeUntilNext % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((timeUntilNext % (1000 * 60)) / 1000);
-      
+
       if (hours > 0) {
         nextReleaseText = `Próxima recomendación en ${hours}h ${minutes}m ${seconds}s`;
+        releaseDetails = `Cada recomendación se libera después de 24h`;
       } else if (minutes > 0) {
         nextReleaseText = `Próxima recomendación en ${minutes}m ${seconds}s`;
+        releaseDetails = `Cada recomendación se libera después de 24h`;
       } else {
         nextReleaseText = `Próxima recomendación en ${seconds}s`;
+        releaseDetails = `Cada recomendación se libera después de 24h`;
       }
     } else if (timeUntilNext === 0) {
       nextReleaseText = '¡Ya puedes obtener otra recomendación!';
     }
+
+    // Calcular tiempos individuales para cada recomendación
+    const individualTimes = dailyStatus.recommendationTimestamps?.map((timestamp, index) => {
+      const recTime = new Date(timestamp);
+      const releaseTime = new Date(recTime.getTime() + 24 * 60 * 60 * 1000);
+      const now = new Date();
+      const diffMs = Math.max(0, releaseTime - now);
+
+      if (diffMs === 0) {
+        return {
+          index: index + 1,
+          status: 'Disponible',
+          timeText: 'Lista para usar'
+        };
+      }
+
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+      let timeStr = '';
+      if (hours > 0) {
+        timeStr = `${hours}h ${minutes}m`;
+      } else if (minutes > 0) {
+        timeStr = `${minutes}m ${seconds}s`;
+      } else {
+        timeStr = `${seconds}s`;
+      }
+
+      return {
+        index: index + 1,
+        status: 'En espera',
+        timeText: `Libera en ${timeStr}`
+      };
+    }) || [];
 
     return (
       <View style={styles.statusCard}>
@@ -398,24 +426,48 @@ const DailyRecommendationScreen = ({ navigation }) => {
           <Text style={styles.statusTitle}>Tus recomendaciones</Text>
           <Text style={styles.statusCount}>{usedCount}/3</Text>
         </View>
-        
+
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
-        
+
         <View style={styles.statusInfo}>
           <Text style={[styles.statusText, { color: remainingColor }]}>
-            {remainingCount > 0 
+            {remainingCount > 0
               ? `🎬 Te quedan ${remainingCount} recomendaciones`
               : '🚫 Has usado todas tus recomendaciones'
             }
           </Text>
           {nextReleaseText && (
-            <Text style={styles.resetTime}>
+            <Text style={[styles.resetTime, { color: remainingCount > 0 ? colors.textMuted : colors.primary }]}>
               {nextReleaseText}
             </Text>
           )}
+          {releaseDetails && remainingCount === 0 && (
+            <Text style={styles.resetTimeDetails}>
+              {releaseDetails}
+            </Text>
+          )}
         </View>
+
+        {/* Mostrar tiempos individuales de cada recomendación */}
+        {individualTimes.length > 0 && (
+          <View style={styles.individualTimesContainer}>
+            <Text style={styles.individualTimesTitle}>Estado de cada recomendación:</Text>
+            {individualTimes.map((item) => (
+              <View key={item.index} style={styles.individualTimeItem}>
+                <Text style={styles.individualTimeIndex}>#{item.index}</Text>
+                <Text style={[
+                  styles.individualTimeStatus,
+                  { color: item.status === 'Disponible' ? colors.success : colors.textMuted }
+                ]}>
+                  {item.status}
+                </Text>
+                <Text style={styles.individualTimeText}>{item.timeText}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
     );
   };
@@ -486,19 +538,6 @@ const DailyRecommendationScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         )}
-
-        {/* Botón de reset para pruebas - comentado para producción */}
-        {/*
-        <TouchableOpacity
-          style={styles.resetButton}
-          onPress={handleResetRecommendations}
-        >
-          <Ionicons name="refresh-outline" size={16} color={colors.textMuted} />
-          <Text style={styles.resetButtonText}>
-            Reiniciar contador (pruebas)
-          </Text>
-        </TouchableOpacity>
-        */}
       </ScrollView>
       </View>
 
@@ -507,7 +546,6 @@ const DailyRecommendationScreen = ({ navigation }) => {
         isVisible={showCard}
         onClose={() => {
           setShowCard(false);
-          // Limpiar la película actual para asegurar reinicio completo
           setTimeout(() => setCurrentMovie(null), 300);
         }}
         onShare={handleShare}
@@ -625,6 +663,52 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted
   },
+  resetTimeDetails: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: 4
+  },
+  individualTimesContainer: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border
+  },
+  individualTimesTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5
+  },
+  individualTimeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    marginBottom: 6
+  },
+  individualTimeIndex: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+    marginRight: spacing.sm,
+    minWidth: 24
+  },
+  individualTimeStatus: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginRight: spacing.sm,
+    flex: 1
+  },
+  individualTimeText: {
+    fontSize: 11,
+    color: colors.textMuted
+  },
   moodSection: {
     marginBottom: spacing.xl
   },
@@ -710,25 +794,6 @@ const createStyles = (colors) => StyleSheet.create({
     ...typography.body,
     fontWeight: '600',
     marginLeft: spacing.md
-  },
-  resetButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignSelf: 'center'
-  },
-  resetButtonText: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginLeft: spacing.sm,
-    fontStyle: 'italic'
   }
 });
 

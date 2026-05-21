@@ -59,6 +59,7 @@ class UserController extends Controller
 
         // Query base - obtener usuarios potenciales
         $query = User::where('id', '!=', $userId)
+            ->where('is_admin', false)
             ->whereNotIn('id', $seenUserIds)
             ->with(['favoriteGenres', 'location']);
 
