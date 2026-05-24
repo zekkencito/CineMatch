@@ -259,7 +259,7 @@ const MatchesScreen = ({ navigation }) => {
       >
         <View style={styles.headerTop}>
           <View style={styles.iconBox}>
-            <Icon name="ticket" size={32} color={colors.primary} />
+            <Icon name="ticket" solid size={32} color={colors.primary} />
           </View>
           <Text style={styles.title}>Amigos de Butaca</Text>
         </View>

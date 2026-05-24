@@ -77,6 +77,7 @@ class Subscription extends Model
         $this->update([
             'plan' => 'premium',
             'status' => 'active',
+            'is_active' => true,
             'start_date' => now(),
             'end_date' => now()->addDays($duration),
             'max_radius' => 100,
@@ -95,6 +96,7 @@ class Subscription extends Model
     {
         $this->update([
             'status' => 'cancelled',
+            'is_active' => false,
         ]);
     }
 
@@ -107,6 +109,7 @@ class Subscription extends Model
             $this->update([
                 'status' => 'expired',
                 'plan' => 'free',
+                'is_active' => false,
                 'max_radius' => 50,
                 'daily_likes_limit' => 10,
                 'can_see_likes' => false,

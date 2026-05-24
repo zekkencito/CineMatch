@@ -16,11 +16,12 @@ class DailyRecommendationController extends Controller
     {
         $user = $request->user();
         $mood = $request->input('mood'); // filtro: 'comedy', 'horror', 'drama', etc.
+        $isPremium = $user->subscription && method_exists($user->subscription, 'isPremium') && $user->subscription->isPremium();
         
         // Verificar límite diario
         $dailyCount = $this->getDailyRecommendationCount($user->id);
         
-        if ($dailyCount >= 3) { // Límite de 3 recomendaciones diarias
+        if (!$isPremium && $dailyCount >= 3) { // Límite de 3 recomendaciones diarias
             return response()->json([
                 'error' => 'DAILY_LIMIT_EXCEEDED',
                 'message' => 'Has alcanzado tu límite de 3 recomendaciones diarias. Vuelve mañana para más.',
@@ -45,9 +46,10 @@ class DailyRecommendationController extends Controller
         return response()->json([
             'success' => true,
             'movie' => $movie,
-            'remaining_recommendations' => 3 - ($dailyCount + 1),
+            'remaining_recommendations' => $isPremium ? null : 3 - ($dailyCount + 1),
             'daily_count' => $dailyCount + 1,
-            'limit' => 3
+            'limit' => $isPremium ? 'unlimited' : 3,
+            'is_premium' => $isPremium
         ]);
     }
     
@@ -141,13 +143,15 @@ class DailyRecommendationController extends Controller
     public function getDailyStatus(Request $request)
     {
         $user = $request->user();
+        $isPremium = $user->subscription && method_exists($user->subscription, 'isPremium') && $user->subscription->isPremium();
         $dailyCount = $this->getDailyRecommendationCount($user->id);
         
         return response()->json([
             'daily_count' => $dailyCount,
-            'limit' => 3, // Límite de 3 recomendaciones diarias
-            'remaining' => max(0, 3 - $dailyCount),
-            'reset_time' => now()->endOfDay()->toISOString()
+            'limit' => $isPremium ? 'unlimited' : 3, // Límite de 3 recomendaciones diarias
+            'remaining' => $isPremium ? null : max(0, 3 - $dailyCount),
+            'reset_time' => now()->endOfDay()->toISOString(),
+            'is_premium' => $isPremium
         ]);
     }
 

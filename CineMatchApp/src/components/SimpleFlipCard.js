@@ -27,6 +27,7 @@ const SimpleFlipCard = ({
   onClose, 
   onShare,
   remainingRecommendations,
+  isPremium = false,
   onWatchedMovie,
   onReviews
 }) => {
@@ -266,7 +267,7 @@ const SimpleFlipCard = ({
             <View style={styles.counterContainer}>
               <Ionicons name="ticket" size={16} color={colors.primary} />
               <Text style={styles.counter}>
-                {remainingRecommendations}/3 restantes
+                {isPremium ? 'Ilimitadas' : `${remainingRecommendations}/3 restantes`}
               </Text>
             </View>
           </View>

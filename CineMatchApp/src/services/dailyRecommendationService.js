@@ -2,6 +2,8 @@ import api from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tmdbRandomService } from './tmdbRandomService';
 import { subscriptionService } from './subscriptionService';
+import { storage } from '../utils/storage';
+
 
 const RECOMMENDATION_TIMESTAMPS_KEY = '@cinematch_recommendation_timestamps';
 
@@ -34,6 +36,42 @@ const saveTimestampsToStorage = async (timestamps) => {
   }
 };
 
+const getIsPremiumUser = async () => {
+  try {
+    // 1. Intentar verificar con el usuario almacenado localmente (rápido y offline)
+    const userData = await storage.getUser();
+    console.log('[DEBUG getIsPremiumUser] userData local:', userData);
+    if (userData) {
+      const isPremiumLocal = Boolean(
+        userData.is_premium ||
+        userData.subscription?.is_premium ||
+        userData.plan === 'premium' ||
+        userData.plan_type === 'premium' ||
+        userData.subscription?.plan === 'premium'
+      );
+      console.log('[DEBUG getIsPremiumUser] isPremiumLocal result:', isPremiumLocal);
+      if (isPremiumLocal) {
+        return true;
+      }
+    }
+
+    // 2. Fallback: Consultar al backend el plan actual
+    const plan = await subscriptionService.getCurrentPlan();
+    console.log('[DEBUG getIsPremiumUser] plan fetched from backend:', plan);
+    const isPremiumBackend = Boolean(
+      plan?.is_premium ||
+      plan?.plan_type === 'premium' ||
+      plan?.plan === 'premium' ||
+      plan?.subscription?.is_premium
+    );
+    console.log('[DEBUG getIsPremiumUser] isPremiumBackend result:', isPremiumBackend);
+    return isPremiumBackend;
+  } catch (error) {
+    console.log('[DEBUG getIsPremiumUser] Error verifying subscription:', error.message);
+    return false;
+  }
+};
+
 export const dailyRecommendationService = {
   async getDailyRecommendation(mood = 'all') {
     try {
@@ -41,13 +79,7 @@ export const dailyRecommendationService = {
         localResetData.recommendationTimestamps = await loadTimestampsFromStorage();
       }
 
-      let isPremium = false;
-      try {
-        const plan = await subscriptionService.getCurrentPlan();
-        isPremium = plan && (plan.is_premium || plan.plan_type === 'premium');
-      } catch (error) {
-        console.log('No se pudo verificar suscripción, asumiendo usuario gratuito:', error.message);
-      }
+      const isPremium = await getIsPremiumUser();
 
       if (isPremium) {
         const movie = await tmdbRandomService.getRandomMovieByMood(mood);
@@ -149,47 +181,60 @@ export const dailyRecommendationService = {
 
   async getDailyStatus() {
     try {
+      console.log('[DEBUG getDailyStatus] Starting check...');
+      // 1. Intentar consultar el estado actual en el backend
+      try {
+        console.log('[DEBUG getDailyStatus] Requesting status from backend...');
+        const response = await api.get('/daily-recommendation/status');
+        console.log('[DEBUG getDailyStatus] Backend response.data:', response.data);
+        const isPremium = await getIsPremiumUser();
+        console.log('[DEBUG getDailyStatus] Calculated isPremium:', isPremium);
+        
+        const mappedStatus = {
+          dailyCount: response.data.daily_count || 0,
+          limit: response.data.limit || (isPremium ? 'unlimited' : 3),
+          remaining: isPremium ? Infinity : (response.data.remaining ?? 3),
+          resetTime: response.data.reset_time || new Date().toISOString(),
+          recommendationTimestamps: [],
+          isPremium: response.data.is_premium ?? isPremium
+        };
+        console.log('[DEBUG getDailyStatus] Mapped status object returning:', mappedStatus);
+        return mappedStatus;
+      } catch (backendError) {
+        console.log('[DEBUG getDailyStatus] Backend error, using local simulation:', backendError.message);
+      }
+
+      // 2. Fallback: Usar simulación local si el backend no responde
       if (localResetData.recommendationTimestamps.length === 0) {
         localResetData.recommendationTimestamps = await loadTimestampsFromStorage();
       }
 
-      if (localResetData) {
-        const now = new Date();
-        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        const activeRecommendations = (localResetData.recommendationTimestamps || [])
-          .filter(timestamp => new Date(timestamp) > twentyFourHoursAgo);
+      const isPremium = await getIsPremiumUser();
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const activeRecommendations = (localResetData.recommendationTimestamps || [])
+        .filter(timestamp => new Date(timestamp) > twentyFourHoursAgo);
 
-        const remaining = Math.max(0, 3 - activeRecommendations.length);
-
+      if (isPremium) {
         return {
           dailyCount: activeRecommendations.length,
-          limit: 3,
-          remaining: remaining,
+          limit: 'unlimited',
+          remaining: Infinity,
           resetTime: localResetData.resetTime || new Date().toISOString(),
-          recommendationTimestamps: localResetData.recommendationTimestamps || []
+          recommendationTimestamps: localResetData.recommendationTimestamps || [],
+          isPremium: true
         };
       }
 
-      try {
-        const response = await api.get('/daily-recommendation/status');
-
-        return {
-          dailyCount: response.data.daily_count || 0,
-          limit: response.data.limit || 3,
-          remaining: response.data.remaining ?? 3,
-          resetTime: response.data.reset_time || new Date().toISOString(),
-          recommendationTimestamps: []
-        };
-      } catch (backendError) {
-        console.log('Backend no disponible para estado, usando simulación:', backendError.message);
-      }
+      const remaining = Math.max(0, 3 - activeRecommendations.length);
 
       return {
-        dailyCount: 0,
+        dailyCount: activeRecommendations.length,
         limit: 3,
-        remaining: 3,
-        resetTime: new Date().toISOString(),
-        recommendationTimestamps: []
+        remaining: remaining,
+        resetTime: localResetData.resetTime || new Date().toISOString(),
+        recommendationTimestamps: localResetData.recommendationTimestamps || [],
+        isPremium: false
       };
 
     } catch (error) {

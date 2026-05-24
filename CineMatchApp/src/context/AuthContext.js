@@ -36,6 +36,13 @@ export const AuthProvider = ({ children }) => {
 
         // Registrar para notificaciones push
         notificationService.registerForPushNotificationsAsync();
+
+        // Actualizar silenciosamente el usuario desde el servidor en segundo plano
+        try {
+          refetchUser().catch(err => console.log('Silent user refetch failed on startup:', err));
+        } catch (e) {
+          // Silencioso
+        }
       }
     } catch (error) {
       console.error('Error loading user:', error);
@@ -70,6 +77,14 @@ export const AuthProvider = ({ children }) => {
       data.user.token = data.token;
       setUser(data.user);
       setIsAuthenticated(true);
+
+      // Marcar tutorial como completado para usuarios existentes
+      try {
+        await tutorialService.markCompleted();
+      } catch (tutErr) {
+        console.log('Error marking tutorial completed:', tutErr);
+      }
+      setPendingPreferencesOnboarding(false);
 
       // Actualizar información (como premium flag) que a lo mejor no envía el endpoint login
       try {
@@ -129,6 +144,15 @@ export const AuthProvider = ({ children }) => {
       if (data.is_new_user) {
         await tutorialService.reset();
         setPendingSocialOnboarding(true);
+      } else {
+        // Usuario existente: marcar tutorial como completado y limpiar estados pendientes
+        try {
+          await tutorialService.markCompleted();
+        } catch (tutErr) {
+          console.log('Error marking tutorial completed:', tutErr);
+        }
+        setPendingSocialOnboarding(false);
+        setPendingPreferencesOnboarding(false);
       }
 
       // Actualizar info completa
@@ -162,6 +186,15 @@ export const AuthProvider = ({ children }) => {
       if (data.is_new_user) {
         await tutorialService.reset();
         setPendingSocialOnboarding(true);
+      } else {
+        // Usuario existente: marcar tutorial como completado y limpiar estados pendientes
+        try {
+          await tutorialService.markCompleted();
+        } catch (tutErr) {
+          console.log('Error marking tutorial completed:', tutErr);
+        }
+        setPendingSocialOnboarding(false);
+        setPendingPreferencesOnboarding(false);
       }
 
       try {
@@ -209,8 +242,9 @@ export const AuthProvider = ({ children }) => {
       // Extraemos el objeto user de la respuesta { success: true, user: {...} }
       const newUserData = responseData.user ? responseData.user : responseData;
 
-      // Mantener el token existente
-      const merged = { ...(user || {}), ...(newUserData || {}), token: user?.token };
+      // Mantener el token existente (o cargarlo de storage si no está en el state todavía)
+      const token = user?.token || await storage.getToken();
+      const merged = { ...(user || {}), ...(newUserData || {}), token };
       setUser(merged);
       await storage.saveUser(merged);
       return merged;

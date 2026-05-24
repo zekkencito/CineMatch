@@ -17,13 +17,21 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import colors from '../constants/colors';
 import typography from '../constants/typography';
 import spacing from '../constants/spacing';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import Card from '../components/Card';
+
+let GoogleSignin = null;
+let statusCodes = {};
+
+try {
+  ({ GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin'));
+} catch (error) {
+  console.warn('Google Sign-In no disponible en esta build:', error?.message);
+}
 
 const { height } = Dimensions.get('window');
 
@@ -36,6 +44,7 @@ const LoginScreen = ({ navigation }) => {
   const [googleLoading, setGoogleLoading] = useState(false);
   // const [facebookLoading, setFacebookLoading] = useState(false);
   const { login, loginWithGoogle } = useAuth();
+  const googleSignInAvailable = Boolean(GoogleSignin?.configure && GoogleSignin?.signIn);
 
   // Referencias para navegación entre inputs
   const passwordInputRef = useRef(null);
@@ -55,11 +64,15 @@ const LoginScreen = ({ navigation }) => {
 
   // Google Sign-in configuration
   useEffect(() => {
+    if (!googleSignInAvailable) {
+      return;
+    }
+
     GoogleSignin.configure({
       webClientId: '815909950118-ub202cfiv226mgf25t803lhgquclpcjv.apps.googleusercontent.com',
       offlineAccess: true,
     });
-  }, []);
+  }, [googleSignInAvailable]);
 
   useEffect(() => {
     Animated.parallel([
@@ -100,6 +113,14 @@ const LoginScreen = ({ navigation }) => {
     }
   };
   const handleGoogleSignIn = async () => {
+    if (!googleSignInAvailable) {
+      Alert.alert(
+        'Google no disponible',
+        'Esta build no tiene el módulo nativo de Google Sign-In. Usa email y contraseña o genera una build de desarrollo con el módulo instalado.'
+      );
+      return;
+    }
+
     try {
       setGoogleLoading(true);
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -277,13 +298,15 @@ const LoginScreen = ({ navigation }) => {
               <TouchableOpacity
                 style={[styles.googleButton, googleLoading && styles.loginButtonDisabled]}
                 onPress={handleGoogleSignIn}
-                disabled={googleLoading}
+                disabled={googleLoading || !googleSignInAvailable}
                 activeOpacity={0.8}
               >
                 {googleLoading ? (
                   <ActivityIndicator color={colors.textDark} size="small" />
                 ) : (
-                  <Text style={styles.googleButtonText}>Iniciar con Google</Text>
+                  <Text style={styles.googleButtonText}>
+                    {googleSignInAvailable ? 'Iniciar con Google' : 'Google no disponible en esta build'}
+                  </Text>
                 )}
               </TouchableOpacity>
 

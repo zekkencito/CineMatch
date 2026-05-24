@@ -10,6 +10,23 @@ const useCustomAlert = () => {
     buttons: [],
   });
 
+    const normalizeButtons = useCallback((buttonOrButtons, fallbackText = 'OK') => {
+      if (Array.isArray(buttonOrButtons) && buttonOrButtons.length > 0) {
+        return buttonOrButtons.map((button) => ({
+          text: typeof button?.text === 'string' ? button.text : fallbackText,
+          style: button?.style,
+          onPress: typeof button?.onPress === 'function' ? button.onPress : () => {},
+        }));
+      }
+
+      return [
+        {
+          text: typeof buttonOrButtons === 'string' ? buttonOrButtons : fallbackText,
+          onPress: () => {},
+        },
+      ];
+    }, []);
+
   const showAlert = useCallback((config) => {
     return new Promise((resolve) => {
       setAlertConfig({
@@ -17,16 +34,16 @@ const useCustomAlert = () => {
         title: config.title || 'Alerta',
         message: config.message || '',
         type: config.type || 'info',
-        buttons: config.buttons || [
+        buttons: normalizeButtons(config.buttons || [
           {
             text: config.buttonText || 'OK',
             onPress: () => resolve(),
           }
-        ],
+        ], config.buttonText || 'OK'),
         resolve,
       });
     });
-  }, []);
+  }, [normalizeButtons]);
 
   const hideAlert = useCallback(() => {
     setAlertConfig(prev => ({ ...prev, visible: false }));
@@ -41,36 +58,36 @@ const useCustomAlert = () => {
       title,
       message,
       type: 'success',
-      buttonText,
+      buttons: normalizeButtons(buttonText),
     });
-  }, [showAlert]);
+  }, [showAlert, normalizeButtons]);
 
   const showError = useCallback((title, message, buttonText = 'OK') => {
     return showAlert({
       title,
       message,
       type: 'error',
-      buttonText,
+      buttons: normalizeButtons(buttonText),
     });
-  }, [showAlert]);
+  }, [showAlert, normalizeButtons]);
 
   const showWarning = useCallback((title, message, buttonText = 'OK') => {
     return showAlert({
       title,
       message,
       type: 'warning',
-      buttonText,
+      buttons: normalizeButtons(buttonText),
     });
-  }, [showAlert]);
+  }, [showAlert, normalizeButtons]);
 
   const showInfo = useCallback((title, message, buttonText = 'OK') => {
     return showAlert({
       title,
       message,
       type: 'info',
-      buttonText,
+      buttons: normalizeButtons(buttonText),
     });
-  }, [showAlert]);
+  }, [showAlert, normalizeButtons]);
 
   const showConfirm = useCallback((title, message, confirmText = 'Confirmar', cancelText = 'Cancelar') => {
     return new Promise((resolve) => {

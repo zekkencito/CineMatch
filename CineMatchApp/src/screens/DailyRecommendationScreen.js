@@ -117,6 +117,7 @@ const DailyRecommendationScreen = ({ navigation }) => {
   const loadDailyStatus = async () => {
     try {
       const status = await dailyRecommendationService.getDailyStatus();
+      console.log('[DEBUG loadDailyStatus] status received in screen:', status);
       setDailyStatus(status);
     } catch (error) {
       console.error('Error loading daily status:', error);
@@ -552,6 +553,7 @@ const DailyRecommendationScreen = ({ navigation }) => {
         onWatchedMovie={handleWatchedMovie}
         onReviews={handleReviews}
         remainingRecommendations={dailyStatus?.remaining || 0}
+        isPremium={Boolean(dailyStatus?.isPremium)}
       />
     </View>
   );

@@ -280,6 +280,14 @@ const ProfileScreen = ({ navigation }) => {
               </View>
             ) : null}
           </View>
+
+          {(user?.subscription?.is_premium || user?.is_premium) ? (
+            <View style={[styles.premiumBadgeSmall, { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 10, marginTop: 2 }]}>
+              <Icon name="star" size={11} color={colors.textDark} solid />
+              <Text style={styles.premiumBadgeText}>MIEMBRO PREMIUM</Text>
+            </View>
+          ) : null}
+
           <Text style={styles.email}>{user?.email || 'No email'}</Text>
 
           {/* Información adicional del usuario */}

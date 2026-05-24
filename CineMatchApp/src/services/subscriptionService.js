@@ -5,6 +5,16 @@ export const subscriptionService = {
   async getCurrentPlan() {
     try {
       const response = await api.get('/subscription/current');
+      const subscription = response.data?.subscription || null;
+
+      if (subscription) {
+        return {
+          ...subscription,
+          subscription,
+          success: response.data?.success ?? true,
+        };
+      }
+
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

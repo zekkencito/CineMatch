@@ -70,8 +70,14 @@ class AdminController extends Controller
     {
         try {
             $totalUsers = User::count();
-            $premiumUsers = Subscription::where('plan', 'premium')->where('is_active', true)->count();
-            $freeUsers = Subscription::where('plan', 'free')->where('is_active', true)->count();
+            $premiumUsers = Subscription::where('plan', 'premium')
+                ->where('status', 'active')
+                ->where(function ($query) {
+                    $query->whereNull('end_date')
+                        ->orWhere('end_date', '>', now());
+                })
+                ->count();
+            $freeUsers = Subscription::where('plan', 'free')->where('status', 'active')->count();
             
             // Calcular ingresos en pesos mexicanos (solo premium genera ingresos)
             $totalRevenue = $premiumUsers * 500; // 500 MXN por suscripción premium
@@ -749,12 +755,18 @@ class AdminController extends Controller
     public function getSubscriptionStatistics()
     {
         $totalSubscriptions = Subscription::count();
-        $activeSubscriptions = Subscription::where('is_active', true)->count();
-        $premiumCount = Subscription::where('plan', 'premium')->where('is_active', true)->count();
+        $activeSubscriptions = Subscription::where('status', 'active')->count();
+        $premiumCount = Subscription::where('plan', 'premium')
+            ->where('status', 'active')
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>', now());
+            })
+            ->count();
         $totalRevenue = $premiumCount * 500; // 500 MXN por premium
 
         $byPlan = Subscription::selectRaw('plan, COUNT(*) as count')
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->groupBy('plan')
             ->get();
 

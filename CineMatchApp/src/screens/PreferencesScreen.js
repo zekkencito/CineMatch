@@ -498,7 +498,7 @@ const PreferencesScreen = ({ navigation, route }) => {
         style={[styles.tab, activeTab === 'movies' && styles.activeTab]}
         onPress={() => setActiveTab('movies')}
       >
-        <Icon name="ticket" size={32} color={activeTab === 'movies' ? colors.primary : 'white'} />
+        <Icon name="ticket" solid size={32} color={activeTab === 'movies' ? colors.primary : 'white'} />
         <Text style={[styles.tabText, activeTab === 'movies' && styles.activeTabText]}>
           Películas
         </Text>

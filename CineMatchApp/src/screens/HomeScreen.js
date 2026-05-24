@@ -273,9 +273,22 @@ const HomeScreen = ({ navigation }) => {
   const handleSwiped = async (cardIndex, direction) => {
     const swipedUser = users[cardIndex];
 
+    console.log('Swipe detected in Amigos Palomeros:', {
+      cardIndex,
+      direction,
+      usersLength: users.length,
+      swipedUserId: swipedUser?.id,
+      swipedUserName: swipedUser?.name,
+    });
+
     // Validar que el usuario exista
     if (!swipedUser || !swipedUser.id) {
-      console.warn('Usuario no válido:', cardIndex);
+      console.warn('Usuario no válido en swipe:', {
+        cardIndex,
+        direction,
+        swipedUser,
+        usersLength: users.length,
+      });
       return;
     }
 
@@ -297,7 +310,14 @@ const HomeScreen = ({ navigation }) => {
         );
       }
     } catch (error) {
-      console.error('Error sending like:', error);
+      console.error('Error sending like:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        cardIndex,
+        direction,
+        swipedUser,
+      });
     }
   };
 

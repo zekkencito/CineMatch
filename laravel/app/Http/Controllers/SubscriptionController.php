@@ -23,6 +23,7 @@ class SubscriptionController extends Controller
                 'user_id' => $user->id,
                 'plan' => 'free',
                 'status' => 'active',
+                'is_active' => true,
                 'max_radius' => 50,
                 'daily_likes_limit' => 10,
             ]);
